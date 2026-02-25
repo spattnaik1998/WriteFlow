@@ -1800,13 +1800,97 @@ function renderBooks() {
 }
 
 function selectBook(id) {
-  CURRENT_BOOK_ID = id; // fix: keep real API in sync with selected book
+  CURRENT_BOOK_ID = id;
   selectedBook = id;
   const b = BOOKS.find(x => x.id === id);
   document.getElementById('barTitle').textContent = b.title;
   document.getElementById('barAuthor').textContent = `— ${b.author}`;
   renderBooks();
   showToast(`Switched to "${b.title}"`);
+
+  // Reset conversation history for the new book
+  conversationHistory = [];
+
+  // Load this book's notes + ideas from the API
+  if (CURRENT_BOOK_ID) loadBookContent(CURRENT_BOOK_ID);
+}
+
+async function loadBookContent(bookId) {
+  // Fetch notes and ideas in parallel
+  const [notes, ideas] = await Promise.all([
+    api('GET', `/notes?book_id=${bookId}`),
+    api('GET', `/distill?book_id=${bookId}`)
+  ]);
+
+  // ── Notes tab ──────────────────────────────────────────
+  const chapterSelect = document.getElementById('chapterSelect');
+  const mainNotes     = document.getElementById('mainNotes');
+  const accordion     = document.querySelector('.accordion');
+
+  if (notes && notes.length > 0) {
+    // Populate chapter dropdown
+    chapterSelect.innerHTML = notes.map(n =>
+      `<option value="${n.chapter_name}">${n.chapter_name}</option>`
+    ).join('');
+
+    // Show first chapter's content in the textarea
+    mainNotes.value = notes[0].content || '';
+
+    // Update accordion with all chapters
+    accordion.innerHTML = notes.map((n, i) => `
+      <div class="accordion-item ${i === 0 ? 'open' : ''}" id="acc-book-${i}">
+        <div class="accordion-head" onclick="this.parentElement.classList.toggle('open')">
+          <div>
+            <div class="acc-title">${n.chapter_name}</div>
+            <div class="acc-meta">${n.word_count || 0} words</div>
+          </div>
+          <svg class="acc-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="accordion-body">
+          <div class="acc-content">${n.content || ''}</div>
+        </div>
+      </div>
+    `).join('');
+
+    // When chapter is changed in dropdown, update textarea
+    chapterSelect.onchange = () => {
+      const selected = notes.find(n => n.chapter_name === chapterSelect.value);
+      if (selected) mainNotes.value = selected.content || '';
+    };
+  } else {
+    // No notes yet for this book — show empty state
+    chapterSelect.innerHTML = '<option>Chapter 1</option>';
+    mainNotes.value = '';
+    accordion.innerHTML = `<div style="padding:14px 0;font-size:12.5px;color:var(--text-4)">No notes yet for this book. Start typing above.</div>`;
+  }
+
+  // ── Ideas tab ──────────────────────────────────────────
+  const grid = document.getElementById('ideasGrid');
+  grid.innerHTML = '';
+
+  if (ideas && ideas.length > 0) {
+    ideas.forEach((idea, i) => {
+      const card = document.createElement('div');
+      card.className = 'idea-card';
+      card.style.animationDelay = `${i * 0.07}s`;
+      card.innerHTML = `
+        <div class="idea-num">INSIGHT ${String(idea.number || i + 1).padStart(2, '0')}</div>
+        <div class="idea-title">${idea.title}</div>
+        <div class="idea-body">${idea.body}</div>
+        <div class="idea-tags">${(idea.tags || []).map(t => `<span class="idea-tag">${t}</span>`).join('')}</div>
+        <button class="idea-explore" onclick="exploreIdea('${idea.title.replace(/'/g, "\\'")}')">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
+          Explore Further
+        </button>
+      `;
+      grid.appendChild(card);
+    });
+  } else {
+    grid.innerHTML = `<div style="padding:24px 0;font-size:12.5px;color:var(--text-4);grid-column:1/-1">No ideas yet — write some notes and hit Distill Ideas.</div>`;
+  }
+
+  // ── Blog panel ─────────────────────────────────────────
+  document.getElementById('blogList').innerHTML = '';
 }
 
 // ═══════════════════════════════════════
@@ -2224,7 +2308,11 @@ async function loadBooksFromAPI() {
       }
     });
     CURRENT_BOOK_ID = BOOKS[0].id;
+    selectedBook = BOOKS[0].id;
+    document.getElementById('barTitle').textContent = BOOKS[0].title;
+    document.getElementById('barAuthor').textContent = `— ${BOOKS[0].author}`;
     renderBooks();
+    loadBookContent(CURRENT_BOOK_ID);
   }
 }
 
