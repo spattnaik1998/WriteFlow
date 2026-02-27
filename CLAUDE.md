@@ -19,8 +19,8 @@ WriteFlow is a book note distillation app: users dump rough notes per chapter, a
 **Single-server, single-file frontend pattern:**
 - `server.js` — Express server that serves `index.html` as a static file AND mounts all API routes under `/api/*`
 - `index.html` — entire frontend in one file (vanilla JS, embedded CSS). No build step, no framework.
-- `routes/` — one file per domain: books, notes, distill, search, chat
-- `services/` — thin wrappers: `openai.js` (distillNotes, chatWithPartner, suggestWriting), `supabase.js` (client), `serper.js` (Google search via Serper API)
+- `routes/` — one file per domain: books, notes, distill, search, chat, narrative
+- `services/` — thin wrappers: `openai.js` (distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances), `supabase.js` (client), `serper.js` (Google search via Serper API)
 
 **Prototype / live mode duality:**
 The frontend boots in prototype mode with sample data. On load it calls `GET /api/health`; if that responds, it switches to live mode and all functions use real API calls. This means the frontend always works even without a running backend. Every user-facing function (sendMsg, distillIdeas, findBlogArticles) has both a prototype branch and a real API branch.
@@ -33,7 +33,12 @@ The frontend boots in prototype mode with sample data. On load it calls `GET /ap
 5. GPT-4o returns JSON array of `{title, body, tags, number}` cards; route persists to `ideas` table, returns saved rows
 
 **Chat context assembly** (`routes/chat.js`):
-Every chat message triggers parallel Supabase fetches for the book, all notes, and up to 10 idea cards. These are injected into the GPT-4o system prompt so the AI is grounded in the user's actual notes. Last 8 conversation turns are passed as message history.
+Every chat message triggers parallel Supabase fetches for the book, all notes, and up to 10 idea cards. These are injected into the GPT-4o system prompt so the AI is grounded in the user's actual notes. Last 8 conversation turns are passed as message history. When Cross-Library Intelligence is active, all other books' top ideas are also injected (up to 5 per book).
+
+**Cross-Library Intelligence** (`routes/narrative.js`):
+- `GET /api/narrative/ideas` — fetches all books with their ideas grouped (used to populate the UI before generation)
+- `POST /api/narrative` — accepts optional `{book_ids}` filter; requires ideas from at least 2 books; calls `generateMacroNarrative()` which returns `{themes: [{name, ideas: [{bookTitle, ideaTitle, ideaBody}]}], narrative: string}`
+- `classifyArticleStances()` in `services/openai.js` — batch-classifies articles as supporting/opposing/neutral relative to a book's thesis; called from the search flow
 
 ## Key conventions
 

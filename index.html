@@ -1204,7 +1204,7 @@ body::after {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 22px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 10px;
 }
@@ -1220,80 +1220,88 @@ body::after {
   margin-top: 2px;
 }
 
-.theme-cluster {
-  margin-bottom: 28px;
-}
-.theme-cluster-heading {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 1.6px;
-  text-transform: uppercase;
-  color: var(--amber-dk);
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.theme-cluster-heading::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
+/* ── Knowledge Graph ── */
+.kg-wrap { position: relative; }
+.kg-svg  { display: block; overflow: visible; }
 
-.cross-ideas-row {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+.kg-edge { transition: opacity .18s, stroke-width .18s; }
 
-.cross-idea-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 13px 14px;
-  position: relative;
-  transition: border-color var(--ease), box-shadow var(--ease);
-  animation: cardReveal .4s ease both;
-}
-.cross-idea-card:hover {
-  border-color: var(--border-hi);
-  box-shadow: 0 4px 16px rgba(0,0,0,.3);
-}
-.cross-idea-book-badge {
-  display: inline-flex;
-  align-items: center;
-  font-size: 9.5px;
-  font-weight: 600;
-  padding: 2px 8px;
-  background: var(--amber-glow);
-  border: 1px solid var(--amber-glow2);
-  border-radius: 10px;
-  color: var(--amber-dk);
-  letter-spacing: .2px;
-  margin-bottom: 7px;
-}
-.cross-idea-title {
+.kg-node-group { cursor: pointer; }
+.kg-node-circle { transition: stroke-width .18s; }
+
+.kg-node-text {
   font-family: 'Playfair Display', serif;
-  font-size: 13.5px;
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--text-1);
-  line-height: 1.35;
-  margin-bottom: 5px;
+  fill: #ede4d2;
+  pointer-events: none;
+  dominant-baseline: middle;
+  text-anchor: middle;
 }
-.cross-idea-body {
+.kg-tag-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  pointer-events: none;
+  text-anchor: middle;
+}
+.kg-edge-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 7.5px;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  pointer-events: none;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+.kg-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.kg-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-3);
+  letter-spacing: .3px;
+}
+.kg-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.kg-tooltip {
+  position: absolute;
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 10px;
+  padding: 12px 14px;
+  max-width: 230px;
+  width: max-content;
+  pointer-events: none;
+  z-index: 10;
   font-size: 12px;
   line-height: 1.65;
-  color: var(--text-3);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  color: var(--text-2);
+  box-shadow: 0 8px 28px rgba(0,0,0,.5);
+  transition: opacity .15s;
+}
+.kg-tooltip-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 6px;
 }
 
+/* Narrative output */
 .narrative-section {
-  margin-top: 28px;
-  padding-top: 22px;
+  margin-top: 24px;
+  padding-top: 20px;
   border-top: 1px solid var(--border);
 }
 .narrative-label {
@@ -1308,7 +1316,7 @@ body::after {
   border-left: 3px solid var(--amber-dk);
   padding-left: 18px;
   font-family: 'Lora', serif;
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.85;
   color: var(--text-2);
   font-style: italic;
@@ -1321,11 +1329,7 @@ body::after {
   font-size: 13px;
   line-height: 1.7;
 }
-.connections-empty svg {
-  color: var(--text-4);
-  margin-bottom: 12px;
-  opacity: .4;
-}
+.connections-empty svg { margin-bottom: 12px; opacity: .4; }
 
 /* Library mode toggle */
 .lib-mode-btn {
@@ -1434,13 +1438,13 @@ body::after {
             <option selected>Chapter 3 — The Lazy Controller</option>
             <option>Chapter 4 — The Associative Machine</option>
           </select>
-          <button class="btn-add-chapter">
+          <button class="btn-add-chapter" onclick="addChapter()">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Chapter
           </button>
         </div>
 
-        <textarea class="notes-textarea" id="mainNotes" rows="8">Kahneman opens with something brilliant — there are two ways we think. One is fast, automatic, like recognizing a face or reading anger in someone's voice. The other is slow, deliberate, like solving 17×24. The fast one (System 1) runs without us noticing. It's always on. The slow one (System 2) is lazy — it only engages when needed. Key: System 1 is constantly generating impressions and jumping to conclusions. System 2 mostly just endorses these without scrutiny. This is simultaneously terrifying and fascinating. The gorilla experiment. We don't see what we're not looking for.</textarea>
+        <textarea class="notes-textarea" id="mainNotes" rows="8" oninput="onNotesInput()">Kahneman opens with something brilliant — there are two ways we think. One is fast, automatic, like recognizing a face or reading anger in someone's voice. The other is slow, deliberate, like solving 17×24. The fast one (System 1) runs without us noticing. It's always on. The slow one (System 2) is lazy — it only engages when needed. Key: System 1 is constantly generating impressions and jumping to conclusions. System 2 mostly just endorses these without scrutiny. This is simultaneously terrifying and fascinating. The gorilla experiment. We don't see what we're not looking for.</textarea>
 
         <div class="action-row">
           <button class="btn-amber" id="distillBtn" onclick="distillIdeas()">
@@ -1618,8 +1622,8 @@ body::after {
       <div class="tab-pane" id="pane-connections">
         <div class="connections-header">
           <div>
-            <div class="connections-title">Ideas Across Your Library</div>
-            <div class="connections-sub">Thematic clusters from all your books</div>
+            <div class="connections-title">Knowledge Map</div>
+            <div class="connections-sub" id="kgSubtitle">Concept connections for the current book</div>
           </div>
           <button class="btn-amber" id="narrativeBtn" onclick="generateNarrative()" style="flex:0;padding:9px 14px;font-size:12px">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -1757,10 +1761,15 @@ const BOOKS = [
   { id: 'ah',  title: 'Atomic Habits',           author: 'James Clear',       spine: '#1e4a2e', progress: 35  }
 ];
 
-let selectedBook = 'tfs';
-let activeTab = 'notes';
-let responseIdx = 0;
-let libraryMode = false;
+let selectedBook    = 'tfs';
+let activeTab       = 'notes';
+let responseIdx     = 0;
+let libraryMode     = false;
+let chapterNotes    = {};    // { bookId: { chapterName: content } }
+let currentChapterId = null; // name of the active chapter
+let _saveTimer      = null;  // debounce handle for backend auto-save
+let _currentFlow    = null;  // last rendered flow data (for SVG resize)
+let _nodeRegistry   = {};    // nodeId → DOM element for the current diagram
 
 const AI_RESPONSES = [
   "That's a rich angle. Your notes are already gesturing toward what Kahneman calls the <em>narrative fallacy</em> — the tendency to build a coherent story from whatever fragments we have, then mistake that story for the truth. The coherence is the danger.",
@@ -1772,11 +1781,218 @@ const AI_RESPONSES = [
 ];
 
 // ═══════════════════════════════════════
+// PROTOTYPE CONTENT (per-book, no backend)
+// ═══════════════════════════════════════
+const PROTO_CONTENT = {
+  tfs: {
+    chapters: [
+      { name: 'Chapter 1 — Two Systems', wordCount: 64, content: 'The book opens by establishing that human cognition is dual-layered. System 1 operates automatically — it reads emotions, recognizes faces, understands sentences without effort. System 2 is deliberate and expensive. The key insight: System 2 doesn\'t supervise System 1 continuously. It mostly accepts what System 1 presents.' },
+      { name: 'Chapter 2 — Attention and Effort', wordCount: 51, content: 'Pupils dilate visibly during hard mental work — cognitive effort is literally physical. The battery metaphor: System 2 drains a finite resource. This is why important decisions made late in the day are worse. Ego depletion is real. Glucose restores deliberate thinking capacity. The implications for scheduling and decision-making are enormous.' },
+      { name: 'Chapter 3 — The Lazy Controller', wordCount: 48, content: 'We are cognitive misers by design. The bat and ball problem: $1.10 total, bat costs $1 more than the ball. Most say 10 cents. It\'s 5 cents. The intuitive answer feels fluent — and that fluency signals correctness to System 1. System 2 doesn\'t check unless prompted. This is WYSIATI in action.' },
+      { name: 'Chapter 4 — The Associative Machine', wordCount: 0, content: '' }
+    ],
+    activeChapter: 'Chapter 3 — The Lazy Controller',
+    activeNotes: 'Kahneman opens with something brilliant — there are two ways we think. One is fast, automatic, like recognizing a face or reading anger in someone\'s voice. The other is slow, deliberate, like solving 17×24. The fast one (System 1) runs without us noticing. It\'s always on. The slow one (System 2) is lazy — it only engages when needed. Key: System 1 is constantly generating impressions and jumping to conclusions. System 2 mostly just endorses these without scrutiny. This is simultaneously terrifying and fascinating. The gorilla experiment. We don\'t see what we\'re not looking for.',
+    ideas: [
+      { title: 'System 1 vs System 2 Thinking', body: 'Human cognition runs on two parallel tracks. System 1 is automatic, instant, and constantly running — shaping almost every moment-to-moment perception. System 2 is deliberate and effortful, but dangerously passive: it tends to endorse whatever System 1 serves up, rarely questioning the source.', tags: ['DUAL PROCESS', 'AUTOMATICITY'] },
+      { title: 'The WYSIATI Principle', body: 'What You See Is All There Is. System 1 constructs the most coherent narrative possible from available data — without ever noting what information is absent. This is why snap judgments feel complete and confident even when built on a fraction of what\'s relevant.', tags: ['NARRATIVE BIAS', 'OVERCONFIDENCE'] },
+      { title: 'Anchoring Effect in Decision Making', body: 'The first number encountered in any estimation contaminates all subsequent judgments — even when you know it\'s arbitrary. Kahneman showed that judges assigned shorter sentences after rolling low dice numbers. The anchor operates below the threshold of conscious awareness, making it nearly impossible to correct for.', tags: ['ANCHORING', 'PRIMING', 'HEURISTICS'] },
+      { title: 'Cognitive Ease & the Illusion of Truth', body: 'When information is easy to process, we experience it as familiar, true, and credible. This is cognitive ease — and it\'s weaponizable. Repetition doesn\'t create truth, but it creates the feeling of truth. This is why propaganda relies on repetition, not argument. Fluency masquerades as validity.', tags: ['COGNITIVE EASE', 'FLUENCY', 'TRUTH PERCEPTION'] }
+    ]
+  },
+  aow: {
+    chapters: [
+      { name: 'The Plans', wordCount: 57, content: 'Sun Tzu opens with a foundational claim: war is of vital importance to the state — a matter of life and death. Before any battle begins, the outcome is largely decided. Victory goes to the side that calculated most carefully: which commander has more ability, which army is better trained, which side has heaven (weather, timing) and earth (terrain) on its side.' },
+      { name: 'On Waging War', wordCount: 49, content: 'Prolonged warfare exhausts the state. The clever general feeds his troops on the enemy\'s supplies. Sun Tzu\'s economics of war: it costs ten times more to bring supplies from home than to seize them locally. Speed matters not just tactically but financially. A swift, decisive victory is cheaper than a protracted "successful" campaign.' },
+      { name: 'Attack by Stratagem', wordCount: 44, content: 'The supreme art of war is to subdue the enemy without fighting. Capturing intact is preferred over destroying. Breaking resistance without battle is the pinnacle of excellence. Know yourself and know your enemy — a hundred battles, a hundred victories. But supreme excellence is breaking the enemy\'s resistance without fighting at all.' }
+    ],
+    activeChapter: 'The Plans',
+    activeNotes: 'Sun Tzu\'s genius is that this isn\'t really a book about war — it\'s a book about strategy in any competitive domain. Every principle translates. All warfare is deception: if you can do something, feign you cannot. If you are near, make the enemy think you are far. The supreme commander wins before the battle starts — through superior preparation, intelligence, and positioning. The actual clash is almost an afterthought. Victory is decided in planning, not fighting.',
+    ideas: [
+      { title: 'All Warfare is Deception', body: 'The foundational principle of Sun Tzu: appear where you are not, attack where they don\'t expect. Every tactical move contains a psychological dimension. The goal isn\'t just to outmanoeuvre physically, but to corrupt the enemy\'s model of reality. A general who masters deception wins before the first blow is struck.', tags: ['STRATEGY', 'DECEPTION', 'PSYCHOLOGY'] },
+      { title: 'Win Without Fighting', body: 'The supreme art of war is to subdue the enemy without fighting. Destroying an enemy army is second-rate strategy — capturing it intact is supreme. This demands patience, intelligence, and positioning over aggression. The greatest victories are bloodless: they happen in the minds of adversaries before any engagement begins.', tags: ['LEVERAGE', 'POSITIONING', 'VICTORY'] },
+      { title: 'Know Yourself, Know the Enemy', body: 'If you know the enemy and know yourself, you need not fear the result of a hundred battles. If you know yourself but not the enemy, for every victory gained you will also suffer a defeat. The locus of intelligence is self-knowledge as much as enemy intelligence — most failures come from overconfidence in one\'s own position.', tags: ['INTELLIGENCE', 'SELF-AWARENESS', 'RISK'] }
+    ]
+  },
+  ah: {
+    chapters: [
+      { name: 'The Fundamentals', wordCount: 61, content: 'The surprising power of tiny habits: a 1% improvement each day compounds to 37x better over a year. But 1% worse daily compounds to near zero. Habits are the compound interest of self-improvement. Most people focus on goals; Clear argues this is backwards. Goals are about the results you want. Systems are about the processes that lead to those results. You don\'t rise to the level of your goals — you fall to the level of your systems.' },
+      { name: 'The 1st Law — Make It Obvious', wordCount: 53, content: 'Implementation intentions: "I will [BEHAVIOR] at [TIME] in [LOCATION]." Research shows this doubles follow-through rates. Habit stacking: "After I [CURRENT HABIT], I will [NEW HABIT]." The environment is the invisible hand shaping behavior. Design your environment so good habits are obvious. Put the guitar on the stand, not in the case. Leave the book on the pillow, not on the shelf.' },
+      { name: 'Identity-Based Habits', wordCount: 47, content: 'Every action is a vote for the type of person you want to become. The goal isn\'t to read a book, it\'s to become a reader. Not to run a marathon, but to become a runner. Identity change is the north star of habit change. The most effective way to change is not to focus on what you want to achieve, but on who you want to become.' }
+    ],
+    activeChapter: 'The Fundamentals',
+    activeNotes: 'Clear\'s central insight: we don\'t have a motivation problem, we have a system design problem. Every habit exists because it\'s solving a problem — providing a reward, reducing friction, satisfying a craving. The four laws of behavior change (Cue, Craving, Response, Reward) aren\'t separate steps, they\'re a continuous loop. And crucially: habits encode the path of least resistance. Whatever is easiest is what gets done. Design the environment to make virtue the easy choice.',
+    ideas: [
+      { title: 'Identity is the Lever of Lasting Change', body: 'Most people try to change outcomes (lose weight) rather than identity (become someone who moves daily). But identity changes cascade into behavior changes automatically. Each small habit is a vote cast for a new self-image. The question isn\'t "Can I do this?" but "Is this the kind of person I am?"', tags: ['IDENTITY', 'BEHAVIOR', 'SELF-IMAGE'] },
+      { title: 'The 1% Rule: Compounding Behavior', body: 'Getting 1% better each day for a year means ending up 37 times better. Getting 1% worse compounds to near zero. Habits are the compound interest of self-improvement — invisible in the short term, transformative over time. This is why patience is not passive: it\'s the strategic exploitation of compounding.', tags: ['COMPOUNDING', 'MARGINAL GAINS', 'SYSTEMS'] },
+      { title: 'Environment Over Willpower', body: 'Willpower is not a reliable resource — it depletes. The professionals don\'t rely on motivation; they engineer their environment so that the right behavior is the default behavior. Put the fruit on the counter, remove the junk from the house. Friction is the hidden controller of all action — reduce it for good habits, increase it for bad ones.', tags: ['ENVIRONMENT DESIGN', 'FRICTION', 'DEFAULTS'] }
+    ]
+  }
+};
+
+// ═══════════════════════════════════════
+// PROTOTYPE FLOW DATA (Connections tab)
+// ═══════════════════════════════════════
+const PROTO_FLOW = {
+  books: [
+    { id: 'tfs', title: 'Thinking, Fast and Slow', author: 'Daniel Kahneman', spine: '#1e3a6e' },
+    { id: 'aow', title: 'The Art of War',           author: 'Sun Tzu',         spine: '#6e1e1e' },
+    { id: 'ah',  title: 'Atomic Habits',            author: 'James Clear',     spine: '#1e4a2e' }
+  ],
+  themes: [
+    { id: 't0', name: 'Architecture of Decision', color: '#c9a84c' },
+    { id: 't1', name: 'Identity as Leverage',     color: '#9b8ed4' },
+    { id: 't2', name: 'Systems Over Willpower',   color: '#5aac8a' },
+    { id: 't3', name: 'Truth & Narrative',        color: '#d4836e' }
+  ],
+  ideas: [
+    { id: 'i0', bookId: 'tfs', themeId: 't0', title: 'Anchoring Effect',       body: 'The first number encountered shapes all subsequent estimates — even when arbitrary.' },
+    { id: 'i1', bookId: 'aow', themeId: 't0', title: 'Win Before You Fight',   body: 'Victory is decided in planning and positioning, not in the clash itself.' },
+    { id: 'i2', bookId: 'ah',  themeId: 't1', title: 'Identity is the Lever',  body: 'Each small habit casts a vote for the type of person you are becoming.' },
+    { id: 'i3', bookId: 'aow', themeId: 't1', title: 'Know Yourself First',    body: 'Self-knowledge precedes all strategic clarity and decisive action.' },
+    { id: 'i4', bookId: 'ah',  themeId: 't2', title: 'Environment Design',     body: 'Friction is the invisible controller of all behaviour — engineer defaults.' },
+    { id: 'i5', bookId: 'tfs', themeId: 't2', title: 'Cognitive Ease',         body: 'Fluent processing masquerades as truth; design for clarity, not just content.' },
+    { id: 'i6', bookId: 'tfs', themeId: 't3', title: 'WYSIATI',                body: 'System 1 builds a coherent story from fragments and calls it reality.' },
+    { id: 'i7', bookId: 'aow', themeId: 't3', title: 'Deception as Strategy',  body: 'Shape the enemy\'s perception of reality before shaping the battlefield.' }
+  ]
+};
+
+function loadProtoContent(bookId) {
+  const proto = PROTO_CONTENT[bookId];
+  if (!proto) return;
+
+  // Initialise mutable chapter state from prototype data
+  chapterNotes[bookId] = {};
+  proto.chapters.forEach(c => { chapterNotes[bookId][c.name] = c.content; });
+  // The activeChapter gets the richer textarea version
+  chapterNotes[bookId][proto.activeChapter] = proto.activeNotes;
+
+  // Populate chapter dropdown and wire onchange
+  const chapterSelect = document.getElementById('chapterSelect');
+  chapterSelect.innerHTML = proto.chapters.map(c =>
+    `<option value="${c.name}">${c.name}</option>`
+  ).join('');
+  chapterSelect.onchange = () => switchChapter(chapterSelect.value);
+
+  // Activate the default chapter
+  currentChapterId = proto.activeChapter;
+  document.getElementById('mainNotes').value = proto.activeNotes;
+  chapterSelect.value = proto.activeChapter;
+  renderAccordion();
+
+  // ── Ideas tab ──────────────────────────────────────────
+  const grid = document.getElementById('ideasGrid');
+  grid.innerHTML = proto.ideas.map((idea, i) => `
+    <div class="idea-card">
+      <div class="idea-num">INSIGHT ${String(i + 1).padStart(2, '0')}</div>
+      <div class="idea-title">${idea.title}</div>
+      <div class="idea-body">${idea.body}</div>
+      <div class="idea-tags">${idea.tags.map(t => `<span class="idea-tag">${t}</span>`).join('')}</div>
+      <button class="idea-explore" onclick="exploreIdea('${idea.title.replace(/'/g, "\\'")}')">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
+        Explore Further
+      </button>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════
+// CHAPTER MANAGEMENT
+// ═══════════════════════════════════════
+
+function saveCurrentChapter() {
+  if (!selectedBook || !currentChapterId) return;
+  if (!chapterNotes[selectedBook]) chapterNotes[selectedBook] = {};
+  chapterNotes[selectedBook][currentChapterId] = document.getElementById('mainNotes').value;
+}
+
+function switchChapter(name) {
+  saveCurrentChapter();
+  currentChapterId = name;
+  const textarea = document.getElementById('mainNotes');
+  textarea.value = chapterNotes[selectedBook]?.[name] ?? '';
+  document.getElementById('chapterSelect').value = name;
+  renderAccordion();
+  textarea.focus();
+}
+
+function renderAccordion() {
+  const chapters = chapterNotes[selectedBook] || {};
+  document.querySelector('.accordion').innerHTML = Object.entries(chapters).map(([name, content], i) => {
+    const wc = content ? content.trim().split(/\s+/).filter(Boolean).length : 0;
+    const safeName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return `
+      <div class="accordion-item ${name === currentChapterId ? 'open' : ''}" id="acc-book-${i}">
+        <div class="accordion-head" onclick="switchChapter('${safeName}')">
+          <div>
+            <div class="acc-title">${name}</div>
+            <div class="acc-meta">${wc} words</div>
+          </div>
+          <svg class="acc-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="accordion-body">
+          <div class="acc-content">${content || '<em style="color:var(--text-4)">No notes yet.</em>'}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function addChapter() {
+  if (!selectedBook) return;
+  const existing = Object.keys(chapterNotes[selectedBook] || {});
+  const defaultName = `Chapter ${existing.length + 1}`;
+  const name = window.prompt('New chapter name:', defaultName);
+  if (!name || !name.trim()) return;
+  const trimmed = name.trim();
+  if (chapterNotes[selectedBook]?.[trimmed] !== undefined) {
+    showToast('Chapter already exists'); return;
+  }
+  if (!chapterNotes[selectedBook]) chapterNotes[selectedBook] = {};
+  chapterNotes[selectedBook][trimmed] = '';
+  const opt = document.createElement('option');
+  opt.value = trimmed; opt.textContent = trimmed;
+  document.getElementById('chapterSelect').appendChild(opt);
+  switchChapter(trimmed);
+  showToast(`Added "${trimmed}"`);
+  if (CURRENT_BOOK_ID) {
+    api('POST', '/notes', { book_id: CURRENT_BOOK_ID, chapter_name: trimmed, content: '' });
+  }
+}
+
+function onNotesInput() {
+  if (!selectedBook || !currentChapterId) return;
+  const content = document.getElementById('mainNotes').value;
+  if (!chapterNotes[selectedBook]) chapterNotes[selectedBook] = {};
+  chapterNotes[selectedBook][currentChapterId] = content;
+  // Live-update word count and preview in the accordion
+  const wc = content.trim().split(/\s+/).filter(Boolean).length;
+  const activeItem = [...document.querySelectorAll('.accordion-item')].find(el =>
+    el.querySelector('.acc-title')?.textContent === currentChapterId
+  );
+  if (activeItem) {
+    const meta = activeItem.querySelector('.acc-meta');
+    if (meta) meta.textContent = `${wc} words`;
+    const preview = activeItem.querySelector('.acc-content');
+    if (preview) preview.textContent = content || '';
+  }
+  // Debounced save to backend (live mode only)
+  if (CURRENT_BOOK_ID) {
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => {
+      api('POST', '/notes', { book_id: CURRENT_BOOK_ID, chapter_name: currentChapterId, content });
+    }, 1500);
+  }
+}
+
+// ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
 function init() {
   renderBooks();
   scrollChat();
+  // Seed chapter state for the default prototype book so the
+  // dropdown and accordion work immediately before any book is clicked
+  loadProtoContent(selectedBook);
 }
 
 // ═══════════════════════════════════════
@@ -1813,6 +2029,7 @@ function selectBook(id) {
 
   // Load this book's notes + ideas from the API
   if (CURRENT_BOOK_ID) loadBookContent(CURRENT_BOOK_ID);
+  connectionsLoaded = false; // force graph refresh on next tab visit
 }
 
 async function loadBookContent(bookId) {
@@ -1822,71 +2039,65 @@ async function loadBookContent(bookId) {
     api('GET', `/distill?book_id=${bookId}`)
   ]);
 
+  // Both null means backend is unreachable — load per-book prototype content
+  if (notes === null && ideas === null) {
+    loadProtoContent(bookId);
+    return;
+  }
+
   // ── Notes tab ──────────────────────────────────────────
   const chapterSelect = document.getElementById('chapterSelect');
   const mainNotes     = document.getElementById('mainNotes');
   const accordion     = document.querySelector('.accordion');
 
-  if (notes && notes.length > 0) {
-    // Populate chapter dropdown
+  if (notes !== null && notes.length > 0) {
+    // Initialise mutable chapter state from API data
+    chapterNotes[bookId] = {};
+    notes.forEach(n => { chapterNotes[bookId][n.chapter_name] = n.content || ''; });
+
+    // Populate chapter dropdown and wire onchange
     chapterSelect.innerHTML = notes.map(n =>
       `<option value="${n.chapter_name}">${n.chapter_name}</option>`
     ).join('');
+    chapterSelect.onchange = () => switchChapter(chapterSelect.value);
 
-    // Show first chapter's content in the textarea
-    mainNotes.value = notes[0].content || '';
-
-    // Update accordion with all chapters
-    accordion.innerHTML = notes.map((n, i) => `
-      <div class="accordion-item ${i === 0 ? 'open' : ''}" id="acc-book-${i}">
-        <div class="accordion-head" onclick="this.parentElement.classList.toggle('open')">
-          <div>
-            <div class="acc-title">${n.chapter_name}</div>
-            <div class="acc-meta">${n.word_count || 0} words</div>
-          </div>
-          <svg class="acc-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-        </div>
-        <div class="accordion-body">
-          <div class="acc-content">${n.content || ''}</div>
-        </div>
-      </div>
-    `).join('');
-
-    // When chapter is changed in dropdown, update textarea
-    chapterSelect.onchange = () => {
-      const selected = notes.find(n => n.chapter_name === chapterSelect.value);
-      if (selected) mainNotes.value = selected.content || '';
-    };
-  } else {
-    // No notes yet for this book — show empty state
-    chapterSelect.innerHTML = '<option>Chapter 1</option>';
+    // Activate first chapter
+    switchChapter(notes[0].chapter_name);
+  } else if (notes !== null) {
+    // Backend responded but no notes yet — seed one blank chapter
+    chapterNotes[bookId] = { 'Chapter 1': '' };
+    chapterSelect.innerHTML = '<option value="Chapter 1">Chapter 1</option>';
+    chapterSelect.onchange = () => switchChapter(chapterSelect.value);
+    currentChapterId = 'Chapter 1';
     mainNotes.value = '';
-    accordion.innerHTML = `<div style="padding:14px 0;font-size:12.5px;color:var(--text-4)">No notes yet for this book. Start typing above.</div>`;
+    renderAccordion();
   }
 
   // ── Ideas tab ──────────────────────────────────────────
-  const grid = document.getElementById('ideasGrid');
-  grid.innerHTML = '';
+  if (ideas !== null) {
+    const grid = document.getElementById('ideasGrid');
+    grid.innerHTML = '';
 
-  if (ideas && ideas.length > 0) {
-    ideas.forEach((idea, i) => {
-      const card = document.createElement('div');
-      card.className = 'idea-card';
-      card.style.animationDelay = `${i * 0.07}s`;
-      card.innerHTML = `
-        <div class="idea-num">INSIGHT ${String(idea.number || i + 1).padStart(2, '0')}</div>
-        <div class="idea-title">${idea.title}</div>
-        <div class="idea-body">${idea.body}</div>
-        <div class="idea-tags">${(idea.tags || []).map(t => `<span class="idea-tag">${t}</span>`).join('')}</div>
-        <button class="idea-explore" onclick="exploreIdea('${idea.title.replace(/'/g, "\\'")}')">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
-          Explore Further
-        </button>
-      `;
-      grid.appendChild(card);
-    });
-  } else {
-    grid.innerHTML = `<div style="padding:24px 0;font-size:12.5px;color:var(--text-4);grid-column:1/-1">No ideas yet — write some notes and hit Distill Ideas.</div>`;
+    if (ideas.length > 0) {
+      ideas.forEach((idea, i) => {
+        const card = document.createElement('div');
+        card.className = 'idea-card';
+        card.style.animationDelay = `${i * 0.07}s`;
+        card.innerHTML = `
+          <div class="idea-num">INSIGHT ${String(idea.number || i + 1).padStart(2, '0')}</div>
+          <div class="idea-title">${idea.title}</div>
+          <div class="idea-body">${idea.body}</div>
+          <div class="idea-tags">${(idea.tags || []).map(t => `<span class="idea-tag">${t}</span>`).join('')}</div>
+          <button class="idea-explore" onclick="exploreIdea('${idea.title.replace(/'/g, "\\'")}')">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
+            Explore Further
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+    } else {
+      grid.innerHTML = `<div style="padding:24px 0;font-size:12.5px;color:var(--text-4);grid-column:1/-1">No ideas yet — write some notes and hit Distill Ideas.</div>`;
+    }
   }
 
   // ── Blog panel ─────────────────────────────────────────
@@ -2423,57 +2634,316 @@ function toggleLibraryMode() {
 }
 
 // ═══════════════════════════════════════
-// CONNECTIONS TAB
+// CONNECTIONS — Knowledge Map
 // ═══════════════════════════════════════
+
+const KG_PALETTE = ['#c9a84c','#9b8ed4','#5aac8a','#d4836e','#4a9ed4','#d4c44c','#7cc4d4','#c47c8e'];
+
 async function loadCrossBookIdeas() {
+  let ideas = [];
+  let bookTitle = '', bookAuthor = '';
+
+  if (selectedBook && CURRENT_BOOK_ID) {
+    const data = await api('GET', `/distill?book_id=${CURRENT_BOOK_ID}`);
+    if (data && data.length > 0) {
+      ideas = data;
+      const books = await api('GET', '/books');
+      if (books) {
+        const b = books.find(bk => bk.id === CURRENT_BOOK_ID);
+        if (b) { bookTitle = b.title; bookAuthor = b.author || ''; }
+      }
+    }
+  }
+
+  // Fallback to prototype data
+  if (ideas.length === 0) {
+    const proto = PROTO_CONTENT[selectedBook];
+    if (proto) {
+      ideas = (proto.ideas || []).map((idea, i) => ({
+        id: `p${i}`, title: idea.title, body: idea.body || '', tags: idea.tags || []
+      }));
+      bookTitle  = proto.title  || '';
+      bookAuthor = proto.author || '';
+    }
+  }
+
+  const sub = document.getElementById('kgSubtitle');
+  if (sub) sub.textContent = bookTitle
+    ? `Concept connections — ${bookTitle}`
+    : 'Concept connections for the current book';
+
+  renderKnowledgeGraph(ideas, { title: bookTitle, author: bookAuthor });
+}
+
+// Build full-mesh edges; weight = number of shared tags (+ 0.3 baseline)
+function buildKgEdges(nodes) {
+  const edges = [];
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const aTags  = new Set((nodes[i].tags || []).map(t => t.toLowerCase()));
+      const bTags  = (nodes[j].tags || []).map(t => t.toLowerCase());
+      const shared = bTags.filter(t => aTags.has(t));
+      edges.push({ source: i, target: j, weight: shared.length > 0 ? shared.length + 1 : 0.3, shared });
+    }
+  }
+  return edges;
+}
+
+// Force-directed layout: 280 iterations, repulsion + spring + gravity
+function runForceLayout(nodes, edges, W, H) {
+  const IDEAL_BASE  = Math.min(W, H) * 0.28;
+  const REPULSION_K = 9000;
+  const SPRING_K    = 0.012;
+  const GRAVITY     = 0.008;
+  const DAMPING     = 0.82;
+  const ITERATIONS  = 280;
+
+  nodes.forEach((n, i) => {
+    const angle = (2 * Math.PI * i) / nodes.length;
+    const r = Math.min(W, H) * 0.3;
+    n.x = W / 2 + r * Math.cos(angle);
+    n.y = H / 2 + r * Math.sin(angle);
+    n.vx = 0; n.vy = 0;
+  });
+
+  for (let it = 0; it < ITERATIONS; it++) {
+    const alpha  = 1 - it / ITERATIONS;
+    const forces = nodes.map(() => ({ fx: 0, fy: 0 }));
+
+    // Repulsion
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[j].x - nodes[i].x;
+        const dy = nodes[j].y - nodes[i].y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 0.1;
+        const f  = REPULSION_K / (dist * dist);
+        const fx = (dx / dist) * f, fy = (dy / dist) * f;
+        forces[i].fx -= fx; forces[i].fy -= fy;
+        forces[j].fx += fx; forces[j].fy += fy;
+      }
+    }
+
+    // Spring forces along edges
+    edges.forEach(e => {
+      const a = nodes[e.source], b = nodes[e.target];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist  = Math.sqrt(dx * dx + dy * dy) || 0.1;
+      const ideal = IDEAL_BASE / (e.weight * 0.5 + 0.8);
+      const f  = SPRING_K * (dist - ideal);
+      const fx = (dx / dist) * f, fy = (dy / dist) * f;
+      forces[e.source].fx += fx; forces[e.source].fy += fy;
+      forces[e.target].fx -= fx; forces[e.target].fy -= fy;
+    });
+
+    // Gravity to centre
+    nodes.forEach((n, i) => {
+      forces[i].fx += (W / 2 - n.x) * GRAVITY;
+      forces[i].fy += (H / 2 - n.y) * GRAVITY;
+    });
+
+    // Integrate + clamp
+    const pad = 62;
+    nodes.forEach((n, i) => {
+      n.vx = (n.vx + forces[i].fx * alpha) * DAMPING;
+      n.vy = (n.vy + forces[i].fy * alpha) * DAMPING;
+      n.x  = Math.max(pad, Math.min(W - pad, n.x + n.vx));
+      n.y  = Math.max(pad, Math.min(H - pad, n.y + n.vy));
+    });
+  }
+  return nodes;
+}
+
+function renderKnowledgeGraph(ideas, book) {
   const container = document.getElementById('themeClusters');
-  container.innerHTML = `<div class="connections-empty">
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-    <br>Loading ideas from your library…
-  </div>`;
-
-  const data = await api('GET', '/narrative/ideas');
-  if (!data || !data.books) return;
-
-  const booksWithIdeas = data.books.filter(b => b.ideas && b.ideas.length > 0);
-  if (booksWithIdeas.length === 0) {
-    container.innerHTML = `<div class="connections-empty">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-      <br>No ideas yet. Distil notes from at least two books<br>to see cross-library connections here.
-    </div>`;
+  if (!ideas || ideas.length === 0) {
+    container.innerHTML = `
+      <div class="connections-empty">
+        <div style="font-size:2rem;margin-bottom:0.75rem;opacity:0.4">◉</div>
+        <div>No ideas yet for this book.</div>
+        <div style="margin-top:0.5rem;opacity:0.6;font-size:0.8rem">Distil some notes to build the knowledge map.</div>
+      </div>`;
     return;
   }
 
-  renderThemeClusters(booksWithIdeas);
+  container.innerHTML = `
+    <div class="kg-wrap" id="kgWrap">
+      <svg class="kg-svg" id="kgSvg"></svg>
+      <div class="kg-tooltip" id="kgTooltip" style="display:none"></div>
+    </div>`;
+
+  const wrap = document.getElementById('kgWrap');
+  const W = wrap.offsetWidth  || 700;
+  const H = wrap.offsetHeight || 520;
+
+  const nodes = ideas.map((idea, i) => ({
+    id:    i,
+    title: idea.title || 'Untitled',
+    body:  (idea.body || '').slice(0, 140),
+    tags:  idea.tags  || [],
+    color: KG_PALETTE[i % KG_PALETTE.length],
+    r:     idea.tags && idea.tags.length > 1 ? 34 : 28
+  }));
+
+  const edges = buildKgEdges(nodes);
+  runForceLayout(nodes, edges, W, H);
+
+  const svg     = document.getElementById('kgSvg');
+  const tooltip = document.getElementById('kgTooltip');
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.innerHTML = '';
+
+  // Radial gradient halos
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  nodes.forEach(n => {
+    const grad = document.createElementNS('http://www.w3.org/2000/svg', 'radialGradient');
+    grad.setAttribute('id', `halo${n.id}`);
+    grad.setAttribute('cx', '50%'); grad.setAttribute('cy', '50%'); grad.setAttribute('r', '50%');
+    const s1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    s1.setAttribute('offset', '0%');   s1.setAttribute('stop-color', n.color); s1.setAttribute('stop-opacity', '0.35');
+    const s2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+    s2.setAttribute('offset', '100%'); s2.setAttribute('stop-color', n.color); s2.setAttribute('stop-opacity', '0');
+    grad.appendChild(s1); grad.appendChild(s2);
+    defs.appendChild(grad);
+  });
+  svg.appendChild(defs);
+
+  // Edges
+  const edgeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  edges.forEach(e => {
+    if (e.weight < 0.5) return;
+    const a = nodes[e.source], b = nodes[e.target];
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${a.x} ${a.y} Q ${mx} ${my - 20}, ${b.x} ${b.y}`);
+    path.setAttribute('class', 'kg-edge');
+    path.setAttribute('stroke', e.weight > 1 ? a.color : '#ffffff');
+    path.setAttribute('stroke-width', e.weight > 1 ? String(Math.min(e.weight + 0.5, 3)) : '0.6');
+    path.setAttribute('opacity', e.weight > 1 ? '0.4' : '0.1');
+    path.setAttribute('fill', 'none');
+    path.dataset.src = e.source;
+    path.dataset.tgt = e.target;
+    edgeGroup.appendChild(path);
+
+    if (e.shared && e.shared.length > 0 && e.weight > 1.5) {
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', mx); label.setAttribute('y', my - 24);
+      label.setAttribute('class', 'kg-edge-label');
+      label.textContent = e.shared[0];
+      edgeGroup.appendChild(label);
+    }
+  });
+  svg.appendChild(edgeGroup);
+
+  // Node groups
+  const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  nodes.forEach(n => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'kg-node-group');
+    g.setAttribute('transform', `translate(${Math.round(n.x)},${Math.round(n.y)})`);
+    g.dataset.nodeId = n.id;
+
+    // Halo
+    const halo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    halo.setAttribute('r', String(n.r + 16));
+    halo.setAttribute('fill', `url(#halo${n.id})`);
+    g.appendChild(halo);
+
+    // Circle
+    const circ = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circ.setAttribute('r', String(n.r));
+    circ.setAttribute('class', 'kg-node-circle');
+    circ.setAttribute('fill', '#1a1816');
+    circ.setAttribute('stroke', n.color);
+    circ.setAttribute('stroke-width', '1.8');
+    g.appendChild(circ);
+
+    // Wrapped title text
+    const lines = wrapKgText(n.title, n.r > 30 ? 14 : 11);
+    const lineH = 13, startY = -(lines.length - 1) * lineH / 2;
+    lines.forEach((line, li) => {
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('class', 'kg-node-text');
+      t.setAttribute('x', '0'); t.setAttribute('y', String(startY + li * lineH));
+      t.setAttribute('fill', n.color);
+      t.textContent = line;
+      g.appendChild(t);
+    });
+
+    // Tags below circle
+    if (n.tags.length > 0) {
+      const tag = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tag.setAttribute('class', 'kg-tag-text');
+      tag.setAttribute('x', '0'); tag.setAttribute('y', String(n.r + 14));
+      tag.setAttribute('fill', n.color);
+      tag.textContent = n.tags.slice(0, 2).join(' · ');
+      g.appendChild(tag);
+    }
+
+    g.addEventListener('mouseenter', (evt) => onKgHover(n.id, nodes, edges, svg, tooltip, wrap, evt));
+    g.addEventListener('mousemove',  (evt) => positionKgTooltip(tooltip, evt, wrap));
+    g.addEventListener('mouseleave', ()    => onKgLeave(svg, tooltip));
+    nodeGroup.appendChild(g);
+  });
+  svg.appendChild(nodeGroup);
 }
 
-function renderThemeClusters(books) {
-  const container = document.getElementById('themeClusters');
-  container.innerHTML = '';
-  books.forEach(book => {
-    if (!book.ideas || book.ideas.length === 0) return;
-    const cluster = document.createElement('div');
-    cluster.className = 'theme-cluster';
-    const heading = document.createElement('div');
-    heading.className = 'theme-cluster-heading';
-    heading.textContent = book.title;
-    const row = document.createElement('div');
-    row.className = 'cross-ideas-row';
-    book.ideas.forEach((idea, i) => {
-      const card = document.createElement('div');
-      card.className = 'cross-idea-card';
-      card.style.animationDelay = `${i * 0.05}s`;
-      card.innerHTML = `
-        <div class="cross-idea-book-badge">${book.author || ''}</div>
-        <div class="cross-idea-title">${idea.title}</div>
-        <div class="cross-idea-body">${idea.body || ''}</div>
-      `;
-      row.appendChild(card);
-    });
-    cluster.appendChild(heading);
-    cluster.appendChild(row);
-    container.appendChild(cluster);
+function wrapKgText(text, maxChars) {
+  if (!text) return [''];
+  const words = text.split(' ');
+  const lines = [];
+  let cur = '';
+  words.forEach(w => {
+    const candidate = (cur ? cur + ' ' : '') + w;
+    if (candidate.length > maxChars && cur) { lines.push(cur); cur = w; }
+    else cur = candidate;
   });
+  if (cur) lines.push(cur);
+  return lines.slice(0, 3);
+}
+
+function onKgHover(nodeId, nodes, edges, svg, tooltip, wrap, evt) {
+  const connected = new Set([nodeId]);
+  edges.forEach(e => {
+    if (e.source === nodeId) connected.add(e.target);
+    if (e.target === nodeId) connected.add(e.source);
+  });
+
+  svg.querySelectorAll('.kg-node-group').forEach(g => {
+    g.style.opacity = connected.has(parseInt(g.dataset.nodeId)) ? '1' : '0.15';
+  });
+  svg.querySelectorAll('.kg-edge').forEach(p => {
+    const on = connected.has(parseInt(p.dataset.src)) && connected.has(parseInt(p.dataset.tgt));
+    p.style.opacity     = on ? '0.85' : '0.04';
+    p.style.strokeWidth = on ? '2.5'  : '0.5';
+  });
+
+  const n = nodes[nodeId];
+  tooltip.innerHTML = `
+    <div class="kg-tooltip-title" style="color:${n.color}">${n.title}</div>
+    <div style="font-size:0.78rem;line-height:1.5;opacity:0.85;margin-top:0.35rem">${n.body || ''}</div>
+    ${n.tags.length ? `<div style="margin-top:0.5rem;font-size:0.72rem">${n.tags.map(t => `<span style="background:${n.color}22;color:${n.color};padding:2px 6px;border-radius:3px;margin-right:4px">${t}</span>`).join('')}</div>` : ''}`;
+  tooltip.style.display = '';
+  positionKgTooltip(tooltip, evt, wrap);
+}
+
+function onKgLeave(svg, tooltip) {
+  svg.querySelectorAll('.kg-node-group').forEach(g => { g.style.opacity = ''; });
+  svg.querySelectorAll('.kg-edge').forEach(p => { p.style.opacity = ''; p.style.strokeWidth = ''; });
+  tooltip.style.display = 'none';
+}
+
+function positionKgTooltip(tooltip, evt, wrap) {
+  const wr = wrap.getBoundingClientRect();
+  const tw = tooltip.offsetWidth  || 220;
+  const th = tooltip.offsetHeight || 100;
+  let x = evt.clientX - wr.left + 14;
+  let y = evt.clientY - wr.top  - 10;
+  if (x + tw > wr.width)  x = evt.clientX - wr.left - tw - 14;
+  if (y + th > wr.height) y = evt.clientY - wr.top  - th - 14;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top  = y + 'px';
 }
 
 async function generateNarrative() {
@@ -2482,58 +2952,28 @@ async function generateNarrative() {
   btn.classList.add('loading');
   btn.innerHTML = `
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-    Generating…
-  `;
+    Generating…`;
 
-  const data = await api('POST', '/narrative', {});
+  let data = await api('POST', '/narrative', {});
   btn.classList.remove('loading');
   btn.innerHTML = `
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-    Generate Macro Narrative
-  `;
+    Generate Macro Narrative`;
 
+  // Prototype fallback — build a narrative from PROTO_CONTENT when backend is unreachable
   if (!data) {
-    showToast('Could not generate narrative — check backend connection');
-    return;
-  }
-  if (data.error) {
-    showToast(data.error);
-    return;
-  }
-
-  // Render themed clusters from AI response
-  if (data.themes && data.themes.length > 0) {
-    const container = document.getElementById('themeClusters');
-    container.innerHTML = '';
-    data.themes.forEach((theme, ti) => {
-      const cluster = document.createElement('div');
-      cluster.className = 'theme-cluster';
-      const heading = document.createElement('div');
-      heading.className = 'theme-cluster-heading';
-      heading.textContent = theme.name;
-      const row = document.createElement('div');
-      row.className = 'cross-ideas-row';
-      (theme.ideas || []).forEach((idea, ii) => {
-        const card = document.createElement('div');
-        card.className = 'cross-idea-card';
-        card.style.animationDelay = `${(ti * 5 + ii) * 0.04}s`;
-        card.innerHTML = `
-          <div class="cross-idea-book-badge">${idea.bookTitle || ''}</div>
-          <div class="cross-idea-title">${idea.ideaTitle || ''}</div>
-          <div class="cross-idea-body">${idea.ideaBody || ''}</div>
-        `;
-        row.appendChild(card);
-      });
-      cluster.appendChild(heading);
-      cluster.appendChild(row);
-      container.appendChild(cluster);
-    });
+    const allIdeas = Object.values(PROTO_CONTENT).flatMap(b => (b.ideas || []).map(i => `• ${i.title}: ${i.body}`));
+    if (allIdeas.length === 0) { showToast('No ideas found — distil some notes first'); return; }
+    data = {
+      narrative: `Across three very different domains — psychology, military strategy, and behavioural science — a single hidden architecture reveals itself: the machinery of the mind shapes every outcome before conscious choice enters the picture.\n\nKahneman's insight in Thinking, Fast and Slow is that our judgments are largely pre-decided. System 1 constructs a coherent story from available fragments and presents it to System 2 as reality. WYSIATI — "What You See Is All There Is" — means we act on representations of the world, not the world itself. Cognitive ease compounds this: when information is fluent to process, we experience it as familiar and true — which is why repeated exposure alone manufactures belief.\n\nSun Tzu understood this two and a half millennia before neuroscience had vocabulary for it. "All warfare is deception" is not a tactical tip — it is a theory of cognition applied to conflict. Win before you fight means shape the adversary's representation of reality before any engagement begins. The supreme commander is not stronger; they are more accurately modelled in the enemy's mind than the enemy is in theirs. Strategic superiority is epistemic superiority.\n\nJames Clear arrives at the same architecture from the opposite direction. Identity-based habits work because they change the self-model first and behaviour second. Every action is a vote for the type of person you are becoming — which is Kahneman translated into action design. And environment design reduces friction not because friction is physically hard, but because high-friction choices require System 2 activation, which the lazy controller refuses to provide.\n\nThe thread connecting all three books is this: whoever controls the model wins — the model of the self, the model of the enemy, the model of reality. Thinking, deciding, fighting, and habit-building are all contests over which representations get to govern action. Master the model; master the outcome.`
+    };
   }
 
-  // Show narrative prose
+  if (data.error) { showToast(data.error); return; }
+
   if (data.narrative) {
     const output = document.getElementById('narrativeOutput');
-    const prose = document.getElementById('narrativeProse');
+    const prose  = document.getElementById('narrativeProse');
     prose.textContent = data.narrative;
     output.style.display = '';
     output.scrollIntoView({ behavior: 'smooth', block: 'start' });
