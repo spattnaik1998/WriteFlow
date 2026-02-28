@@ -6,10 +6,24 @@ const SERPER_URL = 'https://google.serper.dev/search';
  * Search for blog articles related to a book concept.
  * Returns an array of article objects with title, link, snippet, source.
  */
-async function findBlogArticles({ bookTitle, author, conceptQuery, count = 6 }) {
-  const query = conceptQuery
-    ? `${conceptQuery} ${bookTitle} insights analysis`
-    : `${bookTitle} ${author} key ideas summary analysis blog`;
+async function findBlogArticles({ bookTitle, author, conceptQuery, ideasContext = [], count = 6 }) {
+  let query;
+  if (conceptQuery) {
+    // Caller supplied a specific concept — search for it in context of the book
+    query = `"${conceptQuery}" ${bookTitle} deep dive analysis`;
+  } else if (ideasContext.length > 0) {
+    // Build a niche query from distilled idea titles and their top tag
+    const topConcepts = ideasContext
+      .slice(0, 3)
+      .map(i => {
+        const tag = (i.tags || [])[0];
+        return tag ? `${i.title} ${tag}` : i.title;
+      })
+      .join(' OR ');
+    query = `(${topConcepts}) "${bookTitle}" blog essay analysis`;
+  } else {
+    query = `"${bookTitle}" ${author} key ideas analysis blog`;
+  }
 
   const response = await axios.post(
     SERPER_URL,
@@ -29,8 +43,9 @@ async function findBlogArticles({ bookTitle, author, conceptQuery, count = 6 }) 
 
   const organic = response.data.organic || [];
 
-  // Filter out Amazon, Goodreads, Wikipedia — want real blog content
-  const blocked = ['amazon.com', 'goodreads.com', 'wikipedia.org', 'youtube.com'];
+  // Filter out retail, reference, and video sites — want substantive blog/essay content
+  const blocked = ['amazon.com', 'goodreads.com', 'wikipedia.org', 'youtube.com',
+                   'reddit.com', 'quora.com', 'twitter.com', 'x.com'];
   const filtered = organic.filter(r => !blocked.some(b => r.link.includes(b)));
 
   return filtered.slice(0, count).map(r => ({

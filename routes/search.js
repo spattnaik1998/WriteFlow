@@ -18,11 +18,24 @@ router.post('/', async (req, res) => {
 
   if (bookErr) return res.status(404).json({ error: 'Book not found' });
 
+  // When no concept_query is supplied, pull distilled ideas from DB and use
+  // their titles + tags to build a niche search query
+  let ideasContext = [];
+  if (!concept_query) {
+    const { data: ideas } = await supabase
+      .from('ideas')
+      .select('title, tags')
+      .eq('book_id', book_id)
+      .limit(5);
+    ideasContext = ideas || [];
+  }
+
   try {
     const articles = await findBlogArticles({
-      bookTitle: book.title,
-      author:    book.author,
+      bookTitle:    book.title,
+      author:       book.author,
       conceptQuery: concept_query || null,
+      ideasContext,
       count: 6
     });
 

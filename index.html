@@ -468,6 +468,7 @@ body::after {
 
 .action-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 9px;
   margin-top: 13px;
 }
@@ -1142,6 +1143,173 @@ body::after {
 }
 .btn-ghost:hover { color: var(--text-1); border-color: var(--border-hi); }
 
+/* Tweet list inside modal */
+.tweet-list { display: flex; flex-direction: column; gap: 10px; }
+.tweet-item {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-size: 13.5px;
+  color: var(--text-1);
+  line-height: 1.6;
+  position: relative;
+  transition: border-color var(--ease);
+}
+.tweet-item:hover { border-color: var(--border-hi); }
+.tweet-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.tweet-char { font-size: 11px; color: var(--text-4); }
+.tweet-char.warn { color: #e88; }
+.tweet-copy {
+  font-size: 11px;
+  padding: 4px 10px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-3);
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: var(--ease);
+}
+.tweet-copy:hover { border-color: var(--amber-dk); color: var(--amber); }
+.tweet-copy.copied { color: var(--green-ok); border-color: var(--green-ok); }
+.tweet-loading {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--text-3);
+  font-size: 13px;
+}
+.tweet-spinner {
+  width: 22px; height: 22px;
+  border: 2px solid var(--border-hi);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  margin: 0 auto 12px;
+}
+
+/* Thread viewer modal */
+.thread-modal { width: 560px !important; }
+.thread-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.thread-copy-all {
+  flex-shrink: 0;
+  margin-top: 4px;
+  padding: 7px 14px;
+  background: var(--amber-glow);
+  border: 1px solid var(--amber-dk);
+  border-radius: 6px;
+  color: var(--amber);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--ease);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.thread-copy-all:hover { background: var(--amber-glow2); }
+.thread-copy-all.copied { color: var(--green-ok); border-color: var(--green-ok); background: rgba(74,222,128,.08); }
+
+.thread-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 58vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  padding-bottom: 4px;
+}
+
+.thread-item {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 0;
+  position: relative;
+}
+/* Vertical connector line between tweets */
+.thread-item:not(:last-child) .thread-spine::after {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 38px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+.thread-spine {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  padding-bottom: 20px;
+}
+.thread-avatar {
+  width: 32px;
+  height: 32px;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border-hi);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.thread-avatar.hook {
+  background: var(--amber-glow2);
+  border-color: var(--amber-dk);
+  color: var(--amber);
+}
+.thread-avatar.landing {
+  background: rgba(74,222,128,.08);
+  border-color: rgba(74,222,128,.4);
+  color: var(--green-ok);
+}
+
+.thread-body {
+  flex: 1;
+  padding-bottom: 20px;
+}
+.thread-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 5px;
+}
+.thread-label.land { color: var(--green-ok); }
+.thread-text {
+  font-size: 13.5px;
+  color: var(--text-1);
+  line-height: 1.65;
+  margin-bottom: 8px;
+  font-family: 'Lora', serif;
+}
+.thread-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.thread-char { font-size: 11px; color: var(--text-4); }
+.thread-char.warn { color: #e88; }
+
 /* Success toast */
 .toast {
   position: fixed;
@@ -1455,6 +1623,14 @@ body::after {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             Find Articles
           </button>
+          <button class="btn-sec" id="tweetBtn" onclick="openTweetModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.7 5.5 4.3 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
+            Tweet Ideas
+          </button>
+          <button class="btn-sec" id="threadBtn" onclick="openThreadModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            Build Thread
+          </button>
         </div>
 
         <div class="accordion-label">Chapter Notes</div>
@@ -1744,6 +1920,38 @@ body::after {
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn-amber" style="flex:0;padding:9px 20px" onclick="addBook()">Add Book</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tweet Modal -->
+<div class="modal-overlay" id="tweetModalOverlay" onclick="outsideTweetClose(event)">
+  <div class="modal" style="width:520px">
+    <div class="modal-title">Tweet These Ideas</div>
+    <div class="modal-sub" id="tweetModalSub">Generating tweet-ready insights from your notes…</div>
+    <div id="tweetList" class="tweet-list"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeTweetModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Thread Modal -->
+<div class="modal-overlay" id="threadModalOverlay" onclick="outsideThreadClose(event)">
+  <div class="modal thread-modal">
+    <div class="thread-modal-header">
+      <div>
+        <div class="modal-title">Twitter Thread</div>
+        <div class="modal-sub" id="threadModalSub">Weaving your thread…</div>
+      </div>
+      <button class="thread-copy-all" id="threadCopyAll" onclick="copyWholeThread()" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy All
+      </button>
+    </div>
+    <div id="threadList" class="thread-list"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeThreadModal()">Close</button>
     </div>
   </div>
 </div>
@@ -2265,6 +2473,197 @@ function findBlogArticles() {
   };
 
   setTimeout(doSearch, 1900);
+}
+
+// ═══════════════════════════════════════
+// TWEET MODAL
+// ═══════════════════════════════════════
+function openTweetModal() {
+  const notes = document.getElementById('mainNotes').value.trim();
+  if (!notes) { showToast('Write some notes first'); return; }
+
+  const overlay = document.getElementById('tweetModalOverlay');
+  const list    = document.getElementById('tweetList');
+  const sub     = document.getElementById('tweetModalSub');
+
+  list.innerHTML = '<div class="tweet-loading"><div class="tweet-spinner"></div>Generating tweet-ready insights…</div>';
+  sub.textContent = 'Generating tweet-ready insights from your notes…';
+  overlay.classList.add('open');
+
+  const doGenerate = async () => {
+    let tweets = null;
+
+    if (CURRENT_BOOK_ID) {
+      const chapterName = document.getElementById('chapterSelect').value;
+      const result = await api('POST', '/tweets', {
+        book_id:      CURRENT_BOOK_ID,
+        chapter_name: chapterName,
+        content:      notes
+      });
+      tweets = result?.tweets || null;
+    }
+
+    if (!tweets) {
+      // Prototype fallback
+      tweets = [
+        `Most people think slow thinking is safe. Kahneman shows the opposite: System 2 is lazy, not careful. It mostly endorses whatever System 1 hands it without scrutiny.`,
+        `The bat-and-ball problem isn't a trick — it's a window into how you think. If your gut said 10 cents, System 1 handed you a fluent lie and System 2 signed off without checking.`,
+        `WYSIATI: What You See Is All There Is. Your brain builds the most coherent story it can from whatever's in front of it — and never notices what's missing.`
+      ];
+    }
+
+    sub.textContent = `${tweets.length} tweet${tweets.length !== 1 ? 's' : ''} ready to copy`;
+    list.innerHTML = tweets.map((t, i) => {
+      const len  = t.length;
+      const warn = len > 260 ? ' warn' : '';
+      return `
+        <div class="tweet-item">
+          <div>${escHtml(t)}</div>
+          <div class="tweet-footer">
+            <span class="tweet-char${warn}">${len}/280</span>
+            <button class="tweet-copy" onclick="copyTweet(this, ${i})">Copy</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Store tweets on the list for copying
+    list._tweets = tweets;
+  };
+
+  doGenerate();
+}
+
+function copyTweet(btn, idx) {
+  const list   = document.getElementById('tweetList');
+  const tweets = list._tweets || [];
+  const text   = tweets[idx];
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function closeTweetModal() {
+  document.getElementById('tweetModalOverlay').classList.remove('open');
+}
+
+function outsideTweetClose(e) {
+  if (e.target === document.getElementById('tweetModalOverlay')) closeTweetModal();
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════
+// THREAD MODAL
+// ═══════════════════════════════════════
+function openThreadModal() {
+  const notes = document.getElementById('mainNotes').value.trim();
+  if (!notes) { showToast('Write some notes first'); return; }
+
+  const overlay = document.getElementById('threadModalOverlay');
+  const list    = document.getElementById('threadList');
+  const sub     = document.getElementById('threadModalSub');
+  const copyAll = document.getElementById('threadCopyAll');
+
+  list.innerHTML = '<div class="tweet-loading"><div class="tweet-spinner"></div>Weaving your thread…</div>';
+  sub.textContent = 'Weaving your thread…';
+  copyAll.style.display = 'none';
+  overlay.classList.add('open');
+
+  const doGenerate = async () => {
+    let thread = null;
+
+    if (CURRENT_BOOK_ID) {
+      const chapterName = document.getElementById('chapterSelect').value;
+      const result = await api('POST', '/tweets/thread', {
+        book_id:      CURRENT_BOOK_ID,
+        chapter_name: chapterName,
+        content:      notes
+      });
+      thread = result?.thread || null;
+    }
+
+    // Prototype fallback
+    if (!thread) {
+      thread = [
+        { number: 1, text: "Kahneman discovered we have two minds running simultaneously. System 1 is fast, automatic, never off. System 2 is slow and deliberate — and here's the uncomfortable part — almost always asleep on the job." },
+        { number: 2, text: "System 2 thinks it's in charge. It isn't. System 1 runs the show and hands System 2 a polished conclusion. System 2 signs off without reading the fine print. This happens thousands of times a day, invisibly." },
+        { number: 3, text: "The bat-and-ball problem exposes this perfectly. 80% of people say '10 cents.' The answer is 5 cents. It costs nothing to check — System 1 just serves up '10 cents' with total confidence, and System 2 accepts it." },
+        { number: 4, text: "Why? WYSIATI — What You See Is All There Is. System 1 builds the most coherent story from available data. It never notes what's absent. The coherence of the story becomes its own evidence of truth." },
+        { number: 5, text: "Cognitive ease amplifies this. When information is easy to process, it feels familiar. When it feels familiar, it feels true. Repetition doesn't create truth — it creates the feeling of truth. That's the entire architecture of propaganda." },
+        { number: 6, text: "Knowing this doesn't protect you. Kahneman himself — after 40 years studying these biases — still falls for them. The machinery runs below the level where awareness operates. The answer isn't vigilance. It's system design." }
+      ];
+    }
+
+    sub.textContent = `${thread.length} tweets · read in sequence`;
+    copyAll.style.display = '';
+
+    list.innerHTML = thread.map((t, i) => {
+      const isHook    = i === 0;
+      const isLanding = i === thread.length - 1;
+      const avatarCls = isHook ? 'hook' : isLanding ? 'landing' : '';
+      const label     = isHook ? '<div class="thread-label">Hook</div>'
+                      : isLanding ? '<div class="thread-label land">Landing</div>'
+                      : '';
+      const text = t.text || '';
+      const len  = text.length;
+      const warn = len > 260 ? ' warn' : '';
+
+      return `
+        <div class="thread-item">
+          <div class="thread-spine">
+            <div class="thread-avatar ${avatarCls}">${t.number || i + 1}</div>
+          </div>
+          <div class="thread-body">
+            ${label}
+            <div class="thread-text">${escHtml(text)}</div>
+            <div class="thread-meta">
+              <span class="thread-char${warn}">${len}/280</span>
+              <button class="tweet-copy" onclick="copyThreadTweet(this, ${i})">Copy</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    list._thread = thread;
+  };
+
+  doGenerate();
+}
+
+function copyThreadTweet(btn, idx) {
+  const thread = document.getElementById('threadList')._thread || [];
+  const t      = thread[idx];
+  if (!t) return;
+  const text = `${t.number}/ ${t.text}`;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function copyWholeThread() {
+  const thread = document.getElementById('threadList')._thread || [];
+  const text   = thread.map(t => `${t.number}/ ${t.text}`).join('\n\n');
+  const btn    = document.getElementById('threadCopyAll');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy All`; btn.classList.remove('copied'); }, 2200);
+  });
+}
+
+function closeThreadModal() {
+  document.getElementById('threadModalOverlay').classList.remove('open');
+}
+
+function outsideThreadClose(e) {
+  if (e.target === document.getElementById('threadModalOverlay')) closeThreadModal();
 }
 
 // ═══════════════════════════════════════

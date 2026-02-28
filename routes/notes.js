@@ -20,11 +20,11 @@ router.get('/', async (req, res) => {
 // POST /api/notes — create or upsert a chapter note
 router.post('/', async (req, res) => {
   const { book_id, chapter_name, chapter_order, content } = req.body;
-  if (!book_id || !content) return res.status(400).json({ error: 'book_id and content required' });
+  if (!book_id || !chapter_name) return res.status(400).json({ error: 'book_id and chapter_name required' });
 
   const { data, error } = await supabase
     .from('notes')
-    .upsert([{ book_id, chapter_name, chapter_order, content }], {
+    .upsert([{ book_id, chapter_name, chapter_order, content: content ?? '' }], {
       onConflict: 'book_id,chapter_name'
     })
     .select()

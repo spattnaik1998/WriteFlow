@@ -9,6 +9,7 @@ const distillRouter   = require('./routes/distill');
 const searchRouter    = require('./routes/search');
 const chatRouter      = require('./routes/chat');
 const narrativeRouter = require('./routes/narrative');
+const tweetsRouter    = require('./routes/tweets');
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/distill',   distillRouter);
 app.use('/api/search',    searchRouter);
 app.use('/api/chat',      chatRouter);
 app.use('/api/narrative', narrativeRouter);
+app.use('/api/tweets',   tweetsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

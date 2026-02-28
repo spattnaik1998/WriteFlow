@@ -200,4 +200,93 @@ async function suggestWriting({ bookTitle, author, currentText, ideaCards }) {
   return response.choices[0].message.content.trim();
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances };
+/**
+ * Generate 3-5 tweet-ready insights from a chapter's notes.
+ * Returns an array of tweet strings (each under 280 chars).
+ */
+async function generateTweets({ bookTitle, author, chapterName, notesContent, ideas = [] }) {
+  const systemPrompt = `You are an expert at distilling book insights into high-signal, shareable tweets. Each tweet must:
+- Be under 280 characters
+- Lead with a sharp, counterintuitive or thought-provoking insight
+- Feel like it was written by a smart person, not a marketer
+- NOT use hashtags or @mentions
+- Stand completely alone as a compelling thought
+
+Return ONLY valid JSON: { "tweets": ["tweet1", "tweet2", ...] } — exactly 3 to 5 tweets.`;
+
+  const userPrompt = `Book: "${bookTitle}" by ${author}
+Chapter: ${chapterName || 'Key Insights'}
+
+Notes:
+"""
+${(notesContent || '').slice(0, 2000)}
+"""
+
+${ideas.length ? `Already distilled ideas for context:\n${ideas.map(i => `• ${i.title}: ${i.body ? i.body.slice(0, 100) : ''}`).join('\n')}` : ''}
+
+Generate 3-5 high-signal tweets derived from these notes.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.82,
+    max_tokens: 800
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return raw.tweets || [];
+}
+
+/**
+ * Transform chapter notes into a coherent, numbered Twitter thread.
+ * Each tweet in the thread builds on the previous to form a single narrative.
+ * Returns an array of { number, text } objects.
+ */
+async function generateThread({ bookTitle, author, chapterName, notesContent, ideas = [] }) {
+  const systemPrompt = `You are an expert at transforming book chapter notes into compelling, coherent Twitter threads. The thread is a single narrative — not a list of disconnected points.
+
+Rules:
+- Open with a hook tweet: the most counterintuitive or striking insight. Make the reader need to keep reading.
+- Each subsequent tweet flows naturally from the one before it — like paragraphs in an essay
+- Every tweet starts with its number: "1/" "2/" etc. Do NOT include the number in the "text" field — just the body copy
+- Each tweet body must be under 265 characters (the "X/" prefix adds ~3 chars toward the 280 limit)
+- The final tweet is a landing: a synthesis that gives the reader something to carry away
+- Write in an engaged, first-person-adjacent voice — as if a smart person is sharing a discovery
+- No hashtags, no @mentions, no emoji, no filler phrases like "Thread:" or "Let's dive in"
+
+Return ONLY valid JSON: { "thread": [{ "number": 1, "text": "..." }, ...] } — 6 to 10 tweets.`;
+
+  const userPrompt = `Book: "${bookTitle}" by ${author}
+Chapter: ${chapterName || 'Key Insights'}
+
+Notes:
+"""
+${(notesContent || '').slice(0, 2500)}
+"""
+
+${ideas.length
+    ? `Distilled ideas to weave into the thread:\n${ideas.map(i => `• ${i.title}: ${i.body ? i.body.slice(0, 130) : ''}`).join('\n')}`
+    : ''}
+
+Transform these notes into a single, flowing Twitter thread.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.78,
+    max_tokens: 1800
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return raw.thread || [];
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread };
