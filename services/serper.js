@@ -57,4 +57,35 @@ async function findBlogArticles({ bookTitle, author, conceptQuery, ideasContext 
   }));
 }
 
-module.exports = { findBlogArticles };
+/**
+ * Search Google Scholar for academic papers on a specific concept.
+ * Returns an array of { title, url, snippet, publicationInfo, domain }
+ */
+async function findScholarlyArticles({ concept, bookTitle }) {
+  // Focused query: concept name + book context + academic signal words
+  const query = bookTitle
+    ? `${concept} "${bookTitle}" research psychology OR neuroscience OR behavioral science`
+    : `${concept} research paper study psychology OR neuroscience OR behavioral science`;
+
+  const response = await axios.post(
+    'https://google.serper.dev/scholar',
+    { q: query, num: 6, gl: 'us', hl: 'en' },
+    {
+      headers: {
+        'X-API-KEY': process.env.SERPER_API_KEY,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+
+  const organic = response.data.organic || [];
+  return organic.slice(0, 5).map(r => ({
+    title:           r.title   || 'Untitled',
+    url:             r.link    || '#',
+    snippet:         r.snippet || '',
+    publicationInfo: r.publicationInfo?.summary || '',
+    domain:          r.link ? new URL(r.link).hostname.replace('www.', '') : ''
+  }));
+}
+
+module.exports = { findBlogArticles, findScholarlyArticles };

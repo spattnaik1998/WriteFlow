@@ -5,7 +5,7 @@ const { generateTweets, generateThread } = require('../services/openai');
 
 // POST /api/tweets — generate tweet-ready insights from a chapter's notes
 router.post('/', async (req, res) => {
-  const { book_id, chapter_name, content } = req.body;
+  const { book_id, chapter_name, content, brand_profile } = req.body;
   if (!book_id) return res.status(400).json({ error: 'book_id required' });
   if (!content || !content.trim()) return res.status(400).json({ error: 'content required' });
 
@@ -30,7 +30,8 @@ router.post('/', async (req, res) => {
       author:       book.author,
       chapterName:  chapter_name,
       notesContent: content,
-      ideas:        ideas || []
+      ideas:        ideas || [],
+      brandProfile: brand_profile || null
     });
     res.json({ tweets });
   } catch (err) {
@@ -41,7 +42,7 @@ router.post('/', async (req, res) => {
 
 // POST /api/tweets/thread — transform chapter notes into a cohesive Twitter thread
 router.post('/thread', async (req, res) => {
-  const { book_id, chapter_name, content } = req.body;
+  const { book_id, chapter_name, content, brand_profile } = req.body;
   if (!book_id) return res.status(400).json({ error: 'book_id required' });
   if (!content || !content.trim()) return res.status(400).json({ error: 'content required' });
 
@@ -66,7 +67,8 @@ router.post('/thread', async (req, res) => {
       author:       book.author,
       chapterName:  chapter_name,
       notesContent: content,
-      ideas:        ideas || []
+      ideas:        ideas || [],
+      brandProfile: brand_profile || null
     });
     res.json({ thread });
   } catch (err) {

@@ -201,17 +201,28 @@ async function suggestWriting({ bookTitle, author, currentText, ideaCards }) {
 }
 
 /**
+ * Shared helper: builds a brand voice block for injection into prompts.
+ */
+function buildVoiceBlock(brandProfile) {
+  if (!brandProfile) return '';
+  const { positioning, audience, tone } = brandProfile;
+  if (!positioning && !audience && !tone) return '';
+  return `\n\n### Your Brand Voice\nPositioning: ${positioning || ''}\nTarget Audience: ${audience || ''}\nTone & Style: ${tone || ''}\n\nWrite in a voice consistent with this brand profile.\n`;
+}
+
+/**
  * Generate 3-5 tweet-ready insights from a chapter's notes.
  * Returns an array of tweet strings (each under 280 chars).
  */
-async function generateTweets({ bookTitle, author, chapterName, notesContent, ideas = [] }) {
+async function generateTweets({ bookTitle, author, chapterName, notesContent, ideas = [], brandProfile = null }) {
+  const voiceBlock = buildVoiceBlock(brandProfile);
   const systemPrompt = `You are an expert at distilling book insights into high-signal, shareable tweets. Each tweet must:
 - Be under 280 characters
 - Lead with a sharp, counterintuitive or thought-provoking insight
 - Feel like it was written by a smart person, not a marketer
 - NOT use hashtags or @mentions
 - Stand completely alone as a compelling thought
-
+${voiceBlock}
 Return ONLY valid JSON: { "tweets": ["tweet1", "tweet2", ...] } — exactly 3 to 5 tweets.`;
 
   const userPrompt = `Book: "${bookTitle}" by ${author}
@@ -246,7 +257,8 @@ Generate 3-5 high-signal tweets derived from these notes.`;
  * Each tweet in the thread builds on the previous to form a single narrative.
  * Returns an array of { number, text } objects.
  */
-async function generateThread({ bookTitle, author, chapterName, notesContent, ideas = [] }) {
+async function generateThread({ bookTitle, author, chapterName, notesContent, ideas = [], brandProfile = null }) {
+  const voiceBlock = buildVoiceBlock(brandProfile);
   const systemPrompt = `You are an expert at transforming book chapter notes into compelling, coherent Twitter threads. The thread is a single narrative — not a list of disconnected points.
 
 Rules:
@@ -257,7 +269,7 @@ Rules:
 - The final tweet is a landing: a synthesis that gives the reader something to carry away
 - Write in an engaged, first-person-adjacent voice — as if a smart person is sharing a discovery
 - No hashtags, no @mentions, no emoji, no filler phrases like "Thread:" or "Let's dive in"
-
+${voiceBlock}
 Return ONLY valid JSON: { "thread": [{ "number": 1, "text": "..." }, ...] } — 6 to 10 tweets.`;
 
   const userPrompt = `Book: "${bookTitle}" by ${author}
@@ -289,4 +301,142 @@ Transform these notes into a single, flowing Twitter thread.`;
   return raw.thread || [];
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread };
+/**
+ * Generate three LinkedIn post format variants from chapter notes.
+ * Returns { insight, listicle, story } — each a string.
+ */
+async function generateLinkedInPosts({ bookTitle, author, chapterName, notesContent, ideas = [], brandProfile = null }) {
+  const voiceBlock = buildVoiceBlock(brandProfile);
+  const systemPrompt = `You are an expert LinkedIn content creator who turns book insights into three distinct post formats. Each post must feel authentic, not corporate.
+
+Format 1 — INSIGHT (600–900 chars): Single idea expanded into hook + depth + CTA. Dense, intellectual.
+Format 2 — LISTICLE: "X things I learned from [Book]…" — numbered, punchy, scannable.
+Format 3 — STORY (600–900 chars): Personal observation or scenario that wraps a book insight. Narrative-first.
+${voiceBlock}
+Return ONLY valid JSON: { "insight": "...", "listicle": "...", "story": "..." }`;
+
+  const userPrompt = `Book: "${bookTitle}" by ${author}
+Chapter: ${chapterName || 'Key Insights'}
+
+Notes:
+"""
+${(notesContent || '').slice(0, 2000)}
+"""
+
+${ideas.length ? `Key ideas distilled:\n${ideas.map(i => `• ${i.title}: ${i.body ? i.body.slice(0, 120) : ''}`).join('\n')}` : ''}
+
+Generate all three LinkedIn post variants.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.78,
+    max_tokens: 2000
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return {
+    insight:  raw.insight  || '',
+    listicle: raw.listicle || '',
+    story:    raw.story    || ''
+  };
+}
+
+/**
+ * Reformat a Twitter thread into a single cohesive LinkedIn long-form post.
+ * thread: [{ number, text }]
+ * Returns { post: string }
+ */
+async function repurposeThreadToLinkedIn({ thread, bookTitle, author, brandProfile = null }) {
+  const voiceBlock = buildVoiceBlock(brandProfile);
+  const threadText = (thread || []).map(t => `${t.number}/ ${t.text}`).join('\n\n');
+
+  const systemPrompt = `You are an expert at repurposing Twitter threads into cohesive LinkedIn long-form posts. Transform the thread's narrative into a single, flowing post (1500–2000 chars). The result must read as a unified essay, not a list of tweets. Preserve the intellectual depth and hook of the thread opening.
+${voiceBlock}
+Return ONLY valid JSON: { "post": "..." }`;
+
+  const userPrompt = `Book: "${bookTitle || ''}" by ${author || ''}
+
+Twitter Thread:
+${threadText}
+
+Rewrite this as a single cohesive LinkedIn post (1500–2000 chars).`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.75,
+    max_tokens: 900
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return { post: raw.post || '' };
+}
+
+/**
+ * Generate a newsletter digest from the past 7 days of distilled ideas.
+ * books: [{ title, author, ideas: [{title, body, tags}] }]
+ * topArticle: { title, url, domain } | null
+ * Returns { subject_line, opening_hook, key_ideas[], article_pick, closing_thought }
+ */
+async function generateDigest({ books, topArticle, brandProfile = null }) {
+  const voiceBlock = buildVoiceBlock(brandProfile);
+  const booksText = books.map(b =>
+    `### ${b.title} by ${b.author}\n` +
+    (b.ideas || []).map(i => `- **${i.title}**: ${(i.body || '').slice(0, 200)}`).join('\n')
+  ).join('\n\n');
+
+  const articleText = topArticle
+    ? `Top article this week: "${topArticle.title}" from ${topArticle.domain} (${topArticle.url})`
+    : 'No saved articles this week.';
+
+  const systemPrompt = `You are a newsletter writer helping a voracious reader share their week's intellectual discoveries. Write a digest that makes the reader's subscribers feel like they're getting a private briefing from someone who out-reads everyone.
+${voiceBlock}
+Return ONLY valid JSON:
+{
+  "subject_line": "...",
+  "opening_hook": "...",
+  "key_ideas": [{ "book": "...", "title": "...", "insight": "..." }],
+  "article_pick": "...",
+  "closing_thought": "..."
+}
+key_ideas: 3–5 items. Each insight: 1–2 punchy sentences. article_pick: 1–2 sentences on why the article matters.`;
+
+  const userPrompt = `Ideas from this week's reading:
+
+${booksText}
+
+${articleText}
+
+Generate the weekly newsletter digest.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.80,
+    max_tokens: 2000
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return {
+    subject_line:    raw.subject_line    || '',
+    opening_hook:    raw.opening_hook    || '',
+    key_ideas:       raw.key_ideas       || [],
+    article_pick:    raw.article_pick    || '',
+    closing_thought: raw.closing_thought || ''
+  };
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest };

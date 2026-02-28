@@ -1526,6 +1526,95 @@ body::after {
   border-color: var(--amber-dk);
   color: var(--amber);
 }
+
+/* ═══════════════════════════════════════
+   BRAND ENGINE — new styles
+═══════════════════════════════════════ */
+.btn-settings {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-4);
+  padding: 5px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--ease);
+  flex-shrink: 0;
+}
+.btn-settings:hover { color: var(--amber); background: var(--amber-glow); }
+
+/* LinkedIn tab nav */
+.li-tab-nav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.li-tab {
+  padding: 6px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-3);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--ease);
+}
+.li-tab:hover { border-color: var(--border-hi); color: var(--text-2); }
+.li-tab.active {
+  background: var(--amber-glow);
+  border-color: var(--amber-dk);
+  color: var(--amber);
+}
+
+.li-post-body {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  font-family: 'Lora', serif;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text-1);
+  white-space: pre-wrap;
+  min-height: 120px;
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+.li-char-count { font-size: 11px; color: var(--text-4); margin-top: 7px; text-align: right; }
+.li-char-count.warn { color: #e88; }
+
+/* Digest sections */
+.digest-section { margin-bottom: 16px; }
+.digest-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 6px;
+}
+.digest-text {
+  font-size: 13px;
+  line-height: 1.72;
+  color: var(--text-2);
+}
+.digest-idea-item {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 13px;
+  margin-bottom: 7px;
+}
+.digest-idea-book { font-size: 10px; color: var(--amber-dk); font-weight: 600; letter-spacing: .3px; margin-bottom: 3px; }
+.digest-idea-title { font-size: 12.5px; font-weight: 600; color: var(--text-1); margin-bottom: 3px; }
+.digest-idea-body { font-size: 12px; color: var(--text-3); line-height: 1.6; }
+
+.digest-modal { width: 580px !important; }
 </style>
 </head>
 <body>
@@ -1564,7 +1653,10 @@ body::after {
 
     <div class="sidebar-footer">
       <div class="sidebar-footer-avatar">R</div>
-      <div class="sidebar-footer-name">Your Reading Space</div>
+      <div class="sidebar-footer-name" style="flex:1">Your Reading Space</div>
+      <button class="btn-settings" onclick="openBrandModal()" title="Brand Voice Settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
     </div>
   </aside>
 
@@ -1630,6 +1722,10 @@ body::after {
           <button class="btn-sec" id="threadBtn" onclick="openThreadModal()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
             Build Thread
+          </button>
+          <button class="btn-sec" id="linkedinBtn" onclick="openLinkedInModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+            LinkedIn Post
           </button>
         </div>
 
@@ -1801,10 +1897,16 @@ body::after {
             <div class="connections-title">Knowledge Map</div>
             <div class="connections-sub" id="kgSubtitle">Concept connections for the current book</div>
           </div>
-          <button class="btn-amber" id="narrativeBtn" onclick="generateNarrative()" style="flex:0;padding:9px 14px;font-size:12px">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            Generate Macro Narrative
-          </button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-sec" onclick="openDigestModal()" style="font-size:12px;padding:8px 12px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              This Week's Digest
+            </button>
+            <button class="btn-amber" id="narrativeBtn" onclick="generateNarrative()" style="flex:0;padding:9px 14px;font-size:12px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Generate Macro Narrative
+            </button>
+          </div>
         </div>
         <div id="themeClusters"></div>
         <div id="narrativeOutput" style="display:none">
@@ -1952,6 +2054,97 @@ body::after {
     <div id="threadList" class="thread-list"></div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeThreadModal()">Close</button>
+      <button class="btn-sec" id="threadToLinkedinBtn" onclick="repurposeThreadToLinkedIn()" style="display:none;font-size:12px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+        → LinkedIn
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Brand Voice Modal -->
+<div class="modal-overlay" id="brandModalOverlay" onclick="outsideBrandClose(event)">
+  <div class="modal">
+    <div class="modal-title">Brand Voice Profile</div>
+    <div class="modal-sub">Define your positioning so every piece of content sounds like <em>you</em>.</div>
+    <div class="form-group">
+      <label class="form-label">Positioning Statement</label>
+      <input class="form-input" id="brandPositioning" type="text" placeholder="e.g. I help ambitious founders think more clearly by distilling the world's best ideas">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Target Audience</label>
+      <input class="form-input" id="brandAudience" type="text" placeholder="e.g. Founders, operators, and knowledge workers who want an edge">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tone &amp; Style</label>
+      <textarea class="form-ta" id="brandTone" placeholder="e.g. Intellectual but accessible. Direct, never preachy. Curious, not arrogant. Think Naval meets Paul Graham."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeBrandModal()">Cancel</button>
+      <button class="btn-amber" style="flex:0;padding:9px 20px" onclick="saveBrandProfile()">Save Profile</button>
+    </div>
+  </div>
+</div>
+
+<!-- LinkedIn Post Modal -->
+<div class="modal-overlay" id="linkedinModalOverlay" onclick="outsideLinkedInClose(event)">
+  <div class="modal" style="width:560px">
+    <div class="modal-title">LinkedIn Post</div>
+    <div class="modal-sub" id="linkedinModalSub">Generating three format variants…</div>
+    <div id="linkedinLoading" class="tweet-loading" style="display:none"><div class="tweet-spinner"></div>Crafting your LinkedIn posts…</div>
+    <div id="linkedinContent" style="display:none">
+      <div class="li-tab-nav">
+        <button class="li-tab active" onclick="switchLiTab('insight')">Insight</button>
+        <button class="li-tab" onclick="switchLiTab('listicle')">Listicle</button>
+        <button class="li-tab" onclick="switchLiTab('story')">Story</button>
+      </div>
+      <div class="li-post-body" id="liPostBody"></div>
+      <div class="li-char-count" id="liCharCount"></div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn-ghost" onclick="closeLinkedInModal()">Close</button>
+      <button class="btn-sec" id="liCopyBtn" onclick="copyLinkedInPost()" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy Post
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Weekly Digest Modal -->
+<div class="modal-overlay" id="digestModalOverlay" onclick="outsideDigestClose(event)">
+  <div class="modal digest-modal">
+    <div class="modal-title">This Week's Digest</div>
+    <div class="modal-sub" id="digestModalSub">Aggregating your week's reading…</div>
+    <div id="digestLoading" class="tweet-loading" style="display:none"><div class="tweet-spinner"></div>Distilling your week…</div>
+    <div id="digestContent" style="display:none;max-height:60vh;overflow-y:auto;padding-right:4px">
+      <div class="digest-section">
+        <div class="digest-section-label">Subject Line</div>
+        <div class="digest-text" id="digestSubject" style="font-weight:600;color:var(--text-1)"></div>
+      </div>
+      <div class="digest-section">
+        <div class="digest-section-label">Opening Hook</div>
+        <div class="digest-text" id="digestHook"></div>
+      </div>
+      <div class="digest-section">
+        <div class="digest-section-label">Key Ideas This Week</div>
+        <div id="digestIdeas"></div>
+      </div>
+      <div class="digest-section" id="digestArticleSection">
+        <div class="digest-section-label">Article Pick</div>
+        <div class="digest-text" id="digestArticle"></div>
+      </div>
+      <div class="digest-section">
+        <div class="digest-section-label">Closing Thought</div>
+        <div class="digest-text" id="digestClosing"></div>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn-ghost" onclick="closeDigestModal()">Close</button>
+      <button class="btn-sec" id="digestCopyBtn" onclick="copyDigest()" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy for Newsletter
+      </button>
     </div>
   </div>
 </div>
@@ -2496,9 +2689,10 @@ function openTweetModal() {
     if (CURRENT_BOOK_ID) {
       const chapterName = document.getElementById('chapterSelect').value;
       const result = await api('POST', '/tweets', {
-        book_id:      CURRENT_BOOK_ID,
-        chapter_name: chapterName,
-        content:      notes
+        book_id:       CURRENT_BOOK_ID,
+        chapter_name:  chapterName,
+        content:       notes,
+        brand_profile: BRAND_PROFILE
       });
       tweets = result?.tweets || null;
     }
@@ -2572,6 +2766,7 @@ function openThreadModal() {
   list.innerHTML = '<div class="tweet-loading"><div class="tweet-spinner"></div>Weaving your thread…</div>';
   sub.textContent = 'Weaving your thread…';
   copyAll.style.display = 'none';
+  document.getElementById('threadToLinkedinBtn').style.display = 'none';
   overlay.classList.add('open');
 
   const doGenerate = async () => {
@@ -2580,9 +2775,10 @@ function openThreadModal() {
     if (CURRENT_BOOK_ID) {
       const chapterName = document.getElementById('chapterSelect').value;
       const result = await api('POST', '/tweets/thread', {
-        book_id:      CURRENT_BOOK_ID,
-        chapter_name: chapterName,
-        content:      notes
+        book_id:       CURRENT_BOOK_ID,
+        chapter_name:  chapterName,
+        content:       notes,
+        brand_profile: BRAND_PROFILE
       });
       thread = result?.thread || null;
     }
@@ -2630,6 +2826,9 @@ function openThreadModal() {
     }).join('');
 
     list._thread = thread;
+
+    // Show → LinkedIn repurpose button
+    document.getElementById('threadToLinkedinBtn').style.display = '';
   };
 
   doGenerate();
@@ -2669,8 +2868,46 @@ function outsideThreadClose(e) {
 // ═══════════════════════════════════════
 // IDEA EXPLORE
 // ═══════════════════════════════════════
-function exploreIdea(concept) {
-  addAI(`Let's go deep on <em>${concept}</em>. What's the connection you're trying to make? I can pull threads from your other notes, or we can stress-test the idea against what you've read so far.`);
+async function exploreIdea(concept) {
+  // Immediately acknowledge so the UI feels snappy
+  addAI(`Pulling up the research on <em>${concept}</em>…`);
+
+  let articles = null;
+  if (CURRENT_BOOK_ID) {
+    articles = await api('GET', `/search/scholarly?concept=${encodeURIComponent(concept)}&book_id=${CURRENT_BOOK_ID}`);
+  }
+
+  if (!articles || !Array.isArray(articles) || articles.length === 0) {
+    // Prototype fallback — link to a real Google Scholar search so the user
+    // always gets somewhere useful even without a backend
+    const schUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(concept)}`;
+    addAI(
+      `I couldn't fetch live papers right now, but ` +
+      `<a href="${schUrl}" target="_blank" style="color:var(--amber-lt);text-decoration:underline">search Google Scholar for "${concept}"</a> ` +
+      `to find the primary research. For most ideas in your notes, the Kahneman & Tversky papers from the 1970s–80s are the bedrock — highly worth tracking down.`
+    );
+    return;
+  }
+
+  const cardsHtml = articles.map(a => {
+    const pub = a.publicationInfo ? `<div style="font-size:10px;color:var(--amber-dk);margin-top:2px">${escHtml(a.publicationInfo)}</div>` : '';
+    const snip = a.snippet
+      ? `<div style="font-size:10.5px;color:var(--text-4);line-height:1.5;margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${escHtml(a.snippet)}</div>`
+      : '';
+    return (
+      `<a href="${a.url}" target="_blank" rel="noopener" ` +
+      `style="display:block;margin-top:8px;padding:9px 11px;background:var(--bg-base);border:1px solid var(--border);border-radius:7px;text-decoration:none" ` +
+      `onmouseover="this.style.borderColor='var(--amber-dk)'" onmouseout="this.style.borderColor='var(--border)'">` +
+      `<div style="font-size:11.5px;font-weight:500;color:var(--text-1);line-height:1.35">${escHtml(a.title)}</div>` +
+      pub + snip +
+      `</a>`
+    );
+  }).join('');
+
+  addAI(
+    `Here are ${articles.length} research papers on <em>${concept}</em> worth reading:` +
+    `<div style="margin-top:4px">${cardsHtml}</div>`
+  );
 }
 
 // ═══════════════════════════════════════
@@ -2868,7 +3105,12 @@ function showToast(msg) {
 // KEYBOARD SHORTCUTS
 // ═══════════════════════════════════════
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') {
+    closeModal();
+    closeBrandModal();
+    closeLinkedInModal();
+    closeDigestModal();
+  }
   if (e.metaKey || e.ctrlKey) {
     if (e.key === '1') { e.preventDefault(); switchTab('notes'); }
     if (e.key === '2') { e.preventDefault(); switchTab('ideas'); }
@@ -2884,6 +3126,7 @@ document.addEventListener('keydown', e => {
 const API_BASE = '/api';
 let CURRENT_BOOK_ID = null; // set after first real book load
 let conversationHistory = [];
+let BRAND_PROFILE = null; // loaded on init from /api/profile
 
 async function api(method, path, body) {
   try {
@@ -3386,11 +3629,295 @@ fetch('/api/health').then(r => {
   if (r.ok) {
     window.sendMsg = sendMsgReal;
     loadBooksFromAPI();
+    loadBrandProfile();
     console.log('[WriteFlow] Backend connected ✓');
   }
 }).catch(() => {
   console.log('[WriteFlow] Running in prototype mode (no backend)');
 });
+
+// ═══════════════════════════════════════
+// BRAND VOICE PROFILE
+// ═══════════════════════════════════════
+async function loadBrandProfile() {
+  const data = await api('GET', '/profile');
+  if (data && (data.positioning || data.audience || data.tone)) {
+    BRAND_PROFILE = data;
+    console.log('[WriteFlow] Brand profile loaded ✓');
+  }
+}
+
+function openBrandModal() {
+  document.getElementById('brandPositioning').value = BRAND_PROFILE?.positioning || '';
+  document.getElementById('brandAudience').value    = BRAND_PROFILE?.audience    || '';
+  document.getElementById('brandTone').value        = BRAND_PROFILE?.tone        || '';
+  document.getElementById('brandModalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('brandPositioning').focus(), 280);
+}
+
+function closeBrandModal() {
+  document.getElementById('brandModalOverlay').classList.remove('open');
+}
+
+function outsideBrandClose(e) {
+  if (e.target === document.getElementById('brandModalOverlay')) closeBrandModal();
+}
+
+async function saveBrandProfile() {
+  const positioning = document.getElementById('brandPositioning').value.trim();
+  const audience    = document.getElementById('brandAudience').value.trim();
+  const tone        = document.getElementById('brandTone').value.trim();
+
+  BRAND_PROFILE = { positioning, audience, tone };
+
+  if (CURRENT_BOOK_ID || true) {
+    const saved = await api('PUT', '/profile', { positioning, audience, tone });
+    if (saved && !saved.error) {
+      showToast('Brand voice saved');
+    }
+  }
+  closeBrandModal();
+  if (!CURRENT_BOOK_ID) showToast('Brand voice saved locally');
+}
+
+// ═══════════════════════════════════════
+// LINKEDIN POST MODAL
+// ═══════════════════════════════════════
+let _liPosts = { insight: '', listicle: '', story: '' };
+let _liActiveTab = 'insight';
+
+function openLinkedInModal() {
+  const notes = document.getElementById('mainNotes').value.trim();
+  if (!notes) { showToast('Write some notes first'); return; }
+
+  const overlay = document.getElementById('linkedinModalOverlay');
+  const loading = document.getElementById('linkedinLoading');
+  const content = document.getElementById('linkedinContent');
+  const sub     = document.getElementById('linkedinModalSub');
+  const copyBtn = document.getElementById('liCopyBtn');
+
+  loading.style.display = '';
+  content.style.display = 'none';
+  copyBtn.style.display = 'none';
+  sub.textContent = 'Generating three format variants…';
+  overlay.classList.add('open');
+  _liActiveTab = 'insight';
+  document.querySelectorAll('.li-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+
+  const doGenerate = async () => {
+    let posts = null;
+
+    if (CURRENT_BOOK_ID) {
+      const chapterName = document.getElementById('chapterSelect').value;
+      posts = await api('POST', '/linkedin/post', {
+        book_id:      CURRENT_BOOK_ID,
+        chapter_name: chapterName,
+        content:      notes,
+        brand_profile: BRAND_PROFILE
+      });
+    }
+
+    if (!posts || posts.error) {
+      // Prototype fallback
+      posts = {
+        insight: `Here's what I've been thinking about after reading this chapter:\n\nMost people believe they're making rational decisions. The data says otherwise.\n\nEvery time you act on "gut feeling," you're outsourcing your judgment to a mental system that evolved to keep you alive — not to make you successful in a complex knowledge economy.\n\nThe uncomfortable insight: knowing this doesn't protect you from it.\n\nI've been tracking decisions I thought were deliberate. The pattern is unsettling — most were post-hoc rationalizations of what System 1 had already decided.\n\nIf you're building something, leading a team, or trying to think more clearly: the first step is admitting you're not as rational as you think.\n\nWhat decision are you currently dressing up as "careful thinking" that's actually just a fast-thinking output?\n\n#Thinking #DecisionMaking #Learning`,
+        listicle: `5 things I learned about how we actually think (most people get this wrong):\n\n1/ Your brain runs two systems. One is fast, automatic, never off. The other is slow and deliberate — and almost always asleep.\n\n2/ System 1 doesn't know what it doesn't know. It builds a coherent story from available data and calls it reality.\n\n3/ Cognitive ease is your enemy. When information is fluent to process, it feels true. Repetition manufactures belief.\n\n4/ You cannot reason your way out of a bias you don't know you have. Most biases operate below awareness.\n\n5/ The answer isn't more willpower. It's better system design — environments that make good thinking the default, not the exception.\n\nReading Kahneman has permanently changed how I approach decisions. Required reading if you want to think more clearly.`,
+        story: `Last week I caught myself doing something embarrassing.\n\nI was in a meeting, confidently arguing for a decision based on "the data." When someone asked me to walk through the numbers, I realized I'd been working from a number I'd seen in a slide three weeks ago — a number I hadn't verified, hadn't questioned, and couldn't now remember the source of.\n\nI had built an entire position on a phantom anchor.\n\nKahneman calls this WYSIATI — What You See Is All There Is. Your mind doesn't note what's missing from its model. It uses whatever's available to construct the most coherent story possible, and then presents that story to you as reality.\n\nThe coherence feels like correctness.\n\nI'm building a habit now: before any significant decision, I ask "what am I NOT seeing?" Not because I'll always find the answer, but because asking the question forces System 2 online.\n\nWhat's the most expensive assumption you're currently not questioning?`
+      };
+    }
+
+    _liPosts = posts;
+    loading.style.display = 'none';
+    content.style.display = '';
+    copyBtn.style.display = '';
+    sub.textContent = '3 variants ready — pick your format';
+    renderLiPost('insight');
+  };
+
+  doGenerate();
+}
+
+function switchLiTab(tab) {
+  _liActiveTab = tab;
+  document.querySelectorAll('.li-tab').forEach(t => t.classList.toggle('active', t.textContent.toLowerCase() === tab));
+  renderLiPost(tab);
+}
+
+function renderLiPost(tab) {
+  const body  = document.getElementById('liPostBody');
+  const count = document.getElementById('liCharCount');
+  const text  = _liPosts[tab] || '';
+  body.textContent = text;
+  const len = text.length;
+  count.textContent = `${len} characters`;
+  count.className = `li-char-count${len > 2800 ? ' warn' : ''}`;
+  if (len > 2800) count.textContent += ' — over LinkedIn limit (3000)';
+}
+
+function copyLinkedInPost() {
+  const text = _liPosts[_liActiveTab] || '';
+  const btn  = document.getElementById('liCopyBtn');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+    setTimeout(() => {
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Post`;
+    }, 2000);
+  });
+}
+
+function closeLinkedInModal() {
+  document.getElementById('linkedinModalOverlay').classList.remove('open');
+}
+
+function outsideLinkedInClose(e) {
+  if (e.target === document.getElementById('linkedinModalOverlay')) closeLinkedInModal();
+}
+
+// ═══════════════════════════════════════
+// THREAD → LINKEDIN REPURPOSE
+// ═══════════════════════════════════════
+async function repurposeThreadToLinkedIn() {
+  const thread = document.getElementById('threadList')._thread;
+  if (!thread || !thread.length) return;
+
+  closeThreadModal();
+
+  const overlay = document.getElementById('linkedinModalOverlay');
+  const loading = document.getElementById('linkedinLoading');
+  const content = document.getElementById('linkedinContent');
+  const sub     = document.getElementById('linkedinModalSub');
+  const copyBtn = document.getElementById('liCopyBtn');
+
+  loading.style.display = '';
+  content.style.display = 'none';
+  copyBtn.style.display = 'none';
+  sub.textContent = 'Reformatting thread into LinkedIn post…';
+  overlay.classList.add('open');
+
+  let post = null;
+
+  if (CURRENT_BOOK_ID) {
+    const result = await api('POST', '/linkedin/repurpose', {
+      thread,
+      book_id:       CURRENT_BOOK_ID,
+      brand_profile: BRAND_PROFILE
+    });
+    post = result?.post || null;
+  }
+
+  if (!post) {
+    // Prototype fallback: concatenate thread into a coherent post
+    post = thread.map(t => t.text).join('\n\n');
+  }
+
+  _liPosts = { insight: post, listicle: post, story: post };
+  _liActiveTab = 'insight';
+  document.querySelectorAll('.li-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+
+  loading.style.display = 'none';
+  content.style.display = '';
+  copyBtn.style.display = '';
+  sub.textContent = 'Thread reformatted as LinkedIn post — ready to copy';
+  renderLiPost('insight');
+}
+
+// ═══════════════════════════════════════
+// WEEKLY DIGEST MODAL
+// ═══════════════════════════════════════
+let _digestData = null;
+
+function openDigestModal() {
+  const overlay = document.getElementById('digestModalOverlay');
+  const loading = document.getElementById('digestLoading');
+  const content = document.getElementById('digestContent');
+  const sub     = document.getElementById('digestModalSub');
+  const copyBtn = document.getElementById('digestCopyBtn');
+
+  loading.style.display = '';
+  content.style.display = 'none';
+  copyBtn.style.display = 'none';
+  sub.textContent = 'Aggregating your week\'s reading…';
+  overlay.classList.add('open');
+
+  const doGenerate = async () => {
+    let data = null;
+
+    if (CURRENT_BOOK_ID) {
+      data = await api('POST', '/digest', { brand_profile: BRAND_PROFILE });
+    }
+
+    if (!data || data.error) {
+      const errMsg = data?.error || null;
+      if (errMsg && errMsg.includes('No ideas found')) {
+        loading.style.display = 'none';
+        sub.textContent = errMsg;
+        return;
+      }
+      // Prototype fallback
+      data = {
+        subject_line: 'This week I read about why you\'re wrong — and other useful discoveries',
+        opening_hook: 'This week I fell into three books and emerged with a set of ideas that keep cross-referencing each other. The recurring theme: the machinery of the mind shapes outcomes before conscious choice ever enters.',
+        key_ideas: [
+          { book: 'Thinking, Fast and Slow', title: 'System 1 is always on', insight: 'Your brain\'s automatic system is making decisions before you\'re aware of them. Deliberate thinking is the exception, not the rule.' },
+          { book: 'The Art of War', title: 'Win before you fight', insight: 'Sun Tzu\'s supreme insight applies everywhere: victory is decided in preparation and positioning, not in the engagement itself.' },
+          { book: 'Atomic Habits', title: 'Identity precedes behaviour', insight: 'Don\'t try to build habits — try to become the kind of person who already has those habits. Identity change is the lever.' }
+        ],
+        article_pick: 'This Farnam Street piece on cognitive ease deserves your attention — it connects Kahneman\'s framework to practical decision-making in a way most summaries miss.',
+        closing_thought: 'The common thread across everything I read this week: the most powerful interventions happen upstream of the decision, not at the moment of choice. Design your environment. Shape your identity. Win before you fight.',
+        plain_text: ''
+      };
+      // Assemble plain text
+      const ideasText = (data.key_ideas || [])
+        .map(k => `📚 ${k.book}\n${k.title}: ${k.insight}`)
+        .join('\n\n');
+      data.plain_text = `SUBJECT: ${data.subject_line}\n\n${data.opening_hook}\n\n━━━ THIS WEEK\'S IDEAS ━━━\n\n${ideasText}\n\n━━━ CLOSING THOUGHT ━━━\n\n${data.closing_thought}`;
+    }
+
+    _digestData = data;
+
+    document.getElementById('digestSubject').textContent  = data.subject_line    || '';
+    document.getElementById('digestHook').textContent     = data.opening_hook    || '';
+    document.getElementById('digestClosing').textContent  = data.closing_thought || '';
+    document.getElementById('digestArticle').textContent  = data.article_pick    || '';
+
+    const ideasEl = document.getElementById('digestIdeas');
+    ideasEl.innerHTML = (data.key_ideas || []).map(k => `
+      <div class="digest-idea-item">
+        <div class="digest-idea-book">${escHtml(k.book || '')}</div>
+        <div class="digest-idea-title">${escHtml(k.title || '')}</div>
+        <div class="digest-idea-body">${escHtml(k.insight || '')}</div>
+      </div>`).join('');
+
+    const articleSection = document.getElementById('digestArticleSection');
+    articleSection.style.display = data.article_pick ? '' : 'none';
+
+    loading.style.display = 'none';
+    content.style.display = '';
+    copyBtn.style.display = '';
+    sub.textContent = 'Your weekly digest is ready';
+  };
+
+  doGenerate();
+}
+
+function copyDigest() {
+  if (!_digestData) return;
+  const btn = document.getElementById('digestCopyBtn');
+  navigator.clipboard.writeText(_digestData.plain_text || '').then(() => {
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+    setTimeout(() => {
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy for Newsletter`;
+    }, 2000);
+  });
+}
+
+function closeDigestModal() {
+  document.getElementById('digestModalOverlay').classList.remove('open');
+}
+
+function outsideDigestClose(e) {
+  if (e.target === document.getElementById('digestModalOverlay')) closeDigestModal();
+}
 
 // ═══════════════════════════════════════
 // START

@@ -97,6 +97,18 @@ create trigger essays_updated_at before update on essays
 --   ADD COLUMN IF NOT EXISTS stance text DEFAULT 'neutral'
 --   CHECK (stance IN ('supporting', 'opposing', 'neutral'));
 
+-- ===== USER PROFILE (Brand Voice — single row, id='default') =====
+create table if not exists user_profile (
+  id          text primary key default 'default',
+  positioning text,
+  audience    text,
+  tone        text,
+  created_at  timestamptz default now(),
+  updated_at  timestamptz default now()
+);
+create trigger user_profile_updated_at before update on user_profile
+  for each row execute procedure set_updated_at();
+
 -- ===== ROW LEVEL SECURITY (enable when you add auth) =====
 -- alter table books        enable row level security;
 -- alter table notes        enable row level security;

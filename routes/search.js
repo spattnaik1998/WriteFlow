@@ -1,7 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const supabase = require('../services/supabase');
-const { findBlogArticles } = require('../services/serper');
+const { findBlogArticles, findScholarlyArticles } = require('../services/serper');
 const { classifyArticleStances } = require('../services/openai');
 
 // POST /api/search — find blog articles for a concept/book
@@ -71,6 +71,30 @@ router.post('/', async (req, res) => {
     res.json(articlesWithStance);
   } catch (err) {
     console.error('Serper search error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/search/scholarly?concept=...&book_id=... — search Google Scholar for research papers
+router.get('/scholarly', async (req, res) => {
+  const { concept, book_id } = req.query;
+  if (!concept) return res.status(400).json({ error: 'concept required' });
+
+  let bookTitle = '';
+  if (book_id) {
+    const { data: book } = await supabase
+      .from('books')
+      .select('title')
+      .eq('id', book_id)
+      .single();
+    if (book) bookTitle = book.title;
+  }
+
+  try {
+    const articles = await findScholarlyArticles({ concept, bookTitle });
+    res.json(articles);
+  } catch (err) {
+    console.error('Scholar search error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
