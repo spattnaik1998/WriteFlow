@@ -6,33 +6,33 @@
 <title>WriteFlow — Idea Distillation Engine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
 /* ===== RESET & ROOT ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg-base:        #0f0e0d;
-  --bg-sidebar:     #181512;
-  --bg-center:      #111009;
-  --bg-right:       #181512;
-  --bg-card:        #1e1b16;
-  --bg-card-hover:  #232019;
-  --bg-input:       #141210;
-  --border:         #2b2620;
-  --border-hi:      #38322a;
-  --amber:          #c9a84c;
-  --amber-lt:       #e0c06a;
-  --amber-dk:       #a0832e;
-  --amber-glow:     rgba(201,168,76,0.10);
-  --amber-glow2:    rgba(201,168,76,0.20);
-  --amber-glow3:    rgba(201,168,76,0.35);
-  --text-1:         #ede4d2;
-  --text-2:         #b9ad9c;
-  --text-3:         #8a7f6e;
-  --text-4:         #574f42;
-  --green-ok:       #4ade80;
+  --bg-base:        #f1f5f9;
+  --bg-sidebar:     #f8fafc;
+  --bg-center:      #ffffff;
+  --bg-right:       #f8fafc;
+  --bg-card:        #ffffff;
+  --bg-card-hover:  #f1f5f9;
+  --bg-input:       #ffffff;
+  --border:         #e2e8f0;
+  --border-hi:      #cbd5e1;
+  --amber:          #2563eb;
+  --amber-lt:       #3b82f6;
+  --amber-dk:       #1d4ed8;
+  --amber-glow:     rgba(37,99,235,0.07);
+  --amber-glow2:    rgba(37,99,235,0.12);
+  --amber-glow3:    rgba(37,99,235,0.20);
+  --text-1:         #0f172a;
+  --text-2:         #334155;
+  --text-3:         #64748b;
+  --text-4:         #94a3b8;
+  --green-ok:       #10b981;
   --sidebar-w:      280px;
   --right-w:        355px;
   --radius:         8px;
@@ -201,16 +201,16 @@ body::after {
 }
 .book-card:hover { background: var(--bg-card); border-color: var(--border); }
 .book-card.active {
-  background: var(--bg-card);
-  border-color: var(--border-hi);
-  box-shadow: 0 2px 12px rgba(0,0,0,.35), inset 0 0 0 1px var(--amber-glow);
+  background: var(--bg-card-hover);
+  border-color: var(--amber);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), inset 0 0 0 1px var(--amber-glow);
 }
 .book-card.active::before {
   content: '';
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  width: 2px;
-  background: linear-gradient(to bottom, var(--amber-lt), var(--amber-dk));
+  width: 3px;
+  background: var(--amber);
   border-radius: 2px;
 }
 
@@ -259,7 +259,7 @@ body::after {
 }
 .progress-fill {
   height: 100%;
-  background: linear-gradient(to right, var(--amber-dk), var(--amber));
+  background: linear-gradient(to right, var(--amber-dk), var(--amber-lt));
   border-radius: 1px;
   transition: width .5s ease;
 }
@@ -281,13 +281,13 @@ body::after {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--amber-dk), #6b4a1a);
+  background: linear-gradient(135deg, var(--amber-dk), var(--amber));
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-1);
+  color: #ffffff;
   flex-shrink: 0;
 }
 .sidebar-footer-name {
@@ -324,9 +324,9 @@ body::after {
   padding-bottom: 13px;
 }
 .book-bar-title {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Inter', sans-serif;
   font-size: 19px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-1);
   letter-spacing: -.3px;
   white-space: nowrap;
@@ -377,23 +377,28 @@ body::after {
 /* Tab Panes */
 .tab-content {
   flex: 1;
-  overflow: hidden;
+  display: flex;
   position: relative;
+  min-height: 0;
 }
 .tab-pane {
-  position: absolute;
-  inset: 0;
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 22px 24px 28px;
   opacity: 0;
   transform: translateY(6px);
   pointer-events: none;
   transition: opacity .22s ease, transform .22s ease;
+  position: absolute;
+  inset: 0;
 }
 .tab-pane.active {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
+  position: relative;
+  inset: auto;
 }
 
 /* ═══════════════════════════════════════
@@ -452,7 +457,7 @@ body::after {
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text-1);
-  font-family: 'Lora', serif;
+  font-family: 'Inter', sans-serif;
   font-size: 14px;
   line-height: 1.82;
   padding: 16px 18px;
@@ -473,14 +478,14 @@ body::after {
   margin-top: 13px;
 }
 
-/* Primary amber button */
+/* Primary button */
 .btn-amber {
   flex: 1;
   padding: 10px 18px;
-  background: linear-gradient(135deg, #c9a84c 0%, #a07828 100%);
+  background: var(--amber);
   border: none;
   border-radius: var(--radius);
-  color: #18130a;
+  color: #ffffff;
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 600;
@@ -490,12 +495,12 @@ body::after {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  box-shadow: 0 2px 14px rgba(201,168,76,.22), inset 0 1px 0 rgba(255,255,255,.12);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
   letter-spacing: .2px;
 }
 .btn-amber:hover {
-  background: linear-gradient(135deg, #dfc06a 0%, #c9a84c 100%);
-  box-shadow: 0 4px 22px rgba(201,168,76,.42), inset 0 1px 0 rgba(255,255,255,.15);
+  background: var(--amber-lt);
+  box-shadow: 0 4px 8px rgba(37,99,235,0.2);
   transform: translateY(-1px);
 }
 .btn-amber:active { transform: translateY(0); }
@@ -505,8 +510,8 @@ body::after {
   cursor: wait;
 }
 @keyframes amberPulse {
-  0%,100% { box-shadow: 0 2px 14px rgba(201,168,76,.22); }
-  50%      { box-shadow: 0 4px 28px rgba(201,168,76,.55); }
+  0%,100% { box-shadow: 0 1px 3px rgba(37,99,235,0.15); }
+  50%      { box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
 }
 @keyframes spin {
   from { transform: rotate(0deg); }
@@ -639,6 +644,7 @@ body::after {
   margin-bottom: 14px;
   transition: border-color var(--ease), box-shadow var(--ease), transform var(--ease);
   animation: cardReveal .5s ease both;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
 }
 .idea-card:nth-child(1) { animation-delay: 0s; }
 .idea-card:nth-child(2) { animation-delay: .07s; }
@@ -650,7 +656,7 @@ body::after {
 }
 .idea-card:hover {
   border-color: var(--border-hi);
-  box-shadow: 0 5px 20px rgba(0,0,0,.35);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
   transform: translateY(-2px);
 }
 
@@ -691,6 +697,9 @@ body::after {
   border-radius: 4px;
   color: var(--amber-dk);
   letter-spacing: .3px;
+  background: #eff6ff;
+  border-color: #dbeafe;
+  color: #1d4ed8;
 }
 .idea-explore {
   background: none;
@@ -710,6 +719,634 @@ body::after {
   border-color: var(--amber-dk);
   color: var(--amber);
   background: var(--amber-glow);
+}
+
+/* ═══════════════════════════════════════
+   CONTRADICTIONS SECTION
+═══════════════════════════════════════ */
+.contradictions-section {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.contradictions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+
+.btn-sm {
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+#contradictionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.contradiction-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  transition: border-color var(--ease), box-shadow var(--ease);
+  animation: cardReveal .5s ease both;
+}
+
+.contradiction-card:hover {
+  border-color: var(--border-hi);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.contradiction-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.contradiction-left {
+  flex: 1;
+}
+
+.contradiction-type {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 4px;
+}
+
+.contradiction-idea-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--amber);
+  text-decoration: none;
+}
+
+.contradiction-idea-link:hover {
+  text-decoration: underline;
+}
+
+.severity-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #ffffff;
+  min-width: 40px;
+  text-align: center;
+}
+
+.severity-high {
+  background: #dc2626;
+}
+
+.severity-medium {
+  background: #d97706;
+}
+
+.severity-low {
+  background: #eab308;
+  color: #000;
+}
+
+.contradiction-body {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+  margin-bottom: 10px;
+}
+
+.contradiction-middle {
+  font-size: 11px;
+  color: var(--text-4);
+  text-align: center;
+  margin: 8px 0;
+  font-weight: 500;
+}
+
+.contradiction-resolution {
+  background: var(--amber-glow);
+  border: 1px solid var(--amber-glow2);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.resolution-option {
+  margin-bottom: 8px;
+}
+
+.resolution-option:last-child {
+  margin-bottom: 0;
+}
+
+.resolution-label {
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.contradiction-footer {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.contradiction-status-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-3);
+  cursor: pointer;
+  transition: var(--ease);
+}
+
+.contradiction-status-btn:hover {
+  border-color: var(--border-hi);
+  color: var(--text-1);
+}
+
+.contradiction-status-btn.active {
+  background: var(--amber-glow);
+  border-color: var(--amber-glow2);
+  color: var(--amber-dk);
+}
+
+/* ═══════════════════════════════════════
+   ARGUMENTS TAB
+═══════════════════════════════════════ */
+
+.arguments-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.arguments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.arguments-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.argument-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: var(--ease);
+}
+
+.argument-item:hover {
+  border-color: var(--amber-lt);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.argument-header {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, var(--bg-card), var(--amber-glow));
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: var(--ease);
+}
+
+.argument-header:hover {
+  background: linear-gradient(135deg, var(--bg-card-hover), var(--amber-glow2));
+}
+
+.argument-header.open {
+  background: linear-gradient(135deg, var(--amber-glow2), var(--amber-glow3));
+  border-bottom-color: var(--amber-lt);
+}
+
+.argument-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  flex: 1;
+  line-height: 1.4;
+}
+
+.argument-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--text-3);
+  flex-shrink: 0;
+  margin-left: 10px;
+  transition: transform 0.22s ease;
+}
+
+.argument-header.open .argument-chevron {
+  transform: rotate(180deg);
+}
+
+.argument-body {
+  display: none;
+  padding: 16px;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.6;
+  border-top: 1px solid var(--border);
+}
+
+.argument-body.open {
+  display: block;
+}
+
+/* Premises section */
+.argument-premises {
+  margin-bottom: 16px;
+}
+
+.argument-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-3);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.premise-item {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-base);
+  border-left: 3px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.premise-item.foundational {
+  border-left-color: var(--amber);
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.premise-item.supporting {
+  border-left-color: var(--amber-lt);
+  background: rgba(59, 130, 246, 0.04);
+}
+
+.premise-item.contextual {
+  border-left-color: var(--text-4);
+  background: rgba(148, 163, 184, 0.02);
+}
+
+.premise-strength {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--amber-dk);
+}
+
+/* Conclusions section */
+.argument-conclusions {
+  margin-bottom: 16px;
+}
+
+.conclusion-item {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-base);
+  border-left: 3px solid var(--green-ok);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.certainty-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--green-ok);
+}
+
+/* Logical gaps section */
+.argument-gaps {
+  margin-bottom: 16px;
+}
+
+.gap-item {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-base);
+  border-left: 3px solid #f59e0b;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.gap-type {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.severity-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 3px;
+  background: #f59e0b;
+  border-radius: 2px;
+  margin-left: 6px;
+  opacity: 0.5;
+}
+
+.severity-indicator.high { opacity: 1; }
+.severity-indicator.critical { opacity: 1; background: #dc2626; }
+
+/* Counter-arguments section */
+.argument-counter {
+  margin-bottom: 0;
+}
+
+.counter-item {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--bg-base);
+  border-left: 3px solid #ef4444;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.counter-strength {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+/* Metadata footer */
+.argument-metadata {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-4);
+  flex-wrap: wrap;
+}
+
+.metadata-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.metadata-item strong {
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════
+   CONCEPTS TAB
+═══════════════════════════════════════ */
+.concepts-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.concepts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.concepts-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.concept-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: var(--ease);
+}
+
+.concept-card:hover {
+  border-color: var(--amber-lt);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.concept-header {
+  padding: 14px 16px;
+  background: linear-gradient(135deg, var(--bg-card), var(--amber-glow));
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: var(--ease);
+}
+
+.concept-header:hover {
+  background: linear-gradient(135deg, var(--bg-card-hover), var(--amber-glow2));
+}
+
+.concept-header.open {
+  background: linear-gradient(135deg, var(--amber-glow2), var(--amber-glow3));
+  border-bottom-color: var(--amber-lt);
+}
+
+.concept-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  flex: 1;
+}
+
+.concept-centrality {
+  font-size: 11px;
+  color: var(--text-4);
+  margin-left: 8px;
+  padding: 2px 6px;
+  background: rgba(37, 99, 235, 0.08);
+  border-radius: 3px;
+}
+
+.concept-chevron {
+  width: 16px;
+  height: 16px;
+  color: var(--text-3);
+  margin-left: 8px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.concept-header.open .concept-chevron {
+  transform: rotate(180deg);
+}
+
+.concept-body {
+  padding: 16px;
+  display: none;
+}
+
+.concept-body.open {
+  display: block;
+}
+
+.concept-definition {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.concept-definition-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 4px;
+  display: block;
+}
+
+.concept-definition-text {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.concept-type {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--amber-dk);
+  margin-left: 6px;
+}
+
+.concept-type.primary {
+  background: rgba(37, 99, 235, 0.15);
+}
+
+.concept-type.secondary {
+  background: rgba(99, 102, 241, 0.1);
+  color: #4f46e5;
+}
+
+.concept-type.supporting {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--text-3);
+}
+
+.relationships-section {
+  margin-top: 12px;
+}
+
+.relationships-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.relationship-item {
+  font-size: 12px;
+  color: var(--text-2);
+  padding: 6px 0;
+  line-height: 1.4;
+}
+
+.relationship-type {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 1px 4px;
+  border-radius: 2px;
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--amber-dk);
+  margin-right: 4px;
+}
+
+.relationship-strength {
+  font-size: 10px;
+  color: var(--text-4);
+  margin-left: 4px;
 }
 
 /* ═══════════════════════════════════════
@@ -878,13 +1515,13 @@ body::after {
 }
 .chat-msg.user .msg-bubble {
   background: var(--amber-glow2);
-  border: 1px solid rgba(201,168,76,.25);
+  border: 1px solid var(--amber-glow3);
   border-radius: 10px 3px 10px 10px;
   align-self: flex-end;
   color: var(--text-1);
 }
 .msg-bubble em {
-  color: var(--amber-lt);
+  color: var(--amber-dk);
   font-style: normal;
   font-weight: 500;
 }
@@ -945,22 +1582,22 @@ body::after {
 .send-btn {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, var(--amber), var(--amber-dk));
+  background: var(--amber);
   border: none;
   border-radius: 8px;
-  color: #14100a;
+  color: #ffffff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: var(--ease);
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(201,168,76,.3);
+  box-shadow: 0 1px 3px rgba(37,99,235,0.2);
 }
 .send-btn:hover {
-  background: linear-gradient(135deg, var(--amber-lt), var(--amber));
+  background: var(--amber-lt);
   transform: scale(1.07);
-  box-shadow: 0 4px 14px rgba(201,168,76,.5);
+  box-shadow: 0 4px 8px rgba(37,99,235,0.3);
 }
 
 /* Blog Discoveries */
@@ -1327,7 +1964,7 @@ body::after {
   opacity: 0;
   transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
   pointer-events: none;
-  box-shadow: 0 8px 32px rgba(0,0,0,.4);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
 }
 .toast.show { transform: translateY(0); opacity: 1; }
 
@@ -1684,6 +2321,14 @@ body::after {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           Connections
         </button>
+        <button class="tab-btn" id="tabArguments" onclick="switchTab('arguments')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          Arguments
+        </button>
+        <button class="tab-btn" id="tabConcepts" onclick="switchTab('concepts')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="19" r="1"/><line x1="12" y1="13" x2="18" y2="5"/><line x1="11" y1="12" x2="5" y2="18"/></svg>
+          Concepts
+        </button>
       </nav>
     </div>
 
@@ -1710,6 +2355,10 @@ body::after {
           <button class="btn-amber" id="distillBtn" onclick="distillIdeas()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
             Distill Ideas
+          </button>
+          <button class="btn-sec" onclick="exportAllNotesPdf()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export to PDF
           </button>
           <button class="btn-sec" onclick="findBlogArticles()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1842,6 +2491,15 @@ body::after {
             </button>
           </div>
         </div>
+
+        <!-- CONTRADICTIONS SECTION -->
+        <div class="contradictions-section" id="contradictionsSection" style="display:none">
+          <div class="contradictions-header">
+            <span class="section-label">Intellectual Tensions</span>
+            <button class="btn-sec btn-sm" onclick="detectContradictions()">Detect Contradictions</button>
+          </div>
+          <div id="contradictionsList"></div>
+        </div>
       </div>
 
       <!-- WRITE TAB -->
@@ -1913,6 +2571,71 @@ body::after {
           <div class="narrative-section">
             <div class="narrative-label">Macro Narrative</div>
             <div class="narrative-prose" id="narrativeProse"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ARGUMENTS TAB -->
+      <div class="tab-pane" id="pane-arguments">
+        <div class="arguments-container">
+          <!-- Arguments header with action button -->
+          <div class="arguments-header">
+            <span class="section-label">Argument Analysis</span>
+            <button class="btn-amber btn-sm" id="reconstructBtn" onclick="reconstructArguments()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+              Reconstruct Arguments
+            </button>
+          </div>
+
+          <!-- Arguments display area -->
+          <div id="argumentsList" class="arguments-list">
+            <!-- Populated by JavaScript -->
+          </div>
+
+          <!-- Empty state -->
+          <div id="argumentsEmpty" class="empty-state">
+            <div class="empty-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+            </div>
+            <div class="empty-text">
+              <div class="empty-title">No arguments reconstructed yet</div>
+              <div class="empty-desc">Click "Reconstruct Arguments" to extract logical structures from your notes.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONCEPTS TAB -->
+      <div class="tab-pane" id="pane-concepts">
+        <div class="concepts-container">
+          <div class="concepts-header">
+            <span class="section-label">Concept Map</span>
+            <button class="btn-amber btn-sm" id="mapBtn" onclick="generateConceptMap()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="19" r="1"/><line x1="12" y1="13" x2="18" y2="5"/><line x1="11" y1="12" x2="5" y2="18"/>
+              </svg>
+              Generate Map
+            </button>
+          </div>
+
+          <div id="conceptsList" class="concepts-list">
+            <!-- Populated by JavaScript -->
+          </div>
+
+          <div id="conceptsEmpty" class="empty-state">
+            <div class="empty-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+                <circle cx="12" cy="12" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="19" r="1"/><line x1="12" y1="13" x2="18" y2="5"/><line x1="11" y1="12" x2="5" y2="18"/>
+              </svg>
+            </div>
+            <div class="empty-text">
+              <div class="empty-title">No concepts mapped yet</div>
+              <div class="empty-desc">Click "Generate Map" to extract and organize concepts from your notes.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -2417,6 +3140,18 @@ function renderBooks() {
 }
 
 function selectBook(id) {
+  // Save current chapter before switching
+  saveCurrentChapter();
+
+  // Force-flush the current chapter to API before switching
+  if (CURRENT_BOOK_ID && currentChapterId && chapterNotes[CURRENT_BOOK_ID]?.[currentChapterId] !== undefined) {
+    api('POST', '/notes', {
+      book_id: CURRENT_BOOK_ID,
+      chapter_name: currentChapterId,
+      content: chapterNotes[CURRENT_BOOK_ID][currentChapterId]
+    });
+  }
+
   CURRENT_BOOK_ID = id;
   selectedBook = id;
   const b = BOOKS.find(x => x.id === id);
@@ -2431,6 +3166,8 @@ function selectBook(id) {
   // Load this book's notes + ideas from the API
   if (CURRENT_BOOK_ID) loadBookContent(CURRENT_BOOK_ID);
   connectionsLoaded = false; // force graph refresh on next tab visit
+  argumentsLoaded = false;
+  conceptsLoaded = false;
 }
 
 async function loadBookContent(bookId) {
@@ -2496,8 +3233,16 @@ async function loadBookContent(bookId) {
         `;
         grid.appendChild(card);
       });
+
+      // Show contradictions section if >= 2 ideas
+      if (ideas.length >= 2) {
+        document.getElementById('contradictionsSection').style.display = 'block';
+        // Load saved contradictions
+        loadContradictions(bookId);
+      }
     } else {
       grid.innerHTML = `<div style="padding:24px 0;font-size:12.5px;color:var(--text-4);grid-column:1/-1">No ideas yet — write some notes and hit Distill Ideas.</div>`;
+      document.getElementById('contradictionsSection').style.display = 'none';
     }
   }
 
@@ -2516,6 +3261,8 @@ function toggleSidebar() {
 // TABS
 // ═══════════════════════════════════════
 let connectionsLoaded = false;
+let argumentsLoaded = false;
+let conceptsLoaded = false;
 function switchTab(tab) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -2525,6 +3272,14 @@ function switchTab(tab) {
   if (tab === 'connections' && !connectionsLoaded) {
     connectionsLoaded = true;
     loadCrossBookIdeas();
+  }
+  if (tab === 'arguments' && !argumentsLoaded) {
+    argumentsLoaded = true;
+    loadArgumentsForBook();
+  }
+  if (tab === 'concepts' && !conceptsLoaded) {
+    conceptsLoaded = true;
+    loadConceptMapsForBook();
   }
 }
 
@@ -2558,6 +3313,19 @@ function distillIdeas() {
       const result = await distillIdeasFromAPI(CURRENT_BOOK_ID, chapterName, rawNotes);
       if (result?.ideas?.length) {
         renderIdeasFromAPI(result.ideas);
+      }
+
+      // Trigger argument reconstruction in the background
+      if (IS_LIVE_MODE && rawNotes.trim()) {
+        fetch('/api/arguments/reconstruct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            book_id: CURRENT_BOOK_ID,
+            chapter_name: chapterName,
+            raw_notes: rawNotes
+          })
+        }).catch(err => console.warn('Background argument reconstruction failed:', err));
       }
     }
     btn.classList.remove('loading');
@@ -2598,6 +3366,136 @@ function renderIdeasFromAPI(ideas) {
     `;
     grid.appendChild(card);
   });
+}
+
+// ═══════════════════════════════════════
+// CONTRADICTIONS
+// ═══════════════════════════════════════
+async function detectContradictions() {
+  const btn = event.target;
+  const wasLoading = btn.classList.contains('loading');
+  if (wasLoading) return;
+
+  btn.classList.add('loading');
+  btn.textContent = 'Detecting...';
+
+  try {
+    const result = await api('POST', '/contradictions/detect', {
+      book_id: CURRENT_BOOK_ID
+    });
+
+    if (result && Array.isArray(result.contradictions)) {
+      renderContradictions(result.contradictions);
+      showToast(`Found ${result.contradictions.length} intellectual tension${result.contradictions.length !== 1 ? 's' : ''}`);
+    }
+  } catch (err) {
+    console.error('Contradiction detection error:', err);
+    showToast('Error detecting contradictions', 'error');
+  } finally {
+    btn.classList.remove('loading');
+    btn.textContent = 'Detect Contradictions';
+  }
+}
+
+function renderContradictions(contradictions) {
+  const section = document.getElementById('contradictionsSection');
+  const list = document.getElementById('contradictionsList');
+
+  if (!contradictions || contradictions.length === 0) {
+    list.innerHTML = '';
+    return;
+  }
+
+  list.innerHTML = contradictions.map((c, i) => `
+    <div class="contradiction-card" data-id="${c.id}" style="animation-delay: ${i * 0.05}s">
+      <div class="contradiction-header">
+        <div class="contradiction-left">
+          <div class="contradiction-type">${c.contradiction_type.replace(/_/g, ' ')}</div>
+          <div>
+            <span class="contradiction-idea-link">${c.idea_a_title || c.idea_a_id}</span>
+            <span style="color: var(--text-4)"> vs </span>
+            <span class="contradiction-idea-link">${c.idea_b_title || c.idea_b_id}</span>
+          </div>
+        </div>
+        <span class="severity-badge severity-${c.severity >= 0.7 ? 'high' : c.severity >= 0.4 ? 'medium' : 'low'}">
+          ${(c.severity * 100).toFixed(0)}%
+        </span>
+      </div>
+
+      <div class="contradiction-body">
+        ${c.description}
+      </div>
+
+      <div style="margin-top: 10px; display: none;" class="resolution-toggle-content">
+        <div class="contradiction-resolution">
+          <div style="margin-bottom: 10px; font-weight: 600; color: var(--text-1);">Resolution Options:</div>
+          ${(c.resolution_options || []).map((opt, idx) => `
+            <div class="resolution-option">
+              <div class="resolution-label">Option ${idx + 1}:</div>
+              <div>${opt.option}</div>
+              <div style="font-size: 10px; color: var(--text-4); margin-top: 3px;">Reasoning: ${opt.reasoning}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <button class="contradiction-resolution-toggle" onclick="toggleResolutions(this)" style="width: 100%; padding: 6px; margin-top: 8px; background: none; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 11px; color: var(--text-3); transition: var(--ease);">
+        View Resolutions
+      </button>
+
+      <div class="contradiction-footer">
+        <button class="contradiction-status-btn" onclick="updateContradictionStatus('${c.id}', 'unresolved', this)" ${c.status === 'unresolved' ? 'style="background: var(--amber-glow); border-color: var(--amber-glow2); color: var(--amber-dk);"' : ''}>
+          Unresolved
+        </button>
+        <button class="contradiction-status-btn" onclick="updateContradictionStatus('${c.id}', 'resolved', this)" ${c.status === 'resolved' ? 'style="background: var(--amber-glow); border-color: var(--amber-glow2); color: var(--amber-dk);"' : ''}>
+          Resolved
+        </button>
+        <button class="contradiction-status-btn" onclick="updateContradictionStatus('${c.id}', 'accepted_tension', this)" ${c.status === 'accepted_tension' ? 'style="background: var(--amber-glow); border-color: var(--amber-glow2); color: var(--amber-dk);"' : ''}>
+          Accept
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleResolutions(btn) {
+  const content = btn.parentElement.querySelector('.resolution-toggle-content');
+  content.style.display = content.style.display === 'none' ? 'block' : 'none';
+  btn.textContent = content.style.display === 'none' ? 'View Resolutions' : 'Hide Resolutions';
+}
+
+async function updateContradictionStatus(contradictionId, status, btn) {
+  try {
+    await api('PATCH', `/contradictions/${contradictionId}`, { status });
+
+    // Update UI: highlight active button
+    const card = btn.closest('.contradiction-card');
+    const buttons = card.querySelectorAll('.contradiction-status-btn');
+    buttons.forEach(b => {
+      b.style.background = '';
+      b.style.borderColor = '';
+      b.style.color = '';
+    });
+    btn.style.background = 'var(--amber-glow)';
+    btn.style.borderColor = 'var(--amber-glow2)';
+    btn.style.color = 'var(--amber-dk)';
+
+    showToast(`Status updated to ${status.replace(/_/g, ' ')}`);
+  } catch (err) {
+    console.error('Status update error:', err);
+    showToast('Error updating status', 'error');
+  }
+}
+
+async function loadContradictions(bookId) {
+  try {
+    const contradictions = await api('GET', `/contradictions?book_id=${bookId}`);
+    if (contradictions && contradictions.length > 0) {
+      renderContradictions(contradictions);
+    }
+  } catch (err) {
+    console.error('Error loading contradictions:', err);
+  }
 }
 
 // ═══════════════════════════════════════
@@ -2749,6 +3647,55 @@ function outsideTweetClose(e) {
 
 function escHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════════
+// PDF EXPORT
+// ═══════════════════════════════════════
+async function exportAllNotesPdf() {
+  if (!CURRENT_BOOK_ID) {
+    showToast('Select a book first');
+    return;
+  }
+
+  const btn = event.target.closest('button');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg> Generating...';
+  btn.disabled = true;
+
+  try {
+    const response = await fetch('/api/export/notes-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ book_id: CURRENT_BOOK_ID })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      showToast('Failed to generate PDF: ' + (error.error || 'Unknown error'));
+      return;
+    }
+
+    // Get the PDF blob
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const bookTitle = document.getElementById('barTitle')?.textContent || 'notes';
+    a.download = bookTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_notes.pdf';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    showToast('PDF downloaded successfully!');
+  } catch (error) {
+    console.error('PDF export error:', error);
+    showToast('Error generating PDF: ' + error.message);
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
 }
 
 // ═══════════════════════════════════════
@@ -3125,6 +4072,7 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════
 const API_BASE = '/api';
 let CURRENT_BOOK_ID = null; // set after first real book load
+let IS_LIVE_MODE    = false; // true when backend is connected
 let conversationHistory = [];
 let BRAND_PROFILE = null; // loaded on init from /api/profile
 
@@ -3276,10 +4224,644 @@ function toggleLibraryMode() {
 }
 
 // ═══════════════════════════════════════
+// ARGUMENTS — Argument Reconstruction
+// ═══════════════════════════════════════
+
+/**
+ * Reconstruct arguments from current notes
+ */
+async function reconstructArguments() {
+  if (!CURRENT_BOOK_ID) {
+    alert('Please select a book first');
+    return;
+  }
+
+  const chapterName = (selectedBook?.currentChapter || 'Unknown Chapter');
+  const rawNotes = document.querySelector('.notes-textarea')?.value || '';
+
+  if (!rawNotes.trim()) {
+    alert('Please enter notes to reconstruct arguments from');
+    return;
+  }
+
+  const btn = document.getElementById('reconstructBtn');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10"/></svg> Analyzing...';
+
+  try {
+    if (IS_LIVE_MODE) {
+      // Real API call
+      const response = await fetch('/api/arguments/reconstruct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book_id: CURRENT_BOOK_ID,
+          chapter_name: chapterName,
+          raw_notes: rawNotes
+        })
+      });
+
+      if (!response.ok) throw new Error('Argument reconstruction failed');
+      const data = await response.json();
+
+      if (data.argument) {
+        displayArguments([data.argument]);
+        showToast('Arguments reconstructed successfully');
+      }
+    } else {
+      // Prototype mode: use sample data
+      const sampleArgument = generatePrototypeArgument(chapterName, rawNotes);
+      displayArguments([sampleArgument]);
+      showToast('(Prototype) Sample arguments displayed');
+    }
+  } catch (err) {
+    console.error('Reconstruction error:', err);
+    showToast('Error: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+/**
+ * Load and display arguments for the current book
+ */
+async function loadArgumentsForBook() {
+  if (!CURRENT_BOOK_ID) return;
+
+  try {
+    if (IS_LIVE_MODE) {
+      const response = await fetch(`/api/arguments?book_id=${CURRENT_BOOK_ID}`);
+      if (!response.ok) return;
+      const argumentList = await response.json();
+      displayArguments(argumentList);
+    } else {
+      // Prototype: show sample data
+      displayArguments(PROTOTYPE_ARGUMENTS);
+    }
+  } catch (err) {
+    console.error('Error loading arguments:', err);
+  }
+}
+
+/**
+ * Display arguments in the Arguments tab
+ */
+function displayArguments(argumentList) {
+  const container = document.getElementById('argumentsList');
+  const emptyState = document.getElementById('argumentsEmpty');
+
+  if (!argumentList || argumentList.length === 0) {
+    container.style.display = 'none';
+    emptyState.style.display = 'flex';
+    return;
+  }
+
+  container.style.display = 'flex';
+  emptyState.style.display = 'none';
+
+  container.innerHTML = argumentList.map((arg, idx) => {
+    const premises = arg.premises || [];
+    const conclusions = arg.conclusions || [];
+    const gaps = arg.logical_gaps || [];
+    const counters = arg.counter_arguments || [];
+    const meta = arg.metadata || {};
+
+    return `
+      <div class="argument-item" data-arg-id="${arg.id || idx}">
+        <div class="argument-header" onclick="toggleArgumentItem(this)">
+          <div class="argument-title">${escapeHtml(arg.primary_claim || 'Argument ' + (idx + 1))}</div>
+          <svg class="argument-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </div>
+        <div class="argument-body">
+
+          <!-- Premises -->
+          <div class="argument-premises">
+            <label class="argument-section-label">Premises (${premises.length})</label>
+            ${premises.length > 0 ? premises.map((p, i) => `
+              <div class="premise-item ${p.strength || 'supporting'}">
+                <span class="premise-strength">${(p.strength || 'supporting').toUpperCase()}</span>
+                <span>${escapeHtml(p.text || '')}</span>
+                ${p.evidence_count ? `<small style="color: var(--text-4); margin-left: 8px;">(${p.evidence_count} piece${p.evidence_count === 1 ? '' : 's'} of evidence)</small>` : ''}
+              </div>
+            `).join('') : '<div style="color: var(--text-4); font-size: 12px;">No premises extracted</div>'}
+          </div>
+
+          <!-- Conclusions -->
+          ${conclusions.length > 0 ? `
+            <div class="argument-conclusions">
+              <label class="argument-section-label">Conclusions (${conclusions.length})</label>
+              ${conclusions.map(c => `
+                <div class="conclusion-item">
+                  <span class="certainty-badge">${(c.certainty || 'medium').toUpperCase()}</span>
+                  <span>${escapeHtml(c.text || '')}</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          <!-- Logical Gaps -->
+          ${gaps.length > 0 ? `
+            <div class="argument-gaps">
+              <label class="argument-section-label">Logical Gaps (${gaps.length})</label>
+              ${gaps.map(g => `
+                <div class="gap-item">
+                  <span class="gap-type">${(g.type || 'missing_evidence').replace(/_/g, ' ').toUpperCase()}</span>
+                  <span>${escapeHtml(g.description || '')}</span>
+                  <span class="severity-indicator ${g.severity >= 4 ? 'critical' : g.severity >= 3 ? 'high' : ''}"
+                        title="Severity: ${g.severity}/5"></span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          <!-- Counter-Arguments -->
+          ${counters.length > 0 ? `
+            <div class="argument-counter">
+              <label class="argument-section-label">Counter-Arguments (${counters.length})</label>
+              ${counters.map(ca => `
+                <div class="counter-item">
+                  <span class="counter-strength">${(ca.strength || 'moderate').toUpperCase()}</span>
+                  <span>${escapeHtml(ca.claim || '')}</span>
+                  ${ca.why_presented ? `<div style="margin-top: 6px; color: var(--text-3);">Why: ${escapeHtml(ca.why_presented)}</div>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+
+          <!-- Metadata footer -->
+          <div class="argument-metadata">
+            <div class="metadata-item">
+              <strong>Reasoning:</strong>
+              <span>${meta.reasoning_style || 'mixed'}</span>
+            </div>
+            <div class="metadata-item">
+              <strong>Confidence:</strong>
+              <span>${Math.round((meta.confidence_score || 0.7) * 100)}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Toggle argument item expansion
+ */
+function toggleArgumentItem(headerEl) {
+  const item = headerEl.closest('.argument-item');
+  const body = item.querySelector('.argument-body');
+  const isOpen = body.classList.contains('open');
+
+  // Close all others
+  document.querySelectorAll('.argument-body.open').forEach(b => {
+    if (b !== body) {
+      b.classList.remove('open');
+      b.closest('.argument-item').querySelector('.argument-header').classList.remove('open');
+    }
+  });
+
+  // Toggle this one
+  body.classList.toggle('open');
+  headerEl.classList.toggle('open');
+}
+
+/**
+ * Generate prototype argument (when backend unavailable)
+ */
+function generatePrototypeArgument(chapterName, rawNotes) {
+  return {
+    id: 'proto-' + Date.now(),
+    book_id: CURRENT_BOOK_ID,
+    chapter_name: chapterName,
+    primary_claim: 'System 1 thinking operates automatically and dominates decision-making, while System 2 thinking is effortful and often passive.',
+    premises: [
+      {
+        text: 'System 1 operates automatically and instantly, running almost continuously without conscious effort.',
+        strength: 'foundational',
+        evidence_count: 3,
+        order: 1
+      },
+      {
+        text: 'System 2 is deliberately engaged only when cognitive demands exceed automatic capacity.',
+        strength: 'foundational',
+        evidence_count: 2,
+        order: 2
+      },
+      {
+        text: 'System 2 tends to endorse System 1 outputs without rigorous scrutiny.',
+        strength: 'supporting',
+        evidence_count: 2,
+        order: 3
+      },
+      {
+        text: 'Most daily decisions and judgments are shaped by System 1 heuristics and biases.',
+        strength: 'contextual',
+        evidence_count: 1,
+        order: 4
+      }
+    ],
+    conclusions: [
+      {
+        text: 'Cognitive biases are inherent to human reasoning, not symptoms of irrationality.',
+        derived_from_premises: [0, 1, 2],
+        certainty: 'high'
+      },
+      {
+        text: 'Improving decision quality requires awareness of System 1 biases and deliberate System 2 intervention.',
+        derived_from_premises: [0, 1, 2, 3],
+        certainty: 'medium'
+      }
+    ],
+    logical_gaps: [
+      {
+        description: 'The mechanisms underlying System 1 automaticity are not fully explained.',
+        type: 'missing_evidence',
+        severity: 2
+      },
+      {
+        description: 'The assumption that System 2 can always override System 1 is not demonstrated.',
+        type: 'unstated_assumption',
+        severity: 3
+      },
+      {
+        description: 'Jump from describing cognitive processes to prescribing behavior change.',
+        type: 'inferential_leap',
+        severity: 2
+      }
+    ],
+    counter_arguments: [
+      {
+        claim: 'The dual-process model oversimplifies cognition.',
+        why_presented: 'Some theorists argue for a more integrated or continuous view of thinking.',
+        strength: 'moderate'
+      },
+      {
+        claim: 'System 2 engagement is not always voluntary or possible.',
+        why_presented: 'Cognitive load and stress can prevent deliberate reasoning.',
+        strength: 'strong'
+      }
+    ],
+    metadata: {
+      premise_count: 4,
+      conclusion_count: 2,
+      confidence_score: 0.82,
+      reasoning_style: 'deductive'
+    },
+    created_at: new Date().toISOString()
+  };
+}
+
+/**
+ * Generate concept map from chapter notes
+ */
+async function generateConceptMap() {
+  if (!CURRENT_BOOK_ID) {
+    alert('Please select a book first');
+    return;
+  }
+
+  const chapterName = (selectedBook?.currentChapter || 'Unknown Chapter');
+  const rawNotes = document.querySelector('.notes-textarea')?.value || '';
+
+  if (!rawNotes.trim()) {
+    alert('Please enter notes to generate concept map');
+    return;
+  }
+
+  const btn = document.getElementById('mapBtn');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10"/></svg> Mapping...';
+
+  try {
+    if (IS_LIVE_MODE) {
+      // Real API call
+      const response = await fetch('/api/concepts/map', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book_id: CURRENT_BOOK_ID,
+          chapter_name: chapterName,
+          raw_notes: rawNotes
+        })
+      });
+
+      if (!response.ok) throw new Error('Concept map generation failed');
+      const data = await response.json();
+
+      if (data.conceptMap) {
+        displayConceptMap(data.conceptMap);
+        showToast('Concept map generated successfully');
+      }
+    } else {
+      // Prototype mode: use sample data
+      const sampleMap = generatePrototypeConceptMap(chapterName, rawNotes);
+      displayConceptMap(sampleMap);
+      showToast('(Prototype) Sample concept map displayed');
+    }
+  } catch (err) {
+    console.error('Concept map error:', err);
+    showToast('Error: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+/**
+ * Load and display concept maps for the current book
+ */
+async function loadConceptMapsForBook() {
+  if (!CURRENT_BOOK_ID) return;
+
+  try {
+    if (IS_LIVE_MODE) {
+      const response = await fetch(`/api/concepts?book_id=${CURRENT_BOOK_ID}`);
+      if (!response.ok) return;
+      const conceptMaps = await response.json();
+      if (conceptMaps.length > 0) {
+        displayConceptMap(conceptMaps[0]);
+      }
+    } else {
+      // Prototype: show sample data
+      displayConceptMap(PROTOTYPE_CONCEPT_MAP);
+    }
+  } catch (err) {
+    console.error('Error loading concept maps:', err);
+  }
+}
+
+/**
+ * Display concept map in the Concepts tab
+ */
+function displayConceptMap(conceptMap) {
+  const container = document.getElementById('conceptsList');
+  const emptyState = document.getElementById('conceptsEmpty');
+
+  if (!conceptMap || !conceptMap.concepts || conceptMap.concepts.length === 0) {
+    container.style.display = 'none';
+    emptyState.style.display = 'flex';
+    return;
+  }
+
+  container.style.display = 'flex';
+  emptyState.style.display = 'none';
+
+  const concepts = conceptMap.concepts || [];
+  const relationships = conceptMap.relationships || [];
+
+  container.innerHTML = concepts.map((concept, idx) => {
+    // Find relationships for this concept
+    const outgoing = relationships.filter(r => r.from === concept.name);
+
+    return `
+      <div class="concept-card" data-concept-id="${concept.name}">
+        <div class="concept-header" onclick="toggleConceptItem(this)">
+          <div class="concept-name">
+            ${escapeHtml(concept.name)}
+            <span class="concept-type ${concept.type}">${concept.type}</span>
+          </div>
+          <div class="concept-centrality">${(concept.centrality * 100).toFixed(0)}%</div>
+          <svg class="concept-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </div>
+        <div class="concept-body">
+          <div class="concept-definition">
+            <span class="concept-definition-label">Definition</span>
+            <div class="concept-definition-text">${escapeHtml(concept.definition)}</div>
+          </div>
+          ${outgoing.length > 0 ? `
+            <div class="relationships-section">
+              <label class="relationships-label">Relationships (${outgoing.length})</label>
+              ${outgoing.map(rel => `
+                <div class="relationship-item">
+                  <span class="relationship-type">${escapeHtml(rel.type)}</span>
+                  → ${escapeHtml(rel.to)}
+                  <span class="relationship-strength">(${(rel.strength * 100).toFixed(0)}%)</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Toggle concept item expansion
+ */
+function toggleConceptItem(headerEl) {
+  const body = headerEl.nextElementSibling;
+  const isOpen = body.classList.contains('open');
+
+  // Close all other concept items
+  document.querySelectorAll('.concept-body.open').forEach(b => {
+    b.classList.remove('open');
+    b.previousElementSibling.classList.remove('open');
+  });
+
+  // Toggle this one
+  if (!isOpen) {
+    body.classList.add('open');
+    headerEl.classList.add('open');
+  }
+}
+
+/**
+ * Generate prototype concept map
+ */
+function generatePrototypeConceptMap(chapterName, rawNotes) {
+  return {
+    book_id: CURRENT_BOOK_ID,
+    chapter_name: chapterName,
+    concepts: [
+      {
+        name: 'System 1 Thinking',
+        definition: 'Automatic, fast, intuitive cognitive processing that operates without conscious effort.',
+        centrality: 0.95,
+        type: 'primary'
+      },
+      {
+        name: 'System 2 Thinking',
+        definition: 'Deliberate, slow, effortful cognitive processing requiring conscious attention and focus.',
+        centrality: 0.93,
+        type: 'primary'
+      },
+      {
+        name: 'Cognitive Bias',
+        definition: 'Systematic patterns of deviation from rational judgment that arise from System 1 heuristics.',
+        centrality: 0.88,
+        type: 'primary'
+      },
+      {
+        name: 'Automaticity',
+        definition: 'The quality of mental processes that operate without conscious intention or effort.',
+        centrality: 0.72,
+        type: 'secondary'
+      },
+      {
+        name: 'Cognitive Load',
+        definition: 'The amount of mental effort and resources required for a particular cognitive task.',
+        centrality: 0.65,
+        type: 'secondary'
+      },
+      {
+        name: 'Heuristics',
+        definition: 'Mental shortcuts or rules of thumb used by System 1 to make quick judgments.',
+        centrality: 0.82,
+        type: 'secondary'
+      },
+      {
+        name: 'Anchoring',
+        definition: 'A specific heuristic where initial information disproportionately influences judgments.',
+        centrality: 0.58,
+        type: 'supporting'
+      }
+    ],
+    relationships: [
+      { from: 'System 1 Thinking', to: 'Automaticity', type: 'causes', strength: 0.9 },
+      { from: 'System 1 Thinking', to: 'Heuristics', type: 'exemplifies', strength: 0.88 },
+      { from: 'System 1 Thinking', to: 'Cognitive Bias', type: 'causes', strength: 0.85 },
+      { from: 'System 2 Thinking', to: 'Cognitive Load', type: 'refines', strength: 0.72 },
+      { from: 'Heuristics', to: 'Anchoring', type: 'exemplifies', strength: 0.79 },
+      { from: 'Cognitive Bias', to: 'Heuristics', type: 'refines', strength: 0.74 },
+      { from: 'System 2 Thinking', to: 'System 1 Thinking', type: 'contradicts', strength: 0.65 }
+    ],
+    hierarchy: [
+      { parent: 'Cognition', children: ['System 1 Thinking', 'System 2 Thinking'] },
+      { parent: 'System 1 Thinking', children: ['Automaticity', 'Heuristics'] },
+      { parent: 'Heuristics', children: ['Anchoring'] }
+    ],
+    metadata: {
+      concept_count: 7,
+      primary_concepts: ['System 1 Thinking', 'System 2 Thinking', 'Cognitive Bias'],
+      complexity_score: 0.72
+    },
+    created_at: new Date().toISOString()
+  };
+}
+
+// Sample prototype concept map (when backend is not available)
+const PROTOTYPE_CONCEPT_MAP = {
+  id: 'proto-1',
+  chapter_name: 'Chapter 1 — Two Systems',
+  concepts: [
+    {
+      name: 'System 1 Thinking',
+      definition: 'Automatic, fast, intuitive cognitive processing that operates without conscious effort.',
+      centrality: 0.95,
+      type: 'primary'
+    },
+    {
+      name: 'System 2 Thinking',
+      definition: 'Deliberate, slow, effortful cognitive processing requiring conscious attention and focus.',
+      centrality: 0.93,
+      type: 'primary'
+    },
+    {
+      name: 'Cognitive Bias',
+      definition: 'Systematic patterns of deviation from rational judgment that arise from System 1 heuristics.',
+      centrality: 0.88,
+      type: 'primary'
+    },
+    {
+      name: 'Heuristics',
+      definition: 'Mental shortcuts or rules of thumb used by System 1 to make quick judgments.',
+      centrality: 0.82,
+      type: 'secondary'
+    }
+  ],
+  relationships: [
+    { from: 'System 1 Thinking', to: 'Heuristics', type: 'exemplifies', strength: 0.88 },
+    { from: 'System 1 Thinking', to: 'Cognitive Bias', type: 'causes', strength: 0.85 }
+  ],
+  hierarchy: [
+    { parent: 'Cognition', children: ['System 1 Thinking', 'System 2 Thinking'] }
+  ],
+  metadata: {
+    concept_count: 4,
+    primary_concepts: ['System 1 Thinking', 'System 2 Thinking', 'Cognitive Bias'],
+    complexity_score: 0.72
+  }
+};
+
+// Sample prototype arguments (when backend is not available)
+const PROTOTYPE_ARGUMENTS = [
+  {
+    id: 'proto-1',
+    chapter_name: 'Chapter 1 — Two Systems',
+    primary_claim: 'System 1 thinking operates automatically and dominates decision-making.',
+    premises: [
+      {
+        text: 'System 1 operates automatically and instantly.',
+        strength: 'foundational',
+        evidence_count: 3,
+        order: 1
+      },
+      {
+        text: 'System 2 is deliberately engaged only when cognitive demands exceed capacity.',
+        strength: 'foundational',
+        evidence_count: 2,
+        order: 2
+      }
+    ],
+    conclusions: [
+      {
+        text: 'Cognitive biases are inherent to human reasoning.',
+        derived_from_premises: [0, 1],
+        certainty: 'high'
+      }
+    ],
+    logical_gaps: [
+      {
+        description: 'Mechanisms of System 1 automaticity are not fully explained.',
+        type: 'missing_evidence',
+        severity: 2
+      }
+    ],
+    counter_arguments: [
+      {
+        claim: 'The dual-process model oversimplifies cognition.',
+        why_presented: 'Some theorists argue for a more integrated view.',
+        strength: 'moderate'
+      }
+    ],
+    metadata: {
+      premise_count: 2,
+      conclusion_count: 1,
+      confidence_score: 0.82,
+      reasoning_style: 'deductive'
+    },
+    created_at: new Date().toISOString()
+  }
+];
+
+/**
+ * Escape HTML special characters for safe display
+ */
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+// ═══════════════════════════════════════
 // CONNECTIONS — Knowledge Map
 // ═══════════════════════════════════════
 
-const KG_PALETTE = ['#c9a84c','#9b8ed4','#5aac8a','#d4836e','#4a9ed4','#d4c44c','#7cc4d4','#c47c8e'];
+const KG_PALETTE = ['#2563eb','#7c3aed','#059669','#dc2626','#d97706','#0891b2','#db2777','#4f46e5'];
 
 async function loadCrossBookIdeas() {
   let ideas = [];
@@ -3627,6 +5209,7 @@ async function generateNarrative() {
 // Swap to real implementation if backend is available
 fetch('/api/health').then(r => {
   if (r.ok) {
+    IS_LIVE_MODE = true;
     window.sendMsg = sendMsgReal;
     loadBooksFromAPI();
     loadBrandProfile();
