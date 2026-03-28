@@ -3589,7 +3589,7 @@ function distillIdeas() {
 // ═══════════════════════════════════════
 function renderIdeasFromAPI(ideas) {
   const grid = document.getElementById('ideasGrid');
-  // Append new cards rather than replacing (prototype cards stay)
+  grid.innerHTML = '';
   ideas.forEach((idea, i) => {
     const card = document.createElement('div');
     card.className = 'idea-card';
@@ -5451,6 +5451,17 @@ fetch('/api/health').then(r => {
   if (r.ok) {
     IS_LIVE_MODE = true;
     window.sendMsg = sendMsgReal;
+
+    // Remove prototype books from state and clear their DOM before real data loads
+    BOOKS.splice(0, BOOKS.length);
+    document.getElementById('bookList').innerHTML = '';
+    document.getElementById('ideasGrid').innerHTML = '';
+    document.getElementById('chapterSelect').innerHTML = '';
+    document.querySelector('.accordion').innerHTML = '';
+    document.getElementById('mainNotes').value = '';
+    document.getElementById('barTitle').textContent = 'Select a book';
+    document.getElementById('barAuthor').textContent = '';
+
     loadBooksFromAPI();
     loadBrandProfile();
     console.log('[WriteFlow] Backend connected ✓');
