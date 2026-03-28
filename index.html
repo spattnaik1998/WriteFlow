@@ -533,6 +533,18 @@ body::after {
   box-shadow: 0 0 0 3px var(--amber-glow);
 }
 
+.saved-label {
+  font-size: 11px;
+  color: var(--text-4);
+  text-align: right;
+  height: 16px;
+  margin-top: 5px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.saved-label.visible { opacity: 1; }
+
 .action-row {
   display: flex;
   flex-wrap: wrap;
@@ -2453,6 +2465,8 @@ body::after {
 
         <textarea class="notes-textarea" id="mainNotes" rows="8" oninput="onNotesInput()">Kahneman opens with something brilliant — there are two ways we think. One is fast, automatic, like recognizing a face or reading anger in someone's voice. The other is slow, deliberate, like solving 17×24. The fast one (System 1) runs without us noticing. It's always on. The slow one (System 2) is lazy — it only engages when needed. Key: System 1 is constantly generating impressions and jumping to conclusions. System 2 mostly just endorses these without scrutiny. This is simultaneously terrifying and fascinating. The gorilla experiment. We don't see what we're not looking for.</textarea>
 
+        <div id="savedLabel" class="saved-label">Saved</div>
+
         <div class="action-row">
           <button class="btn-amber" id="distillBtn" onclick="distillIdeas()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
@@ -3296,8 +3310,11 @@ function onNotesInput() {
   // Debounced save to backend (live mode only)
   if (CURRENT_BOOK_ID) {
     clearTimeout(_saveTimer);
-    _saveTimer = setTimeout(() => {
-      api('POST', '/notes', { book_id: CURRENT_BOOK_ID, chapter_name: currentChapterId, content });
+    _saveTimer = setTimeout(async () => {
+      await api('POST', '/notes', { book_id: CURRENT_BOOK_ID, chapter_name: currentChapterId, content });
+      const lbl = document.getElementById('savedLabel');
+      lbl.classList.add('visible');
+      setTimeout(() => lbl.classList.remove('visible'), 2000);
     }, 1500);
   }
 }
@@ -3487,7 +3504,57 @@ async function loadBookContent(bookId) {
   }
 
   // ── Blog panel ─────────────────────────────────────────
-  document.getElementById('blogList').innerHTML = '';
+  loadSavedArticles();
+
+  // ── Chat history ────────────────────────────────────────
+  const chatHistory = await api('GET', `/chat/history?book_id=${bookId}`);
+  const chatPanel = document.getElementById('chatMessages');
+  chatPanel.innerHTML = '';
+  if (chatHistory && chatHistory.length > 0) {
+    chatHistory.forEach(msg => {
+      addMsg(
+        msg.role === 'user' ? 'user' : 'ai',
+        msg.role === 'user' ? 'You' : 'Partner',
+        msg.content
+      );
+    });
+  }
+}
+
+// ═══════════════════════════════════════
+// SAVED ARTICLES
+// ═══════════════════════════════════════
+async function loadSavedArticles() {
+  const list = document.getElementById('blogList');
+  list.innerHTML = '';
+  if (!CURRENT_BOOK_ID) return;
+
+  const articles = await api('GET', `/search/saved?book_id=${CURRENT_BOOK_ID}`);
+
+  if (!articles || articles.length === 0) {
+    list.innerHTML = '<div style="padding:16px 0;font-size:11px;color:var(--text-4);text-align:center">No saved articles yet</div>';
+    return;
+  }
+
+  articles.forEach((a, i) => {
+    const initials = (a.domain || '').split('.')[0].slice(0, 2).toUpperCase() || '??';
+    const card = document.createElement('div');
+    card.className = 'blog-card';
+    card.style.animationDelay = `${i * 0.05}s`;
+    const stanceBadge = a.stance && a.stance !== 'neutral'
+      ? `<span class="stance-badge ${a.stance}">${a.stance}</span>`
+      : '';
+    card.innerHTML = `
+      <div class="blog-favicon">${initials}</div>
+      <div class="blog-info">
+        <div class="blog-card-title">${a.title}</div>
+        <div class="blog-domain">${a.domain}</div>
+        ${stanceBadge}
+      </div>
+      <button class="blog-read" onclick="window.open('${a.url}','_blank')">Read</button>
+    `;
+    list.appendChild(card);
+  });
 }
 
 // ═══════════════════════════════════════
@@ -3509,9 +3576,12 @@ function switchTab(tab) {
   document.getElementById(`pane-${tab}`).classList.add('active');
   document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
   activeTab = tab;
-  if (tab === 'connections' && !connectionsLoaded) {
-    connectionsLoaded = true;
-    loadCrossBookIdeas();
+  if (tab === 'connections') {
+    if (!connectionsLoaded) {
+      connectionsLoaded = true;
+      loadCrossBookIdeas();
+    }
+    loadSavedArticles();
   }
   if (tab === 'arguments' && !argumentsLoaded) {
     argumentsLoaded = true;
