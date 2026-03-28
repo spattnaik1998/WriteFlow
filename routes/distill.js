@@ -84,4 +84,57 @@ router.delete('/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+// PATCH /api/distill/:id — update title, body, and/or tags
+router.patch('/:id', async (req, res) => {
+  const { title, body, tags } = req.body;
+  const updates = {};
+  if (title !== undefined) updates.title = title;
+  if (body  !== undefined) updates.body  = body;
+  if (tags  !== undefined) updates.tags  = tags;
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'No fields to update' });
+  }
+
+  const { data, error } = await supabase
+    .from('ideas')
+    .update(updates)
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// POST /api/distill/manual — create a hand-written idea card
+router.post('/manual', async (req, res) => {
+  const { book_id, title, body, tags } = req.body;
+  if (!book_id || !title) {
+    return res.status(400).json({ error: 'book_id and title required' });
+  }
+
+  // Count existing ideas to set the next number
+  const { count } = await supabase
+    .from('ideas')
+    .select('*', { count: 'exact', head: true })
+    .eq('book_id', book_id);
+
+  const { data, error } = await supabase
+    .from('ideas')
+    .insert([{
+      book_id,
+      title,
+      body:      body  || '',
+      tags:      tags  || [],
+      number:    (count || 0) + 1,
+      is_manual: true
+    }])
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data);
+});
+
 module.exports = router;

@@ -835,6 +835,143 @@ body::after {
   background: var(--amber-glow);
 }
 
+/* Idea card CRUD controls */
+.idea-card { position: relative; }
+.idea-card-actions {
+  position: absolute;
+  top: 10px; right: 10px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--ease);
+  z-index: 2;
+}
+.idea-card:hover .idea-card-actions { opacity: 1; }
+.idea-action-btn {
+  width: 24px; height: 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--ease);
+  padding: 0;
+}
+.idea-action-btn:hover { border-color: var(--amber-dk); color: var(--amber); background: var(--amber-glow); }
+.idea-action-delete:hover { border-color: #dc2626; color: #dc2626; background: rgba(220,38,38,0.07); }
+
+.idea-delete-confirm {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: rgba(220,38,38,0.05);
+  border: 1px solid rgba(220,38,38,0.18);
+  border-radius: 6px;
+}
+.idea-delete-text { color: var(--text-2); flex: 1; font-size: 12px; }
+.idea-delete-yes, .idea-delete-no {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  transition: var(--ease);
+}
+.idea-delete-yes { background: #dc2626; border: none; color: white; }
+.idea-delete-yes:hover { background: #b91c1c; }
+.idea-delete-no { background: none; border: 1px solid var(--border); color: var(--text-3); }
+.idea-delete-no:hover { border-color: var(--border-hi); color: var(--text-1); }
+
+.idea-card-edit { display: none; }
+.idea-edit-title, .idea-edit-tags {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  outline: none;
+  transition: border-color var(--ease);
+}
+.idea-edit-title:focus, .idea-edit-tags:focus { border-color: var(--amber-dk); }
+.idea-edit-body {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
+  line-height: 1.6;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--ease);
+}
+.idea-edit-body:focus { border-color: var(--amber-dk); }
+.idea-edit-actions { display: flex; gap: 7px; justify-content: flex-end; }
+
+.idea-manual-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(16,185,129,0.1);
+  color: var(--green-ok);
+  border: 1px solid rgba(16,185,129,0.2);
+  vertical-align: middle;
+  margin-left: 5px;
+}
+
+/* Add insight inline form */
+.ideas-tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.add-insight-form {
+  background: var(--bg-card);
+  border: 1px solid var(--amber-lt);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.07);
+  animation: cardReveal .25s ease both;
+}
+.add-insight-form input, .add-insight-form textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-1);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  outline: none;
+  transition: border-color var(--ease);
+  box-sizing: border-box;
+}
+.add-insight-form input:focus, .add-insight-form textarea:focus { border-color: var(--amber-dk); }
+.add-insight-form textarea { resize: vertical; line-height: 1.6; }
+.add-insight-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
 /* ═══════════════════════════════════════
    CONTRADICTIONS SECTION
 ═══════════════════════════════════════ */
@@ -2539,13 +2676,25 @@ body::after {
 
       <!-- IDEAS TAB -->
       <div class="tab-pane" id="pane-ideas">
-        <div class="themes-bar">
-          <span class="themes-bar-label">Themes</span>
-          <span class="theme-pill active" onclick="togglePill(this)">Cognition</span>
-          <span class="theme-pill" onclick="togglePill(this)">Decision-Making</span>
-          <span class="theme-pill" onclick="togglePill(this)">Bias</span>
-          <span class="theme-pill" onclick="togglePill(this)">Psychology</span>
-          <span class="theme-pill" onclick="togglePill(this)">Behavior</span>
+        <div class="ideas-tab-header">
+          <div class="themes-bar" style="margin-bottom:0">
+            <span class="themes-bar-label">Themes</span>
+            <span class="theme-pill active" onclick="togglePill(this)">Cognition</span>
+            <span class="theme-pill" onclick="togglePill(this)">Decision-Making</span>
+            <span class="theme-pill" onclick="togglePill(this)">Bias</span>
+            <span class="theme-pill" onclick="togglePill(this)">Psychology</span>
+            <span class="theme-pill" onclick="togglePill(this)">Behavior</span>
+          </div>
+          <button class="btn-sec btn-sm" onclick="showAddInsightForm()">+ Add Insight</button>
+        </div>
+        <div id="addInsightForm" class="add-insight-form" style="display:none">
+          <input id="addInsightTitle" type="text" placeholder="Insight title">
+          <textarea id="addInsightBody" rows="3" placeholder="Body — what does this idea mean?"></textarea>
+          <input id="addInsightTags" type="text" placeholder="Tags, comma-separated">
+          <div class="add-insight-actions">
+            <button class="btn-amber btn-sm" onclick="submitManualInsight()">Save Insight</button>
+            <button class="btn-sec btn-sm" onclick="hideAddInsightForm()">Cancel</button>
+          </div>
         </div>
 
         <div class="ideas-grid" id="ideasGrid">
@@ -3474,22 +3623,7 @@ async function loadBookContent(bookId) {
     grid.innerHTML = '';
 
     if (ideas.length > 0) {
-      ideas.forEach((idea, i) => {
-        const card = document.createElement('div');
-        card.className = 'idea-card';
-        card.style.animationDelay = `${i * 0.07}s`;
-        card.innerHTML = `
-          <div class="idea-num">INSIGHT ${String(idea.number || i + 1).padStart(2, '0')}</div>
-          <div class="idea-title">${idea.title}</div>
-          <div class="idea-body">${idea.body}</div>
-          <div class="idea-tags">${(idea.tags || []).map(t => `<span class="idea-tag">${t}</span>`).join('')}</div>
-          <button class="idea-explore" onclick="exploreIdea('${idea.title.replace(/'/g, "\\'")}')">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
-            Explore Further
-          </button>
-        `;
-        grid.appendChild(card);
-      });
+      ideas.forEach((idea, i) => grid.appendChild(buildIdeaCard(idea, i)));
 
       // Show contradictions section if >= 2 ideas
       if (ideas.length >= 2) {
@@ -3655,27 +3789,152 @@ function distillIdeas() {
 }
 
 // ═══════════════════════════════════════
+// IDEA CARD FACTORY + CRUD HANDLERS
+// ═══════════════════════════════════════
+function buildIdeaCard(idea, idx) {
+  const card = document.createElement('div');
+  card.className = 'idea-card';
+  card.style.animationDelay = `${idx * 0.07}s`;
+  card.dataset.ideaId = idea.id || '';
+  card.dataset.title  = idea.title || '';
+  card.dataset.body   = idea.body  || '';
+  card.dataset.tags   = (idea.tags || []).join(',');
+
+  const tagsHtml    = (idea.tags || []).map(t => `<span class="idea-tag">${escapeHtml(t)}</span>`).join('');
+  const manualBadge = idea.is_manual ? ' <span class="idea-manual-badge">Manual</span>' : '';
+  const safeTitle   = (idea.title || '').replace(/'/g, "\\'");
+
+  card.innerHTML = `
+    <div class="idea-card-view">
+      <div class="idea-card-actions">
+        <button class="idea-action-btn" title="Edit" onclick="editIdeaCard(this.closest('.idea-card'))">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="idea-action-btn idea-action-delete" title="Delete" onclick="confirmDeleteIdea(this.closest('.idea-card'))">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+      <div class="idea-num">INSIGHT ${String(idea.number || idx + 1).padStart(2, '0')}${manualBadge}</div>
+      <div class="idea-title">${escapeHtml(idea.title)}</div>
+      <div class="idea-body">${escapeHtml(idea.body || '')}</div>
+      <div class="idea-tags">${tagsHtml}</div>
+      <div class="idea-delete-confirm" style="display:none">
+        <span class="idea-delete-text">Delete this insight?</span>
+        <button class="idea-delete-yes" onclick="deleteIdeaCard(this.closest('.idea-card'))">Yes</button>
+        <button class="idea-delete-no" onclick="cancelDeleteConfirm(this.closest('.idea-card'))">No</button>
+      </div>
+      <button class="idea-explore" onclick="exploreIdea('${safeTitle}')">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
+        Explore Further
+      </button>
+    </div>
+    <div class="idea-card-edit" style="display:none">
+      <input class="idea-edit-title" type="text" value="${escapeHtml(idea.title)}">
+      <textarea class="idea-edit-body" rows="4">${escapeHtml(idea.body || '')}</textarea>
+      <input class="idea-edit-tags" type="text" value="${(idea.tags || []).join(', ')}">
+      <div class="idea-edit-actions">
+        <button class="btn-amber btn-sm" onclick="saveIdeaCard(this.closest('.idea-card'))">Save</button>
+        <button class="btn-sec btn-sm" onclick="cancelIdeaEdit(this.closest('.idea-card'))">Cancel</button>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+function editIdeaCard(card) {
+  card.querySelector('.idea-card-view').style.display = 'none';
+  const edit = card.querySelector('.idea-card-edit');
+  edit.style.display = 'block';
+  edit.querySelector('.idea-edit-title').value = card.dataset.title;
+  edit.querySelector('.idea-edit-body').value  = card.dataset.body;
+  edit.querySelector('.idea-edit-tags').value  = card.dataset.tags.split(',').filter(Boolean).join(', ');
+  edit.querySelector('.idea-edit-title').focus();
+}
+
+function cancelIdeaEdit(card) {
+  card.querySelector('.idea-card-edit').style.display = 'none';
+  card.querySelector('.idea-card-view').style.display = 'block';
+}
+
+async function saveIdeaCard(card) {
+  const ideaId = card.dataset.ideaId;
+  if (!ideaId) { cancelIdeaEdit(card); return; }
+  const edit  = card.querySelector('.idea-card-edit');
+  const title = edit.querySelector('.idea-edit-title').value.trim();
+  const body  = edit.querySelector('.idea-edit-body').value.trim();
+  const tags  = edit.querySelector('.idea-edit-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+  if (!title) { showToast('Title is required'); return; }
+
+  const updated = await api('PATCH', `/distill/${ideaId}`, { title, body, tags });
+  if (!updated) { showToast('Save failed'); return; }
+
+  card.dataset.title = title;
+  card.dataset.body  = body;
+  card.dataset.tags  = tags.join(',');
+  card.querySelector('.idea-title').textContent = title;
+  card.querySelector('.idea-body').textContent  = body;
+  card.querySelector('.idea-tags').innerHTML    = tags.map(t => `<span class="idea-tag">${escapeHtml(t)}</span>`).join('');
+  cancelIdeaEdit(card);
+  showToast('Insight saved');
+}
+
+function confirmDeleteIdea(card) {
+  card.querySelector('.idea-delete-confirm').style.display = 'flex';
+  card.querySelector('.idea-explore').style.display = 'none';
+}
+
+function cancelDeleteConfirm(card) {
+  card.querySelector('.idea-delete-confirm').style.display = 'none';
+  card.querySelector('.idea-explore').style.display = '';
+}
+
+async function deleteIdeaCard(card) {
+  const ideaId = card.dataset.ideaId;
+  if (ideaId) await api('DELETE', `/distill/${ideaId}`);
+  card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+  card.style.opacity    = '0';
+  card.style.transform  = 'scale(0.95)';
+  setTimeout(() => card.remove(), 320);
+}
+
+function showAddInsightForm() {
+  const form = document.getElementById('addInsightForm');
+  form.style.display = 'block';
+  document.getElementById('addInsightTitle').value = '';
+  document.getElementById('addInsightBody').value  = '';
+  document.getElementById('addInsightTags').value  = '';
+  document.getElementById('addInsightTitle').focus();
+}
+
+function hideAddInsightForm() {
+  document.getElementById('addInsightForm').style.display = 'none';
+}
+
+async function submitManualInsight() {
+  if (!CURRENT_BOOK_ID) { showToast('Select a book first'); return; }
+  const title = document.getElementById('addInsightTitle').value.trim();
+  const body  = document.getElementById('addInsightBody').value.trim();
+  const tags  = document.getElementById('addInsightTags').value.split(',').map(t => t.trim()).filter(Boolean);
+  if (!title) { showToast('Title is required'); return; }
+
+  const idea = await api('POST', '/distill/manual', { book_id: CURRENT_BOOK_ID, title, body, tags });
+  if (!idea) { showToast('Failed to save insight'); return; }
+
+  const grid = document.getElementById('ideasGrid');
+  const card = buildIdeaCard(idea, 0);
+  card.style.animationDelay = '0s';
+  grid.insertBefore(card, grid.firstChild);
+  hideAddInsightForm();
+  showToast('Insight added');
+}
+
+// ═══════════════════════════════════════
 // RENDER REAL IDEA CARDS
 // ═══════════════════════════════════════
 function renderIdeasFromAPI(ideas) {
   const grid = document.getElementById('ideasGrid');
   grid.innerHTML = '';
-  ideas.forEach((idea, i) => {
-    const card = document.createElement('div');
-    card.className = 'idea-card';
-    card.style.animationDelay = `${i * 0.07}s`;
-    card.innerHTML = `
-      <div class="idea-num">INSIGHT ${String(idea.number || i + 1).padStart(2, '0')}</div>
-      <div class="idea-title">${idea.title}</div>
-      <div class="idea-body">${idea.body}</div>
-      <div class="idea-tags">${(idea.tags || []).map(t => `<span class="idea-tag">${t}</span>`).join('')}</div>
-      <button class="idea-explore" onclick="exploreIdea('${idea.title.replace(/'/g, "\\'")}')">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
-        Explore Further
-      </button>
-    `;
-    grid.appendChild(card);
-  });
+  ideas.forEach((idea, i) => grid.appendChild(buildIdeaCard(idea, i)));
 }
 
 // ═══════════════════════════════════════
