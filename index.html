@@ -124,6 +124,43 @@ body::after {
 }
 .logo-text span { color: var(--amber); }
 
+/* Sidebar collapsed state */
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .book-title,
+.sidebar.collapsed .book-author,
+.sidebar.collapsed .section-label,
+.sidebar.collapsed .sidebar-footer-name {
+  display: none;
+}
+
+.sidebar.collapsed .book-info {
+  padding: 8px 6px;
+}
+
+.sidebar.collapsed .book-spine {
+  width: 100%;
+  border-radius: 4px;
+}
+
+.sidebar.collapsed .book-card {
+  flex-direction: column;
+  align-items: center;
+  padding: 6px;
+  gap: 0;
+}
+
+.sidebar.collapsed .book-delete-btn {
+  opacity: 0;
+}
+
+.sidebar.collapsed .book-card:hover .book-delete-btn {
+  opacity: 1;
+  width: 22px;
+  height: 22px;
+  right: 2px;
+  top: 2px;
+}
+
 .collapse-btn {
   background: none;
   border: none;
@@ -185,87 +222,112 @@ body::after {
 .book-list {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 0 8px;
+  gap: 8px;
+  padding: 0 10px;
 }
 
 .book-card {
   display: flex;
   align-items: stretch;
-  border-radius: var(--radius);
+  border-radius: 10px;
   cursor: pointer;
-  transition: var(--ease);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   position: relative;
   overflow: hidden;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
-.book-card:hover { background: var(--bg-card); border-color: var(--border); }
+
+.book-card:hover {
+  background: var(--bg-card);
+  border-color: var(--border-hi);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  transform: translateY(-2px);
+}
+
 .book-card.active {
-  background: var(--bg-card-hover);
+  background: linear-gradient(135deg, rgba(37,99,235,0.03) 0%, rgba(37,99,235,0.01) 100%);
   border-color: var(--amber);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08), inset 0 0 0 1px var(--amber-glow);
+  box-shadow: 0 8px 24px rgba(37,99,235,0.15);
 }
+
 .book-card.active::before {
   content: '';
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: var(--amber);
-  border-radius: 2px;
+  width: 4px;
+  background: linear-gradient(180deg, var(--amber) 0%, var(--amber-dk) 100%);
+  border-radius: 0;
 }
 
 .book-spine {
-  width: 7px;
+  width: 12px;
   flex-shrink: 0;
-  border-radius: 4px 0 0 4px;
+  border-radius: 9px 0 0 9px;
+  box-shadow: inset -1px 0 2px rgba(0,0,0,0.1);
 }
 
 .book-info {
-  padding: 10px 10px 10px 11px;
+  padding: 13px 14px;
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .book-title {
-  font-size: 12.5px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
   color: var(--text-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
+  line-height: 1.4;
+  margin-bottom: 4px;
 }
+
 .book-author {
   font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.2px;
   color: var(--text-3);
-  margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.progress-wrap {
+.book-delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: #dc2626;
+  font-size: 16px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 6px;
+  justify-content: center;
+  opacity: 0;
+  transition: all var(--ease);
+  line-height: 1;
 }
-.progress-bar {
-  flex: 1;
-  height: 2px;
-  background: var(--border);
-  border-radius: 1px;
-  overflow: hidden;
+
+.book-card:hover .book-delete-btn {
+  opacity: 1;
 }
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(to right, var(--amber-dk), var(--amber-lt));
-  border-radius: 1px;
-  transition: width .5s ease;
-}
-.progress-pct {
-  font-size: 10px;
-  color: var(--text-4);
+
+.book-delete-btn:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+  transform: scale(1.1);
 }
 
 /* Sidebar footer */
@@ -585,8 +647,14 @@ body::after {
   max-height: 0;
   overflow: hidden;
   transition: max-height .28s cubic-bezier(.4,0,.2,1);
+  display: flex;
+  flex-direction: column;
 }
-.accordion-item.open .accordion-body { max-height: 250px; }
+.accordion-item.open .accordion-body {
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 
 .acc-content {
   padding: 12px 13px 13px;
@@ -595,6 +663,40 @@ body::after {
   font-size: 13px;
   line-height: 1.72;
   color: var(--text-3);
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.chapter-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 13px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-card-hover);
+}
+
+.chapter-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-card);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--ease);
+}
+
+.chapter-btn:hover {
+  background: var(--text-1);
+  color: white;
+  border-color: var(--text-1);
+}
+
+.chapter-btn.delete:hover {
+  background: #dc2626;
+  border-color: #dc2626;
 }
 
 /* ═══════════════════════════════════════
@@ -2890,6 +2992,7 @@ let activeTab       = 'notes';
 let responseIdx     = 0;
 let libraryMode     = false;
 let chapterNotes    = {};    // { bookId: { chapterName: content } }
+let chapterIds      = {};    // { bookId: { chapterName: noteId } } — tracks DB IDs for delete/edit
 let currentChapterId = null; // name of the active chapter
 let _saveTimer      = null;  // debounce handle for backend auto-save
 let _currentFlow    = null;  // last rendered flow data (for SVG resize)
@@ -3045,6 +3148,7 @@ function renderAccordion() {
   document.querySelector('.accordion').innerHTML = Object.entries(chapters).map(([name, content], i) => {
     const wc = content ? content.trim().split(/\s+/).filter(Boolean).length : 0;
     const safeName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const noteId = chapterIds[selectedBook]?.[name];
     return `
       <div class="accordion-item ${name === currentChapterId ? 'open' : ''}" id="acc-book-${i}">
         <div class="accordion-head" onclick="switchChapter('${safeName}')">
@@ -3056,6 +3160,10 @@ function renderAccordion() {
         </div>
         <div class="accordion-body">
           <div class="acc-content">${content || '<em style="color:var(--text-4)">No notes yet.</em>'}</div>
+          <div class="chapter-actions">
+            <button class="chapter-btn" onclick="editChapter('${safeName}', event)">Edit Name</button>
+            <button class="chapter-btn delete" onclick="deleteChapter('${safeName}', ${noteId}, event)">Delete</button>
+          </div>
         </div>
       </div>`;
   }).join('');
@@ -3080,6 +3188,92 @@ function addChapter() {
   showToast(`Added "${trimmed}"`);
   if (CURRENT_BOOK_ID) {
     api('POST', '/notes', { book_id: CURRENT_BOOK_ID, chapter_name: trimmed, content: '' });
+  }
+}
+
+function editChapter(oldName, event) {
+  event.stopPropagation();
+  const newName = window.prompt('Edit chapter name:', oldName);
+  if (!newName || !newName.trim()) return;
+  const trimmed = newName.trim();
+
+  if (trimmed === oldName) return; // No change
+
+  const existing = Object.keys(chapterNotes[selectedBook] || {});
+  if (existing.includes(trimmed)) {
+    showToast('Chapter name already exists');
+    return;
+  }
+
+  // Update frontend state
+  const content = chapterNotes[selectedBook][oldName];
+  delete chapterNotes[selectedBook][oldName];
+  chapterNotes[selectedBook][trimmed] = content;
+
+  // Track ID for the renamed chapter
+  const noteId = chapterIds[selectedBook][oldName];
+  delete chapterIds[selectedBook][oldName];
+  chapterIds[selectedBook][trimmed] = noteId;
+
+  // Update dropdown
+  const chapterSelect = document.getElementById('chapterSelect');
+  const option = [...chapterSelect.options].find(o => o.value === oldName);
+  if (option) {
+    option.value = trimmed;
+    option.textContent = trimmed;
+  }
+
+  // If this was the active chapter, update the current chapter
+  if (currentChapterId === oldName) {
+    currentChapterId = trimmed;
+    chapterSelect.value = trimmed;
+  }
+
+  renderAccordion();
+  showToast(`Renamed to "${trimmed}"`);
+
+  // Update backend (live mode only)
+  if (CURRENT_BOOK_ID && noteId) {
+    api('PATCH', `/notes/${noteId}`, { chapter_name: trimmed });
+  }
+}
+
+function deleteChapter(chapterName, noteId, event) {
+  event.stopPropagation();
+
+  const confirm = window.confirm(`Are you sure you want to delete "${chapterName}"? This cannot be undone.`);
+  if (!confirm) return;
+
+  // Remove from frontend state
+  if (chapterNotes[selectedBook]) {
+    delete chapterNotes[selectedBook][chapterName];
+  }
+  if (chapterIds[selectedBook]) {
+    delete chapterIds[selectedBook][chapterName];
+  }
+
+  // Remove from dropdown
+  const chapterSelect = document.getElementById('chapterSelect');
+  const option = [...chapterSelect.options].find(o => o.value === chapterName);
+  if (option) option.remove();
+
+  // If this was the active chapter, switch to another
+  if (currentChapterId === chapterName) {
+    const remaining = Object.keys(chapterNotes[selectedBook] || {});
+    if (remaining.length > 0) {
+      switchChapter(remaining[0]);
+    } else {
+      currentChapterId = null;
+      document.getElementById('mainNotes').value = '';
+    }
+  }
+
+  renderAccordion();
+  showToast(`Deleted "${chapterName}"`);
+
+  // Delete from backend (live mode only)
+  if (CURRENT_BOOK_ID && noteId) {
+    api('DELETE', `/notes/${noteId}`);
   }
 }
 
@@ -3130,11 +3324,8 @@ function renderBooks() {
       <div class="book-info">
         <div class="book-title">${b.title}</div>
         <div class="book-author">${b.author}</div>
-        <div class="progress-wrap">
-          <div class="progress-bar"><div class="progress-fill" style="width:${b.progress}%"></div></div>
-          <span class="progress-pct">${b.progress}%</span>
-        </div>
       </div>
+      <button class="book-delete-btn" onclick="deleteBook('${b.id}', event)" title="Delete book">×</button>
     </div>
   `).join('');
 }
@@ -3170,6 +3361,51 @@ function selectBook(id) {
   conceptsLoaded = false;
 }
 
+function deleteBook(bookId, event) {
+  event.stopPropagation();
+  const book = BOOKS.find(b => b.id === bookId);
+  if (!book) return;
+
+  const confirm = window.confirm(
+    `Are you sure you want to delete "${book.title}"?\n\nThis will delete the book and all its notes, ideas, and articles. This cannot be undone.`
+  );
+  if (!confirm) return;
+
+  // Remove from BOOKS array
+  const index = BOOKS.findIndex(b => b.id === bookId);
+  if (index > -1) {
+    BOOKS.splice(index, 1);
+  }
+
+  // Clean up frontend state
+  delete chapterNotes[bookId];
+  delete chapterIds[bookId];
+
+  // If this was the selected book, switch to another
+  if (selectedBook === bookId) {
+    if (BOOKS.length > 0) {
+      selectBook(BOOKS[0].id);
+    } else {
+      // No more books
+      CURRENT_BOOK_ID = null;
+      selectedBook = null;
+      currentChapterId = null;
+      document.getElementById('barTitle').textContent = 'No books';
+      document.getElementById('barAuthor').textContent = '';
+      document.getElementById('mainNotes').value = '';
+      document.querySelector('.accordion').innerHTML = '';
+      document.getElementById('chapterSelect').innerHTML = '';
+    }
+  } else {
+    renderBooks();
+  }
+
+  showToast(`Deleted "${book.title}"`);
+
+  // Delete from backend (live mode only)
+  api('DELETE', `/books/${bookId}`);
+}
+
 async function loadBookContent(bookId) {
   // Fetch notes and ideas in parallel
   const [notes, ideas] = await Promise.all([
@@ -3191,7 +3427,11 @@ async function loadBookContent(bookId) {
   if (notes !== null && notes.length > 0) {
     // Initialise mutable chapter state from API data
     chapterNotes[bookId] = {};
-    notes.forEach(n => { chapterNotes[bookId][n.chapter_name] = n.content || ''; });
+    chapterIds[bookId] = {};
+    notes.forEach(n => {
+      chapterNotes[bookId][n.chapter_name] = n.content || '';
+      chapterIds[bookId][n.chapter_name] = n.id;
+    });
 
     // Populate chapter dropdown and wire onchange
     chapterSelect.innerHTML = notes.map(n =>

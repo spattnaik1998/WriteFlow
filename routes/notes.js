@@ -34,11 +34,20 @@ router.post('/', async (req, res) => {
   res.status(201).json(data);
 });
 
-// PATCH /api/notes/:id — update note content
+// PATCH /api/notes/:id — update note content or chapter name
 router.patch('/:id', async (req, res) => {
+  const { content, chapter_name } = req.body;
+  const updates = {};
+  if (content !== undefined) updates.content = content;
+  if (chapter_name !== undefined) updates.chapter_name = chapter_name;
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'No fields to update' });
+  }
+
   const { data, error } = await supabase
     .from('notes')
-    .update({ content: req.body.content })
+    .update(updates)
     .eq('id', req.params.id)
     .select()
     .single();

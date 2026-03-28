@@ -44,11 +44,26 @@ router.patch('/:id', async (req, res) => {
   res.json(data);
 });
 
-// DELETE /api/books/:id
+// DELETE /api/books/:id — cascade delete book and all related data
 router.delete('/:id', async (req, res) => {
-  const { error } = await supabase.from('books').delete().eq('id', req.params.id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ success: true });
+  const bookId = req.params.id;
+
+  try {
+    // Delete all related data in order of foreign key dependencies
+    await supabase.from('conversations').delete().eq('book_id', bookId);
+    await supabase.from('articles').delete().eq('book_id', bookId);
+    await supabase.from('ideas').delete().eq('book_id', bookId);
+    await supabase.from('essays').delete().eq('book_id', bookId);
+    await supabase.from('notes').delete().eq('book_id', bookId);
+
+    // Finally, delete the book itself
+    const { error } = await supabase.from('books').delete().eq('id', bookId);
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

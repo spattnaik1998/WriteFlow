@@ -62,4 +62,10 @@ PORT                # defaults to 3000
 
 ## Database setup
 
-Run `supabase_schema.sql` once in the Supabase SQL editor. It creates 6 tables (`books`, `notes`, `ideas`, `articles`, `conversations`, `essays`) and `updated_at` triggers for books, notes, and essays.
+Run `supabase_schema.sql` once in the Supabase SQL editor. It creates all tables and `updated_at` triggers. For existing deployments, apply new columns via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` rather than re-running the full schema.
+
+## Git / deployment rules
+
+- **Only commit files required to run the app in production.** This means: `server.js`, `index.html`, `package.json`, `package-lock.json`, `routes/*.js`, `services/*.js`, `supabase_schema.sql`, `.env.example`, `CLAUDE.md`. Never commit personal documents (`.docx`, `.pdf`), planning files (`FEATURE_ROADMAP.md`, `IMPLEMENTATION_SUMMARY.md`, `RESUME_HERE.md`, `SETUP_GUIDE.md`, `SKILL.md`), or the product spec.
+- **Never create README or documentation files** after building a feature. Do not create `README.md`, `SETUP_GUIDE.md`, `IMPLEMENTATION_SUMMARY.md`, or similar files unless explicitly asked.
+- Push to `origin master` after each confirmed feature completion.

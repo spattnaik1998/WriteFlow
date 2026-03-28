@@ -439,4 +439,269 @@ Generate the weekly newsletter digest.`;
   };
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest };
+/**
+ * Detect logical contradictions between idea cards.
+ * ideas: [{ id, title, body }]
+ * Returns array of { idea_a_id, idea_b_id, contradiction_type, description, severity, resolution_options }
+ */
+async function detectContradictions({ ideas }) {
+  const ideaList = ideas.map((idea, i) =>
+    `${i + 1}. [ID:${idea.id}] "${idea.title}": ${(idea.body || '').slice(0, 200)}`
+  ).join('\n');
+
+  const systemPrompt = `You are a rigorous analytical philosopher. Identify logical contradictions between idea pairs.
+
+A contradiction exists when:
+- Two ideas make directly opposing claims (direct_conflict)
+- Their underlying premises are mutually exclusive (incompatible_premises)
+- They assume different scope/domain that makes them irreconcilable (scope_mismatch)
+
+For each contradiction found, provide 2 resolution options.
+severity: 0.0 (trivial) to 1.0 (fundamental).
+
+Return ONLY valid JSON:
+{
+  "contradictions": [
+    {
+      "idea_a_id": "uuid",
+      "idea_b_id": "uuid",
+      "contradiction_type": "direct_conflict"|"incompatible_premises"|"scope_mismatch",
+      "description": "string — explains the specific tension in 1-2 sentences",
+      "severity": 0.0-1.0,
+      "resolution_options": [
+        { "option": "string", "reasoning": "string" },
+        { "option": "string", "reasoning": "string" }
+      ]
+    }
+  ]
+}`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Analyze these ideas for contradictions:\n\n${ideaList}` }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.3,
+    max_tokens: 2000
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return raw.contradictions || [];
+}
+
+/**
+ * Reconstruct logical argument structure from raw notes.
+ * Extracts: primary claim, premises (with strength tiers), conclusions,
+ * logical gaps, and counter-arguments.
+ *
+ * Returns a structured argument object matching SKILL.md spec.
+ */
+async function reconstructArgument({
+  bookTitle,
+  author,
+  chapterName,
+  rawNotes,
+  existingArgument = null
+}) {
+  const systemPrompt = `You are a logic analyst and argument reconstructor. Your job is to carefully read a reader's raw notes and extract the underlying argument structure.
+
+You must identify and return:
+1. **primary_claim**: The central thesis or main argument (1 sentence, clear and definitive)
+2. **premises**: Core supporting claims, each labeled as:
+   - "foundational": essential to the argument; if removed, argument collapses
+   - "supporting": strengthens the argument but not strictly necessary
+   - "contextual": provides background or examples
+3. **conclusions**: Claims that logically follow from the premises
+4. **logical_gaps**: Missing evidence, unstated assumptions, or inferential leaps
+   - Classify as "missing_evidence", "unstated_assumption", or "inferential_leap"
+   - Assign severity 1 (minor) to 5 (critical)
+5. **counter_arguments**: Counterarguments the author acknowledges or should acknowledge
+   - Rate as "strong", "moderate", or "weak"
+
+Your analysis should be:
+- Precise and scholarly (but accessible)
+- Grounded in the text, not speculative
+- Forgiving of messiness (notes are rough)
+- Helpful for the reader to see the logical thread they're creating
+
+Return valid JSON ONLY. No preamble.`;
+
+  const userPrompt = `Book: "${bookTitle}" by ${author}
+Chapter: ${chapterName}
+
+Raw notes:
+"""
+${rawNotes}
+"""
+
+${existingArgument ? `Previous argument extraction (for reference, to avoid exact duplication):\nPrimary claim: ${existingArgument.primary_claim}` : ''}
+
+Extract the argument structure from these notes. Return JSON with this exact shape:
+{
+  "primary_claim": string,
+  "premises": [{ "text": string, "strength": "foundational|supporting|contextual", "evidence_count": number, "order": number }],
+  "conclusions": [{ "text": string, "derived_from_premises": [number], "certainty": "high|medium|low" }],
+  "logical_gaps": [{ "description": string, "type": "missing_evidence|unstated_assumption|inferential_leap", "severity": number }],
+  "counter_arguments": [{ "claim": string, "why_presented": string, "strength": "strong|moderate|weak" }],
+  "metadata": { "premise_count": number, "conclusion_count": number, "confidence_score": number, "reasoning_style": string }
+}`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.6, // Lower temp for more consistent logical analysis
+    max_tokens: 2500
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+
+  // Defensive parsing: handle various response shapes
+  return {
+    primary_claim: raw.primary_claim || '',
+    premises: (raw.premises || []).map((p, i) => ({
+      text: p.text || '',
+      strength: p.strength || 'supporting',
+      evidence_count: p.evidence_count || 0,
+      order: p.order !== undefined ? p.order : i
+    })),
+    conclusions: (raw.conclusions || []).map(c => ({
+      text: c.text || '',
+      derived_from_premises: c.derived_from_premises || [],
+      certainty: c.certainty || 'medium'
+    })),
+    logical_gaps: (raw.logical_gaps || []).map(g => ({
+      description: g.description || '',
+      type: g.type || 'missing_evidence',
+      severity: Math.min(5, Math.max(1, g.severity || 2))
+    })),
+    counter_arguments: (raw.counter_arguments || []).map(ca => ({
+      claim: ca.claim || '',
+      why_presented: ca.why_presented || '',
+      strength: ca.strength || 'moderate'
+    })),
+    metadata: {
+      premise_count: (raw.premises || []).length,
+      conclusion_count: (raw.conclusions || []).length,
+      confidence_score: raw.metadata?.confidence_score || 0.7,
+      reasoning_style: raw.metadata?.reasoning_style || 'mixed'
+    }
+  };
+}
+
+/**
+ * Extract concept structure from notes.
+ * Returns: { concepts, relationships, hierarchy, metadata }
+ */
+async function generateConceptMap({
+  bookTitle,
+  author,
+  chapterName,
+  rawNotes,
+  existingConcepts = null
+}) {
+  const systemPrompt = `You are a knowledge architect. Extract the concept structure from notes.
+
+For each chapter, identify:
+1. **Primary concepts**: Main ideas discussed
+   - name: concept name
+   - definition: 1-2 sentences explaining the concept
+   - centrality: 0.0-1.0 (how central to the chapter)
+   - type: "primary|secondary|supporting"
+
+2. **Relationships**: How concepts connect
+   - from: source concept name
+   - to: target concept name
+   - type: "causes", "exemplifies", "contradicts", "refines", "analogy"
+   - strength: 0.0-1.0 (how strong the relationship)
+
+3. **Hierarchy**: Abstract vs. concrete
+   - parent: more abstract concept name
+   - children: [concrete instances or specifications]
+
+Return valid JSON only.`;
+
+  const userPrompt = `Book: "${bookTitle}" by ${author}
+Chapter: ${chapterName}
+
+Raw notes:
+"""
+${rawNotes}
+"""
+
+Extract concept structure. Return JSON:
+{
+  "concepts": [
+    {
+      "name": string,
+      "definition": string,
+      "centrality": number,
+      "type": "primary|secondary|supporting"
+    }
+  ],
+  "relationships": [
+    {
+      "from": string,
+      "to": string,
+      "type": "causes|exemplifies|contradicts|refines|analogy",
+      "strength": number
+    }
+  ],
+  "hierarchy": [
+    {
+      "parent": string,
+      "children": [string]
+    }
+  ],
+  "metadata": {
+    "concept_count": number,
+    "primary_concepts": [string],
+    "complexity_score": number
+  }
+}`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.65,
+    max_tokens: 2500
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+
+  // Defensive parsing
+  return {
+    concepts: (raw.concepts || []).map(c => ({
+      name: c.name || '',
+      definition: c.definition || '',
+      centrality: Math.min(1, Math.max(0, c.centrality || 0.5)),
+      type: c.type || 'secondary'
+    })),
+    relationships: (raw.relationships || []).map(r => ({
+      from: r.from || '',
+      to: r.to || '',
+      type: r.type || 'refines',
+      strength: Math.min(1, Math.max(0, r.strength || 0.5))
+    })),
+    hierarchy: (raw.hierarchy || []).map(h => ({
+      parent: h.parent || '',
+      children: Array.isArray(h.children) ? h.children : []
+    })),
+    metadata: {
+      concept_count: (raw.concepts || []).length,
+      primary_concepts: raw.metadata?.primary_concepts || [],
+      complexity_score: Math.min(1, Math.max(0, raw.metadata?.complexity_score || 0.5))
+    }
+  };
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, reconstructArgument, generateConceptMap };
