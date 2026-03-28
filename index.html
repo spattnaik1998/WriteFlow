@@ -1600,6 +1600,56 @@ body::after {
   margin-left: 4px;
 }
 
+/* ── Concept D3 graph ── */
+#conceptsViz {
+  position: relative;
+  width: 100%;
+  min-height: 430px;
+  background: var(--bg-dim, #f8fafc);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  display: none;
+}
+#conceptsViz svg { display: block; }
+
+.concept-d3-tooltip {
+  position: absolute;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-hi);
+  border-radius: 8px;
+  padding: 12px 14px;
+  max-width: 240px;
+  z-index: 50;
+  box-shadow: 0 4px 24px rgba(0,0,0,.35);
+  pointer-events: auto;
+}
+.ct-close {
+  position: absolute;
+  top: 6px; right: 8px;
+  background: none; border: none;
+  color: var(--text-4); font-size: 16px;
+  cursor: pointer; line-height: 1;
+}
+.ct-close:hover { color: var(--text-1); }
+.ct-name {
+  font-size: 12.5px; font-weight: 600;
+  color: var(--text-1); margin-bottom: 5px; padding-right: 16px;
+}
+.ct-def {
+  font-size: 11.5px; color: var(--text-3); line-height: 1.5;
+  margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px;
+}
+.ct-rels-label {
+  font-size: 9.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--text-4); margin-bottom: 5px;
+}
+.ct-rel { font-size: 11px; color: var(--text-2); padding: 2px 0; }
+.ct-rel-type {
+  display: inline-block; font-size: 9px; font-weight: 600;
+  text-transform: uppercase; background: rgba(37,99,235,.08);
+  color: var(--amber-dk); border-radius: 2px; padding: 1px 4px; margin-right: 3px;
+}
+
 /* ═══════════════════════════════════════
    WRITE TAB
 ═══════════════════════════════════════ */
@@ -3125,15 +3175,20 @@ body::after {
         <div class="concepts-container">
           <div class="concepts-header">
             <span class="section-label">Concept Map</span>
-            <button class="btn-amber btn-sm" id="mapBtn" onclick="generateConceptMap()">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="19" r="1"/><line x1="12" y1="13" x2="18" y2="5"/><line x1="11" y1="12" x2="5" y2="18"/>
-              </svg>
-              Generate Map
-            </button>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn-sec btn-sm" id="conceptViewToggle" onclick="toggleConceptView()" style="display:none">List View</button>
+              <button class="btn-amber btn-sm" id="mapBtn" onclick="generateConceptMap()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="19" r="1"/><line x1="12" y1="13" x2="18" y2="5"/><line x1="11" y1="12" x2="5" y2="18"/>
+                </svg>
+                Generate Map
+              </button>
+            </div>
           </div>
 
-          <div id="conceptsList" class="concepts-list">
+          <div id="conceptsViz"></div>
+
+          <div id="conceptsList" class="concepts-list" style="display:none">
             <!-- Populated by JavaScript -->
           </div>
 
@@ -3402,6 +3457,7 @@ body::after {
 <!-- Toast notification -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous"></script>
 <script>
 // ═══════════════════════════════════════
 // DATA
@@ -5613,21 +5669,17 @@ async function generateConceptMap() {
 }
 
 /**
- * Load and display concept maps for the current book
+ * Load and display concept maps for the current book (live mode: most recent)
  */
 async function loadConceptMapsForBook() {
   if (!CURRENT_BOOK_ID) return;
-
   try {
     if (IS_LIVE_MODE) {
-      const response = await fetch(`/api/concepts?book_id=${CURRENT_BOOK_ID}`);
-      if (!response.ok) return;
-      const conceptMaps = await response.json();
-      if (conceptMaps.length > 0) {
-        displayConceptMap(conceptMaps[0]);
+      const maps = await api('GET', `/concepts?book_id=${CURRENT_BOOK_ID}`);
+      if (maps && maps.length > 0) {
+        displayConceptMap(maps[maps.length - 1]); // most recent
       }
     } else {
-      // Prototype: show sample data
       displayConceptMap(PROTOTYPE_CONCEPT_MAP);
     }
   } catch (err) {
@@ -5636,44 +5688,85 @@ async function loadConceptMapsForBook() {
 }
 
 /**
- * Display concept map in the Concepts tab
+ * Entry point: decide graph vs list based on viewport, populate both
  */
 function displayConceptMap(conceptMap) {
-  const container = document.getElementById('conceptsList');
+  const viz        = document.getElementById('conceptsViz');
+  const listEl     = document.getElementById('conceptsList');
   const emptyState = document.getElementById('conceptsEmpty');
+  const toggleBtn  = document.getElementById('conceptViewToggle');
 
   if (!conceptMap || !conceptMap.concepts || conceptMap.concepts.length === 0) {
-    container.style.display = 'none';
+    viz.style.display      = 'none';
+    listEl.style.display   = 'none';
     emptyState.style.display = 'flex';
+    toggleBtn.style.display  = 'none';
     return;
   }
 
-  container.style.display = 'flex';
   emptyState.style.display = 'none';
 
-  const concepts = conceptMap.concepts || [];
+  // Always populate the list (for list-view mode)
+  renderConceptList(conceptMap, listEl);
+
+  if (window.innerWidth < 768) {
+    // Narrow viewport — skip SVG, show list only
+    viz.style.display      = 'none';
+    listEl.style.display   = 'flex';
+    toggleBtn.style.display = 'none';
+    return;
+  }
+
+  // Wide viewport — default to graph view
+  viz.style.display      = 'block';
+  listEl.style.display   = 'none';
+  toggleBtn.style.display = '';
+  toggleBtn.textContent   = 'List View';
+  renderConceptGraph(conceptMap);
+}
+
+/**
+ * Toggle between graph and list view
+ */
+function toggleConceptView() {
+  const viz    = document.getElementById('conceptsViz');
+  const listEl = document.getElementById('conceptsList');
+  const btn    = document.getElementById('conceptViewToggle');
+
+  if (viz.style.display !== 'none') {
+    viz.style.display    = 'none';
+    listEl.style.display = 'flex';
+    btn.textContent      = 'Graph View';
+  } else {
+    listEl.style.display = 'none';
+    viz.style.display    = 'block';
+    btn.textContent      = 'List View';
+  }
+}
+
+/**
+ * Render the text-list view into listEl
+ */
+function renderConceptList(conceptMap, listEl) {
+  const concepts      = conceptMap.concepts      || [];
   const relationships = conceptMap.relationships || [];
 
-  container.innerHTML = concepts.map((concept, idx) => {
-    // Find relationships for this concept
+  listEl.innerHTML = concepts.map(concept => {
     const outgoing = relationships.filter(r => r.from === concept.name);
-
     return `
-      <div class="concept-card" data-concept-id="${concept.name}">
+      <div class="concept-card" data-concept-id="${escapeHtml(concept.name)}">
         <div class="concept-header" onclick="toggleConceptItem(this)">
           <div class="concept-name">
             ${escapeHtml(concept.name)}
-            <span class="concept-type ${concept.type}">${concept.type}</span>
+            <span class="concept-type ${concept.type || ''}">${concept.type || ''}</span>
           </div>
-          <div class="concept-centrality">${(concept.centrality * 100).toFixed(0)}%</div>
-          <svg class="concept-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M6 9l6 6 6-6"/>
-          </svg>
+          <div class="concept-centrality">${((concept.centrality || 0) * 100).toFixed(0)}%</div>
+          <svg class="concept-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
         </div>
         <div class="concept-body">
           <div class="concept-definition">
             <span class="concept-definition-label">Definition</span>
-            <div class="concept-definition-text">${escapeHtml(concept.definition)}</div>
+            <div class="concept-definition-text">${escapeHtml(concept.definition || '')}</div>
           </div>
           ${outgoing.length > 0 ? `
             <div class="relationships-section">
@@ -5682,35 +5775,202 @@ function displayConceptMap(conceptMap) {
                 <div class="relationship-item">
                   <span class="relationship-type">${escapeHtml(rel.type)}</span>
                   → ${escapeHtml(rel.to)}
-                  <span class="relationship-strength">(${(rel.strength * 100).toFixed(0)}%)</span>
+                  <span class="relationship-strength">(${((rel.strength || 0) * 100).toFixed(0)}%)</span>
                 </div>
               `).join('')}
-            </div>
-          ` : ''}
+            </div>` : ''}
         </div>
-      </div>
-    `;
+      </div>`;
   }).join('');
 }
 
 /**
- * Toggle concept item expansion
+ * Toggle concept item expansion (list view)
  */
 function toggleConceptItem(headerEl) {
-  const body = headerEl.nextElementSibling;
+  const body   = headerEl.nextElementSibling;
   const isOpen = body.classList.contains('open');
-
-  // Close all other concept items
   document.querySelectorAll('.concept-body.open').forEach(b => {
     b.classList.remove('open');
     b.previousElementSibling.classList.remove('open');
   });
-
-  // Toggle this one
   if (!isOpen) {
     body.classList.add('open');
     headerEl.classList.add('open');
   }
+}
+
+/**
+ * Render D3 force-directed graph into #conceptsViz
+ */
+function renderConceptGraph(conceptMap) {
+  const viz = document.getElementById('conceptsViz');
+  viz.innerHTML = '';
+  // Remove stale tooltip
+  document.querySelectorAll('.concept-d3-tooltip').forEach(t => t.remove());
+
+  const concepts      = conceptMap.concepts      || [];
+  const relationships = conceptMap.relationships || [];
+  if (concepts.length === 0) return;
+
+  const W = viz.offsetWidth  || 700;
+  const H = 430;
+
+  const NODE_COLOR = { primary: '#2563EB', secondary: '#93C5FD', supporting: '#CBD5E1' };
+
+  const svg = d3.select('#conceptsViz')
+    .append('svg')
+    .attr('width', W)
+    .attr('height', H);
+
+  // Arrowhead marker
+  svg.append('defs').append('marker')
+    .attr('id', 'cg-arrow')
+    .attr('viewBox', '0 -4 8 8')
+    .attr('refX', 28)
+    .attr('refY', 0)
+    .attr('markerWidth', 6)
+    .attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-4L8,0L0,4')
+    .attr('fill', '#94a3b8');
+
+  // Build simulation nodes/links
+  const nodeMap = {};
+  const nodes = concepts.map(c => {
+    const n = {
+      id:         c.name,
+      name:       c.name,
+      definition: c.definition || '',
+      type:       c.type || 'supporting',
+      centrality: c.centrality || 0,
+      r:          8 + (c.centrality || 0) * 16   // 8–24 px
+    };
+    nodeMap[c.name] = n;
+    return n;
+  });
+
+  const links = relationships
+    .filter(r => nodeMap[r.from] && nodeMap[r.to])
+    .map(r => ({
+      source:   r.from,
+      target:   r.to,
+      type:     r.type || '',
+      strength: r.strength || 0.5,
+      dashed:   r.type === 'contradicts'
+    }));
+
+  // Force simulation
+  const sim = d3.forceSimulation(nodes)
+    .force('link',      d3.forceLink(links).id(d => d.id)
+                          .distance(d => 80 + (1 - d.strength) * 60)
+                          .strength(0.4))
+    .force('charge',    d3.forceManyBody().strength(-300))
+    .force('center',    d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide(d => d.r + 20));
+
+  // Edge layer
+  const edgeLayer = svg.append('g');
+  const linkSel = edgeLayer.selectAll('line')
+    .data(links)
+    .join('line')
+    .attr('stroke', '#94a3b8')
+    .attr('stroke-opacity', 0.55)
+    .attr('stroke-width', d => 1 + d.strength * 3)
+    .attr('stroke-dasharray', d => d.dashed ? '5,3' : null)
+    .attr('marker-end', 'url(#cg-arrow)');
+
+  // Node layer
+  const nodeGrp = svg.append('g')
+    .selectAll('g')
+    .data(nodes)
+    .join('g')
+    .style('cursor', 'pointer')
+    .on('click', (event, d) => showConceptTooltip(event, d, relationships))
+    .call(d3.drag()
+      .on('start', (ev, d) => { if (!ev.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+      .on('drag',  (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+      .on('end',   (ev, d) => { if (!ev.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+  nodeGrp.append('circle')
+    .attr('r', d => d.r)
+    .attr('fill', d => NODE_COLOR[d.type] || '#CBD5E1')
+    .attr('fill-opacity', 0.88)
+    .attr('stroke', '#fff')
+    .attr('stroke-width', 2);
+
+  // Labels below nodes — wrap long names
+  nodeGrp.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#475569')
+    .style('font-family', "'Inter', sans-serif")
+    .style('font-size', '10px')
+    .style('font-weight', '500')
+    .style('pointer-events', 'none')
+    .each(function(d) {
+      const el    = d3.select(this);
+      const words = d.name.split(/\s+/);
+      const lineH = 12;
+      const yOff  = d.r + 13;
+      if (words.length <= 2) {
+        el.append('tspan').attr('x', 0).attr('y', yOff).text(d.name);
+      } else {
+        el.append('tspan').attr('x', 0).attr('y', yOff).text(words.slice(0, 2).join(' '));
+        el.append('tspan').attr('x', 0).attr('dy', lineH).text(words.slice(2).join(' '));
+      }
+    });
+
+  // Tick: update positions, clamp to SVG bounds
+  sim.on('tick', () => {
+    linkSel
+      .attr('x1', d => d.source.x)
+      .attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x)
+      .attr('y2', d => d.target.y);
+
+    nodeGrp.attr('transform', d =>
+      `translate(${Math.max(d.r + 2, Math.min(W - d.r - 2, d.x))},${Math.max(d.r + 2, Math.min(H - d.r - 2, d.y))})`);
+  });
+}
+
+/**
+ * Show tooltip near the clicked node
+ */
+function showConceptTooltip(event, d, relationships) {
+  document.querySelectorAll('.concept-d3-tooltip').forEach(t => t.remove());
+
+  const outgoing = relationships.filter(r => r.from === d.name);
+  const incoming = relationships.filter(r => r.to   === d.name);
+  const allRels  = [
+    ...outgoing.map(r => `<div class="ct-rel"><span class="ct-rel-type">${escapeHtml(r.type)}</span> → ${escapeHtml(r.to)}</div>`),
+    ...incoming.map(r => `<div class="ct-rel"><span class="ct-rel-type">${escapeHtml(r.type)}</span> ← ${escapeHtml(r.from)}</div>`)
+  ].join('');
+
+  const tip = document.createElement('div');
+  tip.className = 'concept-d3-tooltip';
+  tip.innerHTML = `
+    <button class="ct-close" onclick="this.parentElement.remove()">×</button>
+    <div class="ct-name">${escapeHtml(d.name)}</div>
+    <div class="ct-def">${escapeHtml(d.definition)}</div>
+    ${allRels ? `<div class="ct-rels-label">Relationships</div>${allRels}` : ''}
+  `;
+  document.getElementById('conceptsViz').appendChild(tip);
+
+  // Position near click, adjust if near edge
+  const viz = document.getElementById('conceptsViz');
+  const vr  = viz.getBoundingClientRect();
+  let tx = event.clientX - vr.left + 14;
+  let ty = event.clientY - vr.top  + 14;
+  tip.style.left = tx + 'px';
+  tip.style.top  = ty + 'px';
+
+  // Reposition if overflowing
+  requestAnimationFrame(() => {
+    const tr = tip.getBoundingClientRect();
+    if (tr.right  > vr.right)  tip.style.left = (tx - tr.width  - 28) + 'px';
+    if (tr.bottom > vr.bottom) tip.style.top  = (ty - tr.height - 28) + 'px';
+  });
 }
 
 /**
