@@ -34,12 +34,13 @@ router.post('/', async (req, res) => {
   res.status(201).json(data);
 });
 
-// PATCH /api/notes/:id — update note content or chapter name
+// PATCH /api/notes/:id — update note content, chapter name, or completed flag
 router.patch('/:id', async (req, res) => {
-  const { content, chapter_name } = req.body;
+  const { content, chapter_name, completed } = req.body;
   const updates = {};
   if (content !== undefined) updates.content = content;
   if (chapter_name !== undefined) updates.chapter_name = chapter_name;
+  if (completed !== undefined) updates.completed = completed;
 
   if (Object.keys(updates).length === 0) {
     return res.status(400).json({ error: 'No fields to update' });

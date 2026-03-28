@@ -161,6 +161,103 @@ body::after {
   top: 2px;
 }
 
+/* Sidebar search */
+.sidebar-search {
+  padding: 8px 12px 4px;
+  flex-shrink: 0;
+}
+.sidebar.collapsed .sidebar-search { display: none; }
+.search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-icon {
+  position: absolute;
+  left: 9px;
+  color: var(--text-4);
+  pointer-events: none;
+  display: flex;
+}
+.search-input {
+  width: 100%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 6px 28px 6px 30px;
+  font-size: 12px;
+  color: var(--text-1);
+  outline: none;
+  transition: var(--ease);
+}
+.search-input::placeholder { color: var(--text-4); }
+.search-input:focus { border-color: var(--amber-dk); background: var(--surface-3); }
+.search-clear {
+  position: absolute;
+  right: 7px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-4);
+  padding: 2px;
+  display: none;
+  line-height: 1;
+  font-size: 14px;
+}
+.search-clear:hover { color: var(--text-2); }
+.search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+  z-index: 200;
+  max-height: 360px;
+  overflow-y: auto;
+  display: none;
+}
+.search-results.open { display: block; }
+.search-group { padding: 6px 0 2px; }
+.search-group:not(:first-child) { border-top: 1px solid var(--border); margin-top: 2px; }
+.search-group-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-4);
+  padding: 4px 12px 2px;
+}
+.search-item {
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: var(--ease);
+}
+.search-item:hover { background: var(--surface-2); }
+.search-item-title {
+  font-size: 12.5px;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-item-meta {
+  font-size: 11px;
+  color: var(--text-4);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-no-results {
+  padding: 14px 12px;
+  font-size: 12px;
+  color: var(--text-4);
+  text-align: center;
+}
+
 .collapse-btn {
   background: none;
   border: none;
@@ -328,6 +425,95 @@ body::after {
   color: white;
   border-color: #dc2626;
   transform: scale(1.1);
+}
+
+/* Book status dot */
+.book-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+  margin-right: 5px;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+}
+.book-status-dot.reading {
+  background: #2563eb;
+  animation: bookDotPulse 2.2s ease-in-out infinite;
+}
+.book-status-dot.to_read  { background: #888; }
+.book-status-dot.completed { background: #22c55e; }
+@keyframes bookDotPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(37,99,235,.5); }
+  60%      { box-shadow: 0 0 0 4px rgba(37,99,235,0); }
+}
+.book-card.archived .book-title { color: var(--text-4); }
+
+/* Source type pill */
+.book-type-pill {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-top: 4px;
+  opacity: .85;
+}
+.book-type-pill.book    { background: rgba(201,168,76,.15); color: var(--amber); }
+.book-type-pill.article { background: rgba(30, 94,138,.18); color: #5ba3cc; }
+.book-type-pill.paper   { background: rgba(110,74, 30,.18); color: #b5895a; }
+.book-type-pill.blog    { background: rgba(30,110, 74,.18); color: #5cad8a; }
+
+/* Library filter toggle */
+.library-filter {
+  display: flex;
+  gap: 4px;
+  padding: 0 10px 10px;
+}
+.sidebar.collapsed .library-filter { display: none; }
+.filter-btn {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-4);
+  font-size: 11px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: var(--ease);
+  text-align: center;
+}
+.filter-btn:hover { color: var(--text-2); border-color: var(--border-hi); }
+.filter-btn.active { background: var(--amber-glow); border-color: var(--amber-dk); color: var(--amber); }
+
+/* Chapter done button */
+.btn-chapter-done {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-4);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  padding: 9px 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--ease);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.btn-chapter-done:hover { color: var(--text-2); border-color: var(--border-hi); }
+.btn-chapter-done.done {
+  background: rgba(34,197,94,.1);
+  border-color: rgba(34,197,94,.4);
+  color: #22c55e;
 }
 
 /* Sidebar footer */
@@ -2624,6 +2810,109 @@ body::after {
 }
 .connections-empty svg { margin-bottom: 12px; opacity: .4; }
 
+/* Empty state (Arguments / Concepts tabs) */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 24px;
+  text-align: center;
+  gap: 12px;
+  color: var(--text-4);
+}
+.empty-state svg { opacity: .3; }
+.empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+.empty-desc {
+  font-size: 12.5px;
+  color: var(--text-4);
+  max-width: 280px;
+  line-height: 1.65;
+}
+
+/* Review mode overlay */
+.review-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,9,8,.92);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.review-progress {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 28px;
+}
+.review-card-inner {
+  background: var(--surface-3);
+  border: 1px solid var(--border-hi);
+  border-radius: 16px;
+  padding: 36px 40px;
+  max-width: 640px;
+  width: 100%;
+  box-shadow: 0 24px 64px rgba(0,0,0,.6);
+}
+.review-card-num {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 12px;
+}
+.review-card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1.35;
+  margin-bottom: 16px;
+}
+.review-card-body {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.75;
+  margin-bottom: 20px;
+}
+.review-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 32px;
+}
+.review-card-tag {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: var(--surface-2);
+  color: var(--text-4);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+.review-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.review-hint {
+  font-size: 11px;
+  color: var(--text-4);
+}
+
 /* Library mode toggle */
 .lib-mode-btn {
   background: none;
@@ -2766,11 +3055,28 @@ body::after {
       </button>
     </div>
 
+    <div class="sidebar-search">
+      <div class="search-wrap" style="position:relative">
+        <span class="search-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+        </span>
+        <input class="search-input" id="sidebarSearch" type="text" placeholder="Search notes, ideas, books…" oninput="onSearchInput()" autocomplete="off"/>
+        <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear">✕</button>
+        <div class="search-results" id="searchResults"></div>
+      </div>
+    </div>
+
     <div class="sidebar-body">
       <div style="padding: 0 0 8px">
         <div class="section-header">
           <span class="section-label">My Library</span>
           <button class="add-book-btn" onclick="openModal()" title="Add new book">+</button>
+        </div>
+        <div class="library-filter">
+          <button class="filter-btn active" id="filterInProgress" onclick="setLibraryFilter('in_progress')">In Progress</button>
+          <button class="filter-btn" id="filterAll" onclick="setLibraryFilter('all')">All</button>
         </div>
         <div class="book-list" id="bookList"></div>
       </div>
@@ -2831,6 +3137,10 @@ body::after {
             <option selected>Chapter 3 — The Lazy Controller</option>
             <option>Chapter 4 — The Associative Machine</option>
           </select>
+          <button class="btn-chapter-done" id="chapterDoneBtn" onclick="toggleChapterDone()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            Done
+          </button>
           <button class="btn-add-chapter" onclick="addChapter()">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Chapter
@@ -2922,7 +3232,21 @@ body::after {
             <span class="theme-pill" onclick="togglePill(this)">Psychology</span>
             <span class="theme-pill" onclick="togglePill(this)">Behavior</span>
           </div>
-          <button class="btn-sec btn-sm" onclick="showAddInsightForm()">+ Add Insight</button>
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+            <button class="btn-sec btn-sm" onclick="openReviewMode()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              Review
+            </button>
+            <button class="btn-sec btn-sm" onclick="copyIdeasAsMarkdown()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy MD
+            </button>
+            <button class="btn-sec btn-sm" id="exportIdeasBtn" onclick="exportIdeasPdf()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export PDF
+            </button>
+            <button class="btn-sec btn-sm" onclick="showAddInsightForm()">+ Add Insight</button>
+          </div>
         </div>
         <div id="addInsightForm" class="add-insight-form" style="display:none">
           <input id="addInsightTitle" type="text" placeholder="Insight title">
@@ -3142,13 +3466,19 @@ body::after {
           <!-- Arguments header with action button -->
           <div class="arguments-header">
             <span class="section-label">Argument Analysis</span>
+            <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-sec btn-sm" id="exportArgBtn" onclick="exportArgumentOutline()" style="display:none">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export
+            </button>
             <button class="btn-amber btn-sm" id="reconstructBtn" onclick="reconstructArguments()">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
               </svg>
               Reconstruct Arguments
             </button>
-          </div>
+            </div><!-- /button group -->
+          </div><!-- /arguments-header -->
 
           <!-- Arguments display area -->
           <div id="argumentsList" class="arguments-list">
@@ -3163,8 +3493,8 @@ body::after {
               </svg>
             </div>
             <div class="empty-text">
-              <div class="empty-title">No arguments reconstructed yet</div>
-              <div class="empty-desc">Click "Reconstruct Arguments" to extract logical structures from your notes.</div>
+              <div class="empty-title">No argument mapped yet</div>
+              <div class="empty-desc">Write notes and distil ideas first, then click "Reconstruct Arguments" to extract logical structures.</div>
             </div>
           </div>
         </div>
@@ -3472,12 +3802,15 @@ let selectedBook    = 'tfs';
 let activeTab       = 'notes';
 let responseIdx     = 0;
 let libraryMode     = false;
-let chapterNotes    = {};    // { bookId: { chapterName: content } }
-let chapterIds      = {};    // { bookId: { chapterName: noteId } } — tracks DB IDs for delete/edit
+let chapterNotes     = {};    // { bookId: { chapterName: content } }
+let chapterIds       = {};    // { bookId: { chapterName: noteId } } — tracks DB IDs for delete/edit
+let chapterCompleted = {};    // { bookId: { chapterName: bool } }
 let currentChapterId = null; // name of the active chapter
 let _saveTimer      = null;  // debounce handle for notes auto-save
 let _writeTimer     = null;  // debounce handle for essay auto-save
 let _currentEssayId = null;  // DB id of the essay being edited
+let _searchTimer    = null;  // debounce handle for sidebar search
+let _postLoadAction = null;  // { tab, chapter } applied after loadBookContent resolves
 let _currentFlow    = null;  // last rendered flow data (for SVG resize)
 let _nodeRegistry   = {};    // nodeId → DOM element for the current diagram
 
@@ -3623,6 +3956,7 @@ function switchChapter(name) {
   textarea.value = chapterNotes[selectedBook]?.[name] ?? '';
   document.getElementById('chapterSelect').value = name;
   renderAccordion();
+  updateChapterDoneBtn();
   textarea.focus();
 }
 
@@ -3650,6 +3984,50 @@ function renderAccordion() {
         </div>
       </div>`;
   }).join('');
+}
+
+function updateChapterDoneBtn() {
+  const btn = document.getElementById('chapterDoneBtn');
+  if (!btn) return;
+  const done = !!(currentChapterId && selectedBook && chapterCompleted[selectedBook]?.[currentChapterId]);
+  btn.classList.toggle('done', done);
+  btn.querySelector('svg').style.opacity = done ? '1' : '0.4';
+}
+
+async function toggleChapterDone() {
+  if (!CURRENT_BOOK_ID || !currentChapterId) return;
+  const noteId = chapterIds[CURRENT_BOOK_ID]?.[currentChapterId];
+  if (!noteId) return;
+
+  if (!chapterCompleted[CURRENT_BOOK_ID]) chapterCompleted[CURRENT_BOOK_ID] = {};
+  const nowDone = !chapterCompleted[CURRENT_BOOK_ID][currentChapterId];
+  chapterCompleted[CURRENT_BOOK_ID][currentChapterId] = nowDone;
+  updateChapterDoneBtn();
+
+  await api('PATCH', `/notes/${noteId}`, { completed: nowDone });
+
+  if (nowDone) {
+    // Check if all chapters are now done → auto-complete the book
+    const allDone = Object.keys(chapterNotes[CURRENT_BOOK_ID] || {}).every(
+      ch => chapterCompleted[CURRENT_BOOK_ID]?.[ch]
+    );
+    if (allDone) {
+      const book = BOOKS.find(b => b.id === CURRENT_BOOK_ID);
+      if (book && book.status !== 'completed') {
+        book.status = 'completed';
+        renderBooks();
+        await api('PATCH', `/books/${CURRENT_BOOK_ID}`, {
+          status: 'completed',
+          finished_at: new Date().toISOString()
+        });
+        showToast('All chapters done — book marked as Completed!');
+      }
+    } else {
+      showToast(`"${currentChapterId}" marked done`);
+    }
+  } else {
+    showToast(`"${currentChapterId}" unmarked`);
+  }
 }
 
 function addChapter() {
@@ -3802,18 +4180,38 @@ function init() {
 // ═══════════════════════════════════════
 // BOOKS
 // ═══════════════════════════════════════
+let _libraryFilter = 'in_progress'; // 'in_progress' | 'all'
+
+function setLibraryFilter(f) {
+  _libraryFilter = f;
+  document.getElementById('filterInProgress').classList.toggle('active', f === 'in_progress');
+  document.getElementById('filterAll').classList.toggle('active', f === 'all');
+  renderBooks();
+}
+
 function renderBooks() {
   const list = document.getElementById('bookList');
-  list.innerHTML = BOOKS.map(b => `
-    <div class="book-card ${b.id === selectedBook ? 'active' : ''}" onclick="selectBook('${b.id}')">
+  const books = _libraryFilter === 'in_progress'
+    ? BOOKS.filter(b => b.status === 'reading' || b.status === 'to_read' || !b.status)
+    : BOOKS;
+
+  list.innerHTML = books.map(b => {
+    const st = b.status || 'reading';
+    const dotHtml = st === 'archived' ? ''
+      : `<span class="book-status-dot ${st}"></span>`;
+    const archivedCls = st === 'archived' ? 'archived' : '';
+    const typeLabel = b.source_type || 'book';
+    return `
+    <div class="book-card ${b.id === selectedBook ? 'active' : ''} ${archivedCls}" onclick="selectBook('${b.id}')">
       <div class="book-spine" style="background:${b.spine}"></div>
       <div class="book-info">
-        <div class="book-title">${b.title}</div>
-        <div class="book-author">${b.author}</div>
+        <div class="book-title">${dotHtml}${escapeHtml(b.title)}</div>
+        <div class="book-author">${escapeHtml(b.author)}</div>
+        <span class="book-type-pill ${typeLabel}">${typeLabel}</span>
       </div>
       <button class="book-delete-btn" onclick="deleteBook('${b.id}', event)" title="Delete book">×</button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function selectBook(id) {
@@ -3866,6 +4264,7 @@ function deleteBook(bookId, event) {
   // Clean up frontend state
   delete chapterNotes[bookId];
   delete chapterIds[bookId];
+  delete chapterCompleted[bookId];
 
   // If this was the selected book, switch to another
   if (selectedBook === bookId) {
@@ -3917,9 +4316,11 @@ async function loadBookContent(bookId) {
     // Initialise mutable chapter state from API data
     chapterNotes[bookId] = {};
     chapterIds[bookId] = {};
+    chapterCompleted[bookId] = {};
     notes.forEach(n => {
       chapterNotes[bookId][n.chapter_name] = n.content || '';
       chapterIds[bookId][n.chapter_name] = n.id;
+      chapterCompleted[bookId][n.chapter_name] = !!n.completed;
     });
 
     // Populate chapter dropdown and wire onchange
@@ -3975,6 +4376,20 @@ async function loadBookContent(bookId) {
         msg.content
       );
     });
+  }
+
+  // ── Post-load navigation (e.g. from search result click) ────
+  if (_postLoadAction) {
+    const action = _postLoadAction;
+    _postLoadAction = null;
+    if (action.tab) switchTab(action.tab);
+    if (action.chapter) {
+      const sel = document.getElementById('chapterSelect');
+      if (sel) {
+        sel.value = action.chapter;
+        switchChapter(action.chapter);
+      }
+    }
   }
 }
 
@@ -4185,10 +4600,13 @@ function buildIdeaCard(idea, idx) {
   const card = document.createElement('div');
   card.className = 'idea-card';
   card.style.animationDelay = `${idx * 0.07}s`;
-  card.dataset.ideaId = idea.id || '';
-  card.dataset.title  = idea.title || '';
-  card.dataset.body   = idea.body  || '';
-  card.dataset.tags   = (idea.tags || []).join(',');
+  card.dataset.ideaId        = idea.id || '';
+  card.dataset.title         = idea.title || '';
+  card.dataset.body          = idea.body  || '';
+  card.dataset.tags          = (idea.tags || []).join(',');
+  card.dataset.chapterName   = idea.chapter_name || '';
+  card.dataset.reviewCount   = idea.review_count || 0;
+  card.dataset.lastReviewedAt = idea.last_reviewed_at || '';
 
   const tagsHtml    = (idea.tags || []).map(t => `<span class="idea-tag">${escapeHtml(t)}</span>`).join('');
   const manualBadge = idea.is_manual ? ' <span class="idea-manual-badge">Manual</span>' : '';
@@ -4639,6 +5057,222 @@ async function exportAllNotesPdf() {
   }
 }
 
+async function exportIdeasPdf() {
+  if (!CURRENT_BOOK_ID) { showToast('Select a book first'); return; }
+
+  const btn = document.getElementById('exportIdeasBtn');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10"/></svg> Generating...';
+  btn.disabled = true;
+
+  try {
+    const response = await fetch('/api/export/ideas-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ book_id: CURRENT_BOOK_ID })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      showToast('Failed to generate PDF: ' + (error.error || 'Unknown error'));
+      return;
+    }
+
+    const blob = await response.blob();
+    const url  = window.URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    const bookTitle = document.getElementById('barTitle')?.textContent || 'ideas';
+    a.download = bookTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '_ideas.pdf';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    showToast('Ideas PDF downloaded!');
+  } catch (err) {
+    console.error('Ideas PDF export error:', err);
+    showToast('Error generating PDF: ' + err.message);
+  } finally {
+    btn.innerHTML = originalText;
+    btn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════
+// REVIEW MODE
+// ═══════════════════════════════════════
+let _reviewQueue  = [];
+let _reviewIndex  = 0;
+let _reviewTotal  = 0;
+
+function openReviewMode() {
+  const cards = Array.from(document.querySelectorAll('#ideasGrid .idea-card'));
+  if (!cards.length) { showToast('No ideas to review'); return; }
+
+  // Build queue sorted by last_reviewed_at ASC, nulls first
+  _reviewQueue = cards
+    .map(c => ({
+      id:            c.dataset.ideaId,
+      title:         c.dataset.title,
+      body:          c.dataset.body,
+      tags:          c.dataset.tags ? c.dataset.tags.split(',').filter(Boolean) : [],
+      reviewCount:   parseInt(c.dataset.reviewCount, 10) || 0,
+      lastReviewedAt: c.dataset.lastReviewedAt || null,
+      _card:         c
+    }))
+    .sort((a, b) => {
+      if (!a.lastReviewedAt && !b.lastReviewedAt) return 0;
+      if (!a.lastReviewedAt) return -1;
+      if (!b.lastReviewedAt) return 1;
+      return new Date(a.lastReviewedAt) - new Date(b.lastReviewedAt);
+    });
+
+  _reviewIndex = 0;
+  _reviewTotal = _reviewQueue.length;
+  document.getElementById('reviewOverlay').style.display = 'flex';
+  showReviewCard();
+}
+
+function showReviewCard() {
+  if (_reviewIndex >= _reviewQueue.length) {
+    document.getElementById('reviewProgress').textContent = `All ${_reviewTotal} reviewed!`;
+    document.getElementById('reviewTitle').textContent = 'Review complete';
+    document.getElementById('reviewBody').textContent = `You reviewed all ${_reviewTotal} ideas.`;
+    document.getElementById('reviewTags').innerHTML = '';
+    document.getElementById('reviewNum').textContent = '';
+    document.getElementById('reviewNextBtn').style.display = 'none';
+    return;
+  }
+
+  const idea = _reviewQueue[_reviewIndex];
+  const num = String(_reviewIndex + 1).padStart(2, '0');
+  document.getElementById('reviewNum').textContent = `INSIGHT ${num}`;
+  document.getElementById('reviewTitle').textContent = idea.title;
+  document.getElementById('reviewBody').textContent  = idea.body;
+  document.getElementById('reviewTags').innerHTML =
+    idea.tags.map(t => `<span class="review-card-tag">${escapeHtml(t)}</span>`).join('');
+  document.getElementById('reviewProgress').textContent =
+    `${_reviewIndex} of ${_reviewTotal} reviewed`;
+  document.getElementById('reviewNextBtn').style.display = '';
+}
+
+async function reviewNext() {
+  if (_reviewIndex >= _reviewQueue.length) { closeReviewMode(); return; }
+
+  const idea = _reviewQueue[_reviewIndex];
+  const now  = new Date().toISOString();
+  const newCount = idea.reviewCount + 1;
+
+  // Optimistic: update data attribute on the DOM card
+  if (idea._card) {
+    idea._card.dataset.reviewCount    = newCount;
+    idea._card.dataset.lastReviewedAt = now;
+  }
+
+  // Persist
+  if (IS_LIVE_MODE && idea.id) {
+    api('PATCH', `/distill/${idea.id}`, { last_reviewed_at: now, review_count: newCount });
+  }
+
+  _reviewIndex++;
+  showReviewCard();
+}
+
+function closeReviewMode() {
+  document.getElementById('reviewOverlay').style.display = 'none';
+  _reviewQueue = [];
+}
+
+// ═══════════════════════════════════════
+// COPY IDEAS AS MARKDOWN
+// ═══════════════════════════════════════
+async function copyIdeasAsMarkdown() {
+  const cards = Array.from(document.querySelectorAll('#ideasGrid .idea-card'));
+  if (!cards.length) { showToast('No ideas to copy'); return; }
+
+  // Group by chapter
+  const chapters = {};
+  const chapterOrder = [];
+  cards.forEach(c => {
+    const ch = c.dataset.chapterName || 'General';
+    if (!chapters[ch]) { chapters[ch] = []; chapterOrder.push(ch); }
+    chapters[ch].push(c);
+  });
+
+  const lines = [];
+  const bookTitle = document.getElementById('barTitle')?.textContent || 'Untitled';
+  lines.push(`# ${bookTitle} — Idea Cards\n`);
+
+  chapterOrder.forEach(ch => {
+    lines.push(`## ${ch}\n`);
+    chapters[ch].forEach(c => {
+      lines.push(`### ${c.dataset.title}`);
+      if (c.dataset.body) lines.push(`\n${c.dataset.body}`);
+      const tags = c.dataset.tags ? c.dataset.tags.split(',').filter(Boolean) : [];
+      if (tags.length) lines.push(`\n**Tags:** ${tags.join(', ')}`);
+      lines.push('');
+    });
+  });
+
+  try {
+    await navigator.clipboard.writeText(lines.join('\n'));
+    showToast('Copied to clipboard');
+  } catch {
+    showToast('Copy failed — try again');
+  }
+}
+
+// ═══════════════════════════════════════
+// EXPORT ARGUMENT OUTLINE
+// ═══════════════════════════════════════
+function exportArgumentOutline() {
+  if (!_currentArguments.length) { showToast('No argument data to export'); return; }
+
+  const bookTitle = document.getElementById('barTitle')?.textContent || 'Untitled';
+  const lines = [`# Argument Outline — ${bookTitle}\n`];
+
+  _currentArguments.forEach((arg, idx) => {
+    lines.push(`# ${arg.primary_claim || `Argument ${idx + 1}`}\n`);
+
+    if (arg.premises?.length) {
+      lines.push('## Premises\n');
+      arg.premises.forEach(p => lines.push(`- **[${(p.strength || 'supporting').toUpperCase()}]** ${p.text || ''}`));
+      lines.push('');
+    }
+
+    if (arg.conclusions?.length) {
+      lines.push('## Conclusions\n');
+      arg.conclusions.forEach(c => lines.push(`- ${c.text || c}`));
+      lines.push('');
+    }
+
+    if (arg.logical_gaps?.length) {
+      lines.push('## Logical Gaps\n');
+      arg.logical_gaps.forEach(g => lines.push(`- **[${(g.type || 'gap').replace(/_/g, ' ').toUpperCase()}]** ${g.description || ''}`));
+      lines.push('');
+    }
+
+    if (arg.counter_arguments?.length) {
+      lines.push('## Counter-Arguments\n');
+      arg.counter_arguments.forEach(ca => lines.push(`- **[${(ca.strength || 'moderate').toUpperCase()}]** ${ca.claim || ''}`));
+      lines.push('');
+    }
+  });
+
+  const md   = lines.join('\n');
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = (bookTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'argument') + '_outline.md';
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+  showToast('Argument outline downloaded');
+}
+
 // ═══════════════════════════════════════
 // THREAD MODAL
 // ═══════════════════════════════════════
@@ -4995,7 +5629,7 @@ async function addBook() {
 
   // Optimistic UI update
   const tempId = 'temp-' + Date.now();
-  BOOKS.push({ id: tempId, title, author: author || 'Unknown Author', spine: spineColor, progress: 0 });
+  BOOKS.push({ id: tempId, title, author: author || 'Unknown Author', spine: spineColor, progress: 0, source_type: sourceType, status });
   renderBooks();
   closeModal();
   showToast(`"${title}" added to your library`);
@@ -5139,6 +5773,122 @@ function showToast(msg) {
 }
 
 // ═══════════════════════════════════════
+// SIDEBAR FULL-TEXT SEARCH
+// ═══════════════════════════════════════
+function onSearchInput() {
+  const q = document.getElementById('sidebarSearch').value;
+  document.getElementById('searchClear').style.display = q ? 'block' : 'none';
+  clearTimeout(_searchTimer);
+  if (q.length < 3) { closeSearchPanel(); return; }
+  _searchTimer = setTimeout(() => runSearch(q), 300);
+}
+
+async function runSearch(q) {
+  if (!IS_LIVE_MODE) return;
+  const results = await api('GET', `/search/internal?q=${encodeURIComponent(q)}`);
+  if (!results) return;
+  renderSearchResults(results);
+}
+
+function renderSearchResults({ books, notes, ideas }) {
+  const panel = document.getElementById('searchResults');
+  panel.innerHTML = '';
+
+  const total = (books?.length || 0) + (notes?.length || 0) + (ideas?.length || 0);
+  if (total === 0) {
+    panel.innerHTML = '<div class="search-no-results">No results found</div>';
+    panel.classList.add('open');
+    return;
+  }
+
+  if (books?.length)  panel.appendChild(makeSearchGroup('Books',  books,  makeBookItem));
+  if (notes?.length)  panel.appendChild(makeSearchGroup('Notes',  notes,  makeNoteItem));
+  if (ideas?.length)  panel.appendChild(makeSearchGroup('Ideas',  ideas,  makeIdeaItem));
+
+  panel.classList.add('open');
+}
+
+function makeSearchGroup(label, items, itemFn) {
+  const g = document.createElement('div');
+  g.className = 'search-group';
+  const lbl = document.createElement('div');
+  lbl.className = 'search-group-label';
+  lbl.textContent = label;
+  g.appendChild(lbl);
+  items.forEach(item => g.appendChild(itemFn(item)));
+  return g;
+}
+
+function makeBookItem(b) {
+  const el = document.createElement('div');
+  el.className = 'search-item';
+  el.innerHTML = `<div class="search-item-title">${escapeHtml(b.title)}</div>
+    <div class="search-item-meta">${escapeHtml(b.author || '')}</div>`;
+  el.addEventListener('click', () => openSearchResult({ book_id: b.id }));
+  return el;
+}
+
+function makeNoteItem(n) {
+  const preview = (n.content || '').replace(/\s+/g, ' ').slice(0, 80);
+  const el = document.createElement('div');
+  el.className = 'search-item';
+  el.innerHTML = `<div class="search-item-title">${escapeHtml(n.chapter_name)}</div>
+    <div class="search-item-meta">${escapeHtml(preview)}…</div>`;
+  el.addEventListener('click', () => openSearchResult({ book_id: n.book_id, tab: 'notes', chapter: n.chapter_name }));
+  return el;
+}
+
+function makeIdeaItem(idea) {
+  const preview = (idea.body || '').replace(/\s+/g, ' ').slice(0, 70);
+  const el = document.createElement('div');
+  el.className = 'search-item';
+  el.innerHTML = `<div class="search-item-title">${escapeHtml(idea.title)}</div>
+    <div class="search-item-meta">${escapeHtml(preview)}…</div>`;
+  el.addEventListener('click', () => openSearchResult({ book_id: idea.book_id, tab: 'ideas' }));
+  return el;
+}
+
+function openSearchResult({ book_id, tab, chapter }) {
+  closeSearchPanel();
+  clearSearch();
+  if (!book_id) return;
+
+  if (tab || chapter) _postLoadAction = { tab, chapter };
+
+  if (book_id === CURRENT_BOOK_ID) {
+    // Already on this book — just navigate
+    if (_postLoadAction) {
+      const action = _postLoadAction;
+      _postLoadAction = null;
+      if (action.tab) switchTab(action.tab);
+      if (action.chapter) {
+        const sel = document.getElementById('chapterSelect');
+        if (sel) { sel.value = action.chapter; switchChapter(action.chapter); }
+      }
+    }
+  } else {
+    selectBook(book_id);
+  }
+}
+
+function closeSearchPanel() {
+  document.getElementById('searchResults').classList.remove('open');
+}
+
+function clearSearch() {
+  const inp = document.getElementById('sidebarSearch');
+  if (inp) inp.value = '';
+  document.getElementById('searchClear').style.display = 'none';
+  closeSearchPanel();
+}
+
+// Close search when clicking outside
+document.addEventListener('click', e => {
+  const wrap = document.querySelector('.sidebar-search');
+  if (wrap && !wrap.contains(e.target)) closeSearchPanel();
+});
+
+// ═══════════════════════════════════════
 // KEYBOARD SHORTCUTS
 // ═══════════════════════════════════════
 document.addEventListener('keydown', e => {
@@ -5147,6 +5897,13 @@ document.addEventListener('keydown', e => {
     closeBrandModal();
     closeLinkedInModal();
     closeDigestModal();
+    closeSearchPanel();
+    closeReviewMode();
+  }
+
+  // Review mode advance
+  if (document.getElementById('reviewOverlay')?.style.display !== 'none') {
+    if (e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); reviewNext(); }
   }
   if (e.metaKey || e.ctrlKey) {
     if (e.key === '1') { e.preventDefault(); switchTab('notes'); }
@@ -5190,11 +5947,13 @@ async function loadBooksFromAPI() {
     data.forEach(b => {
       if (!BOOKS.find(x => x.id === b.id)) {
         BOOKS.unshift({
-          id:       b.id,
-          title:    b.title,
-          author:   b.author || '',
-          spine:    b.spine_color || '#1e3a6e',
-          progress: b.progress || 0
+          id:          b.id,
+          title:       b.title,
+          author:      b.author || '',
+          spine:       b.spine_color || '#1e3a6e',
+          progress:    b.progress || 0,
+          source_type: b.source_type || 'book',
+          status:      b.status || 'reading'
         });
       }
     });
@@ -5403,7 +6162,10 @@ async function loadArgumentsForBook() {
 /**
  * Display arguments in the Arguments tab
  */
+let _currentArguments = [];
+
 function displayArguments(argumentList) {
+  _currentArguments = argumentList || [];
   const container = document.getElementById('argumentsList');
   const emptyState = document.getElementById('argumentsEmpty');
 
@@ -5415,6 +6177,8 @@ function displayArguments(argumentList) {
 
   container.style.display = 'flex';
   emptyState.style.display = 'none';
+  const exportBtn = document.getElementById('exportArgBtn');
+  if (exportBtn) exportBtn.style.display = 'flex';
 
   container.innerHTML = argumentList.map((arg, idx) => {
     const premises = arg.premises || [];
@@ -6827,5 +7591,27 @@ function outsideDigestClose(e) {
 // ═══════════════════════════════════════
 init();
 </script>
+
+<!-- Review mode overlay -->
+<div class="review-overlay" id="reviewOverlay" style="display:none" role="dialog" aria-modal="true">
+  <div class="review-progress" id="reviewProgress">0 of 0 reviewed</div>
+  <div class="review-card-inner">
+    <div class="review-card-num" id="reviewNum">INSIGHT 01</div>
+    <div class="review-card-title" id="reviewTitle"></div>
+    <div class="review-card-body" id="reviewBody"></div>
+    <div class="review-card-tags" id="reviewTags"></div>
+    <div class="review-actions">
+      <span class="review-hint">Space or → to advance · Esc to exit</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn-sec btn-sm" onclick="closeReviewMode()">Exit</button>
+        <button class="btn-amber btn-sm" id="reviewNextBtn" onclick="reviewNext()">
+          Next
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:4px"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

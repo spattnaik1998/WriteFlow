@@ -106,6 +106,26 @@ router.delete('/articles/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+// GET /api/search/internal?q= — full-text search across books, notes, ideas
+router.get('/internal', async (req, res) => {
+  const { q } = req.query;
+  if (!q || q.trim().length < 3) return res.json({ books: [], notes: [], ideas: [] });
+
+  const term = `%${q.trim()}%`;
+
+  const [booksRes, notesRes, ideasRes] = await Promise.all([
+    supabase.from('books').select('id, title, author').or(`title.ilike.${term},author.ilike.${term}`).limit(4),
+    supabase.from('notes').select('id, book_id, chapter_name, content').ilike('content', term).limit(4),
+    supabase.from('ideas').select('id, book_id, title, body').or(`title.ilike.${term},body.ilike.${term}`).limit(4)
+  ]);
+
+  res.json({
+    books: booksRes.data  || [],
+    notes: notesRes.data  || [],
+    ideas: ideasRes.data  || []
+  });
+});
+
 // GET /api/search/saved?book_id=... — get previously saved articles
 router.get('/saved', async (req, res) => {
   const { book_id } = req.query;

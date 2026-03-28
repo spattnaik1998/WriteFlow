@@ -170,6 +170,10 @@ create trigger ideas_updated_at before update on ideas
 create trigger user_profile_updated_at before update on user_profile
   for each row execute procedure set_updated_at();
 
+-- ===== MIGRATIONS (run once in Supabase SQL editor) =====
+-- Add completed flag to notes (chapter mark-done feature)
+alter table notes add column if not exists completed boolean default false;
+
 -- ===== ROW LEVEL SECURITY (enable when you add auth) =====
 -- alter table books        enable row level security;
 -- alter table notes        enable row level security;
