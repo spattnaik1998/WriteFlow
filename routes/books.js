@@ -13,14 +13,65 @@ router.get('/', async (req, res) => {
   res.json(data);
 });
 
+// GET /api/books/prefill?url= — scrape og meta tags to pre-fill the add-book form
+router.get('/prefill', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.json({});
+
+  try {
+    const controller = new AbortController();
+    const timeout    = setTimeout(() => controller.abort(), 5000);
+    const response   = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; WriteFlow/1.0)' },
+      signal:  controller.signal
+    });
+    clearTimeout(timeout);
+    if (!response.ok) return res.json({});
+
+    const html = await response.text();
+
+    // og:title (both attribute orders), fallback to <title>
+    const titleMatch =
+      html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']{1,300})["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']{1,300})["'][^>]+property=["']og:title["']/i) ||
+      html.match(/<title[^>]*>([^<]{1,300})<\/title>/i);
+
+    // article:author / og:author / author / byline
+    const authorMatch =
+      html.match(/<meta[^>]+(?:property|name)=["'](?:article:author|og:author|author|byline)["'][^>]+content=["']([^"']{1,200})["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']{1,200})["'][^>]+(?:property|name)=["'](?:article:author|og:author|author|byline)["']/i);
+
+    // og:site_name, fallback to hostname
+    const siteMatch =
+      html.match(/<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']{1,200})["']/i) ||
+      html.match(/<meta[^>]+content=["']([^"']{1,200})["'][^>]+property=["']og:site_name["']/i);
+
+    const domain = new URL(url).hostname.replace(/^www\./, '');
+
+    return res.json({
+      title:  titleMatch  ? titleMatch[1].trim()  : '',
+      author: authorMatch ? authorMatch[1].trim() : '',
+      domain: siteMatch   ? siteMatch[1].trim()   : domain
+    });
+  } catch {
+    return res.json({});
+  }
+});
+
 // POST /api/books — create a book
 router.post('/', async (req, res) => {
-  const { title, author, category, why_reading, spine_color } = req.body;
+  const { title, author, category, why_reading, spine_color,
+          source_type, status, source_url } = req.body;
   if (!title) return res.status(400).json({ error: 'title is required' });
 
   const { data, error } = await supabase
     .from('books')
-    .insert([{ title, author, category, why_reading, spine_color, progress: 0 }])
+    .insert([{
+      title, author, category, why_reading, spine_color, progress: 0,
+      source_type: source_type || 'book',
+      status:      status      || 'reading',
+      source_url:  source_url  || null
+    }])
     .select()
     .single();
 

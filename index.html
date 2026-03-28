@@ -1967,13 +1967,87 @@ body::after {
   border: 1px solid var(--border-hi);
   border-radius: 14px;
   padding: 28px;
-  width: 440px;
+  width: 460px;
   max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
   transform: translateY(22px) scale(.97);
   transition: transform .26s cubic-bezier(.34,1.56,.64,1);
   box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(201,168,76,.08);
 }
 .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+/* Source type segmented selector */
+.source-type-selector {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.src-btn {
+  flex: 1;
+  background: none;
+  border: none;
+  border-right: 1px solid var(--border);
+  color: var(--text-3);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 0;
+  cursor: pointer;
+  transition: var(--ease);
+}
+.src-btn:last-child { border-right: none; }
+.src-btn:hover { background: var(--border); color: var(--text-1); }
+.src-btn.active { background: var(--amber-glow); color: var(--amber-dk); font-weight: 600; }
+
+/* URL field with inline spinner */
+.url-field-wrap { position: relative; }
+.url-field-wrap .form-input { padding-right: 36px; }
+.url-spinner {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  display: none;
+}
+.url-spinner.on { display: block; animation: spin 0.7s linear infinite; }
+
+/* Status radio group */
+.status-radio {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.status-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.status-option input[type="radio"] { accent-color: var(--amber-dk); cursor: pointer; }
+
+/* Spine colour swatches (books only) */
+.spine-color-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.spine-swatch {
+  width: 22px; height: 22px;
+  border-radius: 5px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease;
+}
+.spine-swatch:hover { transform: scale(1.18); }
+.spine-swatch.active { border-color: var(--amber); transform: scale(1.18); }
 
 .modal-title {
   font-family: 'Playfair Display', serif;
@@ -3122,30 +3196,82 @@ body::after {
 
 </div><!-- /app -->
 
-<!-- Add Book Modal -->
+<!-- Add Book / Source Modal -->
 <div class="modal-overlay" id="modalOverlay" onclick="outsideClose(event)">
   <div class="modal">
     <div class="modal-title">Add to Your Library</div>
     <div class="modal-sub">What are you reading?</div>
+
+    <!-- Source type selector -->
     <div class="form-group">
-      <label class="form-label">Book Title</label>
+      <label class="form-label">Source Type</label>
+      <div class="source-type-selector">
+        <button class="src-btn active" data-type="book"    onclick="setSourceType('book')">Book</button>
+        <button class="src-btn"        data-type="article" onclick="setSourceType('article')">Article</button>
+        <button class="src-btn"        data-type="paper"   onclick="setSourceType('paper')">Paper</button>
+        <button class="src-btn"        data-type="blog"    onclick="setSourceType('blog')">Blog</button>
+      </div>
+    </div>
+
+    <!-- URL (auto-prefill for non-book types) -->
+    <div class="form-group">
+      <label class="form-label">URL <span style="color:var(--text-4);font-weight:400">(optional — auto-fills title &amp; author)</span></label>
+      <div class="url-field-wrap">
+        <input class="form-input" id="newUrl" type="url" placeholder="https://" onblur="prefillFromUrl()">
+        <div class="url-spinner" id="urlSpinner"></div>
+      </div>
+    </div>
+
+    <!-- Title -->
+    <div class="form-group">
+      <label class="form-label" id="titleLabel">Book Title</label>
       <input class="form-input" id="newTitle" type="text" placeholder="e.g. The Pragmatic Programmer">
     </div>
+
+    <!-- Author -->
     <div class="form-group">
       <label class="form-label">Author</label>
       <input class="form-input" id="newAuthor" type="text" placeholder="e.g. David Thomas, Andy Hunt">
     </div>
+
+    <!-- Category -->
     <div class="form-group">
       <label class="form-label">Category</label>
       <input class="form-input" id="newCat" type="text" placeholder="e.g. Philosophy, Business, Science">
     </div>
+
+    <!-- Why reading -->
     <div class="form-group">
       <label class="form-label">Why are you reading this?</label>
-      <textarea class="form-ta" id="newWhy" placeholder="What drew you to this book? What do you hope to discover in it?"></textarea>
+      <textarea class="form-ta" id="newWhy" placeholder="What drew you to this? What do you hope to discover?"></textarea>
     </div>
+
+    <!-- Status -->
+    <div class="form-group">
+      <label class="form-label">Status</label>
+      <div class="status-radio">
+        <label class="status-option"><input type="radio" name="newStatus" value="to_read"> To Read</label>
+        <label class="status-option"><input type="radio" name="newStatus" value="reading" checked> Reading</label>
+        <label class="status-option"><input type="radio" name="newStatus" value="completed"> Completed</label>
+      </div>
+    </div>
+
+    <!-- Spine colour (books only) -->
+    <div class="form-group" id="spineGroup">
+      <label class="form-label">Spine Colour</label>
+      <div class="spine-color-row" id="spineSwatches">
+        <div class="spine-swatch active" data-color="#1e3a6e" style="background:#1e3a6e" onclick="selectSwatch(this)"></div>
+        <div class="spine-swatch" data-color="#6e1e1e" style="background:#6e1e1e" onclick="selectSwatch(this)"></div>
+        <div class="spine-swatch" data-color="#1e4a2e" style="background:#1e4a2e" onclick="selectSwatch(this)"></div>
+        <div class="spine-swatch" data-color="#4a2a6e" style="background:#4a2a6e" onclick="selectSwatch(this)"></div>
+        <div class="spine-swatch" data-color="#6e4a2a" style="background:#6e4a2a" onclick="selectSwatch(this)"></div>
+        <div class="spine-swatch" data-color="#2a5e5e" style="background:#2a5e5e" onclick="selectSwatch(this)"></div>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn-amber" style="flex:0;padding:9px 20px" onclick="addBook()">Add Book</button>
+      <button class="btn-amber" id="addBookBtn" style="flex:0;padding:9px 20px" onclick="addBook()">Add Book</button>
     </div>
   </div>
 </div>
@@ -4719,8 +4845,26 @@ function scrollChat() {
 // ═══════════════════════════════════════
 // MODAL
 // ═══════════════════════════════════════
+// Fixed spine colours for non-book source types
+const SOURCE_TYPE_COLORS = {
+  article: '#1e5e8a',
+  paper:   '#6e4a1e',
+  blog:    '#1e6e4a'
+};
+
 function openModal() {
   document.getElementById('modalOverlay').classList.add('open');
+  setSourceType('book');
+  // Reset all fields
+  ['newUrl','newTitle','newAuthor','newCat','newWhy'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  // Default status: Reading
+  const radios = document.querySelectorAll('input[name="newStatus"]');
+  radios.forEach(r => { r.checked = r.value === 'reading'; });
+  // Reset spine swatch
+  document.querySelectorAll('.spine-swatch').forEach((s, i) => s.classList.toggle('active', i === 0));
   setTimeout(() => document.getElementById('newTitle').focus(), 280);
 }
 
@@ -4732,26 +4876,76 @@ function outsideClose(e) {
   if (e.target === document.getElementById('modalOverlay')) closeModal();
 }
 
-async function addBook() {
-  const title  = document.getElementById('newTitle').value.trim();
-  const author = document.getElementById('newAuthor').value.trim();
-  const cat    = document.getElementById('newCat').value.trim();
-  const why    = document.getElementById('newWhy').value.trim();
-  if (!title) { document.getElementById('newTitle').focus(); return; }
+function setSourceType(type) {
+  // Update segment buttons
+  document.querySelectorAll('.src-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === type);
+  });
 
-  const colors = ['#2a3f6e','#6e2a2a','#2a5e3a','#4a2a6e','#6e4a2a','#2a5e5e','#2a5e8e'];
-  const spine  = colors[BOOKS.length % colors.length];
+  // Update title label
+  const labels = { book: 'Book Title', article: 'Article Title', paper: 'Paper Title', blog: 'Post Title' };
+  document.getElementById('titleLabel').textContent = labels[type] || 'Title';
+
+  // Update add button label
+  const btnLabels = { book: 'Add Book', article: 'Add Article', paper: 'Add Paper', blog: 'Add Post' };
+  document.getElementById('addBookBtn').textContent = btnLabels[type] || 'Add';
+
+  // Show spine row only for books
+  document.getElementById('spineGroup').style.display = type === 'book' ? '' : 'none';
+
+  // Default status
+  const defaultStatus = type === 'book' ? 'reading' : 'to_read';
+  document.querySelectorAll('input[name="newStatus"]').forEach(r => {
+    r.checked = r.value === defaultStatus;
+  });
+}
+
+function selectSwatch(el) {
+  document.querySelectorAll('.spine-swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+async function prefillFromUrl() {
+  const urlVal = document.getElementById('newUrl').value.trim();
+  if (!urlVal || !CURRENT_BOOK_ID && !IS_LIVE_MODE) return;
+  if (!urlVal.startsWith('http')) return;
+
+  const spinner = document.getElementById('urlSpinner');
+  spinner.classList.add('on');
+
+  const data = await api('GET', `/books/prefill?url=${encodeURIComponent(urlVal)}`);
+
+  spinner.classList.remove('on');
+  if (!data) return;
+
+  if (data.title  && !document.getElementById('newTitle').value)  document.getElementById('newTitle').value  = data.title;
+  if (data.author && !document.getElementById('newAuthor').value) document.getElementById('newAuthor').value = data.author;
+}
+
+async function addBook() {
+  const title      = document.getElementById('newTitle').value.trim();
+  const author     = document.getElementById('newAuthor').value.trim();
+  const cat        = document.getElementById('newCat').value.trim();
+  const why        = document.getElementById('newWhy').value.trim();
+  const sourceUrl  = document.getElementById('newUrl').value.trim();
+  const sourceType = document.querySelector('.src-btn.active')?.dataset.type || 'book';
+  const status     = document.querySelector('input[name="newStatus"]:checked')?.value || 'reading';
+  const activeSwatch = document.querySelector('.spine-swatch.active');
+  const spineColor = sourceType === 'book'
+    ? (activeSwatch?.dataset.color || '#1e3a6e')
+    : SOURCE_TYPE_COLORS[sourceType];
+
+  if (!title) { document.getElementById('newTitle').focus(); return; }
 
   // Optimistic UI update
   const tempId = 'temp-' + Date.now();
-  BOOKS.push({ id: tempId, title, author: author || 'Unknown Author', spine, progress: 0 });
+  BOOKS.push({ id: tempId, title, author: author || 'Unknown Author', spine: spineColor, progress: 0 });
   renderBooks();
   closeModal();
-  ['newTitle','newAuthor','newCat','newWhy'].forEach(fid => document.getElementById(fid).value = '');
   showToast(`"${title}" added to your library`);
 
   // Persist to Supabase in background
-  const saved = await addBookToAPI(title, author, cat, why);
+  const saved = await addBookToAPI(title, author, cat, why, spineColor, sourceType, status, sourceUrl || null);
   if (saved?.id) {
     const idx = BOOKS.findIndex(b => b.id === tempId);
     if (idx > -1) BOOKS[idx].id = saved.id;
@@ -4990,11 +5184,16 @@ async function searchArticlesFromAPI(bookId, conceptQuery) {
 }
 
 // Real add book — saves to Supabase via backend
-async function addBookToAPI(title, author, category, whyReading) {
+async function addBookToAPI(title, author, category, whyReading, spineColor, sourceType, status, sourceUrl) {
   return await api('POST', '/books', {
-    title, author, category,
-    why_reading: whyReading,
-    spine_color: getRandomSpine()
+    title,
+    author,
+    category,
+    why_reading:  whyReading,
+    spine_color:  spineColor  || getRandomSpine(),
+    source_type:  sourceType  || 'book',
+    status:       status      || 'reading',
+    source_url:   sourceUrl   || null
   });
 }
 
