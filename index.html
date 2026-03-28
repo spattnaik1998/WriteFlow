@@ -2794,12 +2794,13 @@ body::after {
           </button>
         </div>
 
-        <div class="write-area" id="writeArea" contenteditable="true">
+        <div class="write-area" id="writeArea" contenteditable="true" oninput="onWriteInput()">
           <h2>The Hidden Architecture of Thought</h2>
           <p>Daniel Kahneman's central thesis is deceptively simple: we do not think as much as we believe we do. The mind operates on two parallel systems — one fast and automatic, one slow and deliberate — and the deliberate one is far more passive than our self-image suggests.</p>
           <blockquote>What You See Is All There Is. The mind builds coherent stories from available information, never asking what might be missing from the picture.</blockquote>
           <p>The implications cascade outward. If System 1 generates the vast majority of our judgments, and System 2 mostly just endorses them, then our cherished sense of careful deliberation is largely an illusion. We are not rational agents who occasionally err. We are intuitive agents who occasionally reflect.</p>
         </div>
+        <div id="writeSavedLabel" class="saved-label">Saved</div>
 
         <div class="export-row">
           <button class="btn-sec" style="font-size:12px" onclick="exportMd()">
@@ -3157,7 +3158,9 @@ let libraryMode     = false;
 let chapterNotes    = {};    // { bookId: { chapterName: content } }
 let chapterIds      = {};    // { bookId: { chapterName: noteId } } — tracks DB IDs for delete/edit
 let currentChapterId = null; // name of the active chapter
-let _saveTimer      = null;  // debounce handle for backend auto-save
+let _saveTimer      = null;  // debounce handle for notes auto-save
+let _writeTimer     = null;  // debounce handle for essay auto-save
+let _currentEssayId = null;  // DB id of the essay being edited
 let _currentFlow    = null;  // last rendered flow data (for SVG resize)
 let _nodeRegistry   = {};    // nodeId → DOM element for the current diagram
 
@@ -3573,6 +3576,9 @@ function deleteBook(bookId, event) {
 }
 
 async function loadBookContent(bookId) {
+  // Reset essay state for the incoming book
+  _currentEssayId = null;
+
   // Fetch notes and ideas in parallel
   const [notes, ideas] = await Promise.all([
     api('GET', `/notes?book_id=${bookId}`),
@@ -3716,6 +3722,9 @@ function switchTab(tab) {
       loadCrossBookIdeas();
     }
     loadSavedArticles();
+  }
+  if (tab === 'write') {
+    loadWriteContent();
   }
   if (tab === 'arguments' && !argumentsLoaded) {
     argumentsLoaded = true;
@@ -4584,11 +4593,92 @@ function execFmt(cmd) {
   }
 }
 
-function requestAISuggest() {
+// ═══════════════════════════════════════
+// WRITE TAB — ESSAY PERSISTENCE
+// ═══════════════════════════════════════
+async function loadWriteContent() {
+  if (!CURRENT_BOOK_ID) return;
+  const essays = await api('GET', `/essays?book_id=${CURRENT_BOOK_ID}`);
+  if (essays && essays.length > 0) {
+    _currentEssayId = essays[0].id;
+    document.getElementById('writeArea').innerHTML = essays[0].content || '';
+  } else {
+    _currentEssayId = null;
+    // Leave area as-is so user's in-progress prototype draft isn't wiped
+  }
+}
+
+function onWriteInput() {
+  if (!CURRENT_BOOK_ID) return;
+  clearTimeout(_writeTimer);
+  _writeTimer = setTimeout(saveWriteContent, 2000);
+}
+
+async function saveWriteContent() {
+  if (!CURRENT_BOOK_ID) return;
+  const area    = document.getElementById('writeArea');
+  const content = area.innerHTML;
+  const title   = (area.innerText.trim().split('\n')[0] || 'Untitled').slice(0, 80);
+
+  let saved;
+  if (_currentEssayId) {
+    saved = await api('PATCH', `/essays/${_currentEssayId}`, { title, content });
+  } else {
+    saved = await api('POST', '/essays', { book_id: CURRENT_BOOK_ID, title, content });
+    if (saved) _currentEssayId = saved.id;
+  }
+
+  if (saved) {
+    const lbl = document.getElementById('writeSavedLabel');
+    lbl.classList.add('visible');
+    setTimeout(() => lbl.classList.remove('visible'), 2000);
+  }
+}
+
+async function requestAISuggest() {
+  if (!CURRENT_BOOK_ID) {
+    showToast('Select a book first');
+    return;
+  }
+  const area        = document.getElementById('writeArea');
+  const currentText = area.innerText.slice(-800).trim();
+  if (!currentText) { showToast('Write something first'); return; }
+
+  const btn = document.querySelector('[onclick*="requestAISuggest"]');
+  if (btn) { btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none'; }
+
+  const result = await api('POST', '/chat/suggest', { book_id: CURRENT_BOOK_ID, current_text: currentText });
+
+  if (btn) { btn.style.opacity = ''; btn.style.pointerEvents = ''; }
+
+  if (result && result.suggestion) {
+    insertSuggestionAtCursor(result.suggestion);
+    clearTimeout(_writeTimer);
+    _writeTimer = setTimeout(saveWriteContent, 2000);
+  } else {
+    showToast('Suggestion failed');
+  }
+}
+
+function insertSuggestionAtCursor(text) {
   const area = document.getElementById('writeArea');
-  const text = area.innerText.slice(-200);
-  addAI(`Based on what you've written, consider exploring: the moment when System 2 stops questioning System 1 is not always about laziness — sometimes it's about <em>trust built through past accuracy</em>. The brain is optimizing, not failing. The question is whether the optimization is calibrated to the current situation.`);
-  showToast('AI suggestion sent to Partner panel');
+  area.focus();
+  const span = document.createElement('span');
+  span.style.cssText = 'color:#6b8cba;opacity:0.82;font-style:italic';
+  span.textContent   = ' ' + text;
+
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount > 0 && area.contains(sel.anchorNode)) {
+    const range = sel.getRangeAt(0);
+    range.collapse(false);
+    range.insertNode(span);
+    range.setStartAfter(span);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } else {
+    area.appendChild(span);
+  }
 }
 
 function exportMd() {
@@ -5790,6 +5880,7 @@ fetch('/api/health').then(r => {
     document.getElementById('mainNotes').value = '';
     document.getElementById('barTitle').textContent = 'Select a book';
     document.getElementById('barAuthor').textContent = '';
+    document.getElementById('writeArea').innerHTML = '';
 
     loadBooksFromAPI();
     loadBrandProfile();

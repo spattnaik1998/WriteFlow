@@ -17,6 +17,7 @@ const contradictionsRouter = require('./routes/contradictions');
 const argumentsRouter      = require('./routes/arguments');
 const conceptsRouter      = require('./routes/concepts');
 const exportRouter        = require('./routes/export');
+const essaysRouter        = require('./routes/essays');
 
 const app = express();
 
@@ -39,6 +40,7 @@ app.use('/api/contradictions', contradictionsRouter);
 app.use('/api/arguments',      argumentsRouter);
 app.use('/api/concepts',      conceptsRouter);
 app.use('/api/export',        exportRouter);
+app.use('/api/essays',        essaysRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
