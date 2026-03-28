@@ -2254,6 +2254,119 @@ body::after {
 }
 
 /* ═══════════════════════════════════════
+   CONNECTIONS TAB — SECTION LAYOUT
+═══════════════════════════════════════ */
+.conn-section { margin-bottom: 32px; }
+.conn-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.conn-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+
+/* Article card enhancements */
+.article-title-link {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  line-height: 1.4;
+  text-decoration: none;
+  display: block;
+  margin-bottom: 2px;
+}
+.article-title-link:hover { color: var(--amber); }
+.article-snippet {
+  font-size: 11px;
+  color: var(--text-4);
+  line-height: 1.5;
+  margin: 3px 0 4px;
+}
+.article-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.article-remove {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-4);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: var(--ease);
+  white-space: nowrap;
+}
+.article-remove:hover { border-color: #f87171; color: #f87171; }
+
+/* Narrative theme collapsibles */
+.narrative-themes { margin-bottom: 8px; }
+.narrative-theme-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 7px;
+  overflow: hidden;
+}
+.narrative-theme-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--bg-card);
+  border: none;
+  padding: 11px 14px;
+  cursor: pointer;
+  font-family: 'Playfair Display', serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  text-align: left;
+  transition: var(--ease);
+}
+.narrative-theme-head:hover { background: var(--bg-card-hover); }
+.theme-chevron { flex-shrink: 0; transition: transform 0.2s ease; }
+.narrative-theme-head.open .theme-chevron { transform: rotate(180deg); }
+.narrative-theme-body {
+  padding: 8px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.narrative-idea-card {
+  background: var(--bg-dim);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.narrative-idea-book {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--amber-dk);
+  margin-bottom: 4px;
+}
+.narrative-idea-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+.narrative-idea-body { font-size: 11.5px; color: var(--text-3); line-height: 1.6; }
+
+/* ═══════════════════════════════════════
    CONNECTIONS TAB
 ═══════════════════════════════════════ */
 .connections-header {
@@ -2816,29 +2929,87 @@ body::after {
 
       <!-- CONNECTIONS TAB -->
       <div class="tab-pane" id="pane-connections">
-        <div class="connections-header">
-          <div>
-            <div class="connections-title">Knowledge Map</div>
-            <div class="connections-sub" id="kgSubtitle">Concept connections for the current book</div>
+
+        <!-- Section A: Related Reading -->
+        <div class="conn-section">
+          <div class="conn-section-head">
+            <span class="conn-section-label">Related Reading</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="blog-searching" id="blogSearching">
+                <div class="s-dot"></div><div class="s-dot"></div><div class="s-dot"></div>
+                <span style="font-size:10px;color:var(--text-4)">Searching…</span>
+              </div>
+              <button class="btn-sec btn-sm" onclick="findBlogArticles()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                Find Articles
+              </button>
+            </div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn-sec" onclick="openDigestModal()" style="font-size:12px;padding:8px 12px">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              This Week's Digest
-            </button>
-            <button class="btn-amber" id="narrativeBtn" onclick="generateNarrative()" style="flex:0;padding:9px 14px;font-size:12px">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              Generate Macro Narrative
-            </button>
+          <div class="blog-list" id="blogList">
+            <div class="blog-card">
+              <div class="blog-favicon">FS</div>
+              <div class="blog-info">
+                <a class="article-title-link" href="https://fs.blog" target="_blank" rel="noopener">Why Your Brain Takes Shortcuts: The Science Behind Cognitive Bias</a>
+                <div class="blog-domain">fs.blog</div>
+              </div>
+              <div class="article-card-actions">
+                <button class="blog-read" onclick="window.open('https://fs.blog','_blank')">Read</button>
+              </div>
+            </div>
+            <div class="blog-card" style="animation-delay:.05s">
+              <div class="blog-favicon">LW</div>
+              <div class="blog-info">
+                <a class="article-title-link" href="https://lesswrong.com" target="_blank" rel="noopener">Dual Process Theory: How System 1 and 2 Shape Every Decision You Make</a>
+                <div class="blog-domain">lesswrong.com</div>
+              </div>
+              <div class="article-card-actions">
+                <button class="blog-read" onclick="window.open('https://lesswrong.com','_blank')">Read</button>
+              </div>
+            </div>
+            <div class="blog-card" style="animation-delay:.1s">
+              <div class="blog-favicon">MD</div>
+              <div class="blog-info">
+                <a class="article-title-link" href="https://medium.com" target="_blank" rel="noopener">WYSIATI: The Mental Model That Explains Why We're So Often Wrong</a>
+                <div class="blog-domain">medium.com</div>
+              </div>
+              <div class="article-card-actions">
+                <button class="blog-read" onclick="window.open('https://medium.com','_blank')">Read</button>
+              </div>
+            </div>
           </div>
         </div>
-        <div id="themeClusters"></div>
-        <div id="narrativeOutput" style="display:none">
-          <div class="narrative-section">
-            <div class="narrative-label">Macro Narrative</div>
-            <div class="narrative-prose" id="narrativeProse"></div>
+
+        <!-- Section B: Cross-Library Synthesis -->
+        <div class="conn-section">
+          <div class="conn-section-head">
+            <span class="conn-section-label">Cross-Library Synthesis</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn-sec" onclick="openDigestModal()" style="font-size:12px;padding:8px 12px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                This Week's Digest
+              </button>
+              <button class="btn-amber" id="narrativeBtn" onclick="generateNarrative()" style="flex:0;padding:9px 14px;font-size:12px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Generate Macro Narrative
+              </button>
+            </div>
+          </div>
+          <div class="connections-header" style="margin-bottom:12px">
+            <div>
+              <div class="connections-title">Knowledge Map</div>
+              <div class="connections-sub" id="kgSubtitle">Concept connections for the current book</div>
+            </div>
+          </div>
+          <div id="themeClusters"></div>
+          <div id="narrativeOutput" style="display:none">
+            <div id="narrativeThemes" class="narrative-themes"></div>
+            <div class="narrative-section">
+              <div class="narrative-label">Macro Narrative</div>
+              <div class="narrative-prose" id="narrativeProse"></div>
+            </div>
           </div>
         </div>
+
       </div>
 
       <!-- ARGUMENTS TAB -->
@@ -2947,42 +3118,6 @@ body::after {
       </div>
     </div>
 
-    <!-- Blog Panel -->
-    <div class="blog-panel">
-      <div class="blog-panel-header">
-        <div class="blog-panel-title">Blog Discoveries</div>
-        <div class="blog-searching" id="blogSearching">
-          <div class="s-dot"></div><div class="s-dot"></div><div class="s-dot"></div>
-          <span style="font-size:10px;color:var(--text-4)">Searching...</span>
-        </div>
-      </div>
-      <div class="blog-list" id="blogList">
-        <div class="blog-card">
-          <div class="blog-favicon">FS</div>
-          <div class="blog-info">
-            <div class="blog-card-title">Why Your Brain Takes Shortcuts: The Science Behind Cognitive Bias</div>
-            <div class="blog-domain">fs.blog</div>
-          </div>
-          <button class="blog-read">Read</button>
-        </div>
-        <div class="blog-card" style="animation-delay:.05s">
-          <div class="blog-favicon">LW</div>
-          <div class="blog-info">
-            <div class="blog-card-title">Dual Process Theory: How System 1 and 2 Shape Every Decision You Make</div>
-            <div class="blog-domain">lesswrong.com</div>
-          </div>
-          <button class="blog-read">Read</button>
-        </div>
-        <div class="blog-card" style="animation-delay:.1s">
-          <div class="blog-favicon">MD</div>
-          <div class="blog-info">
-            <div class="blog-card-title">WYSIATI: The Mental Model That Explains Why We're So Often Wrong</div>
-            <div class="blog-domain">medium.com</div>
-          </div>
-          <button class="blog-read">Read</button>
-        </div>
-      </div>
-    </div>
   </aside>
 
 </div><!-- /app -->
@@ -3662,6 +3797,88 @@ async function loadBookContent(bookId) {
 }
 
 // ═══════════════════════════════════════
+// ARTICLE CARD FACTORY + REMOVE
+// ═══════════════════════════════════════
+function buildArticleCard(a, idx) {
+  const card = document.createElement('div');
+  card.className = 'blog-card';
+  card.style.animationDelay = `${idx * 0.05}s`;
+  if (a.id) card.dataset.articleId = a.id;
+
+  const initials  = (a.domain || '').split('.')[0].slice(0, 2).toUpperCase() || '??';
+  const snippet   = a.snippet ? a.snippet.slice(0, 200) : '';
+  const stanceCls = a.stance || 'neutral';
+
+  card.innerHTML = `
+    <div class="blog-favicon">${escapeHtml(initials)}</div>
+    <div class="blog-info">
+      <a class="article-title-link" href="#" target="_blank" rel="noopener">${escapeHtml(a.title || '')}</a>
+      <div class="blog-domain">${escapeHtml(a.domain || '')}</div>
+      ${snippet ? `<div class="article-snippet">${escapeHtml(snippet)}</div>` : ''}
+      <span class="stance-badge ${stanceCls}">${stanceCls}</span>
+    </div>
+    <div class="article-card-actions">
+      <button class="blog-read">Read</button>
+      ${a.id ? '<button class="article-remove">Remove</button>' : ''}
+    </div>
+  `;
+
+  // Attach URL safely via DOM properties (avoids XSS via inline handlers)
+  card.querySelector('.article-title-link').href = a.url || '#';
+  card.querySelector('.blog-read').addEventListener('click', () => window.open(a.url, '_blank'));
+  if (a.id) {
+    card.querySelector('.article-remove').addEventListener('click', () => removeArticle(card));
+  }
+
+  return card;
+}
+
+async function removeArticle(card) {
+  const articleId = card.dataset.articleId;
+  if (articleId) await api('DELETE', `/search/articles/${articleId}`);
+  card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+  card.style.opacity    = '0';
+  card.style.transform  = 'scale(0.97)';
+  setTimeout(() => card.remove(), 320);
+}
+
+// ═══════════════════════════════════════
+// NARRATIVE THEME RENDERING
+// ═══════════════════════════════════════
+function renderNarrativeThemes(themes) {
+  const container = document.getElementById('narrativeThemes');
+  container.innerHTML = '';
+  themes.forEach((theme, i) => {
+    const section = document.createElement('div');
+    section.className = 'narrative-theme-section';
+    const isOpen = i === 0;
+    section.innerHTML = `
+      <button class="narrative-theme-head ${isOpen ? 'open' : ''}" onclick="toggleThemeSection(this)">
+        <span>${escapeHtml(theme.name || '')}</span>
+        <svg class="theme-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="narrative-theme-body" style="${isOpen ? '' : 'display:none'}">
+        ${(theme.ideas || []).map(idea => `
+          <div class="narrative-idea-card">
+            <div class="narrative-idea-book">${escapeHtml(idea.bookTitle || '')}</div>
+            <div class="narrative-idea-title">${escapeHtml(idea.ideaTitle || '')}</div>
+            <div class="narrative-idea-body">${escapeHtml(idea.ideaBody || '')}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+    container.appendChild(section);
+  });
+}
+
+function toggleThemeSection(btn) {
+  const body   = btn.nextElementSibling;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : '';
+  btn.classList.toggle('open', !isOpen);
+}
+
+// ═══════════════════════════════════════
 // SAVED ARTICLES
 // ═══════════════════════════════════════
 async function loadSavedArticles() {
@@ -3676,25 +3893,7 @@ async function loadSavedArticles() {
     return;
   }
 
-  articles.forEach((a, i) => {
-    const initials = (a.domain || '').split('.')[0].slice(0, 2).toUpperCase() || '??';
-    const card = document.createElement('div');
-    card.className = 'blog-card';
-    card.style.animationDelay = `${i * 0.05}s`;
-    const stanceBadge = a.stance && a.stance !== 'neutral'
-      ? `<span class="stance-badge ${a.stance}">${a.stance}</span>`
-      : '';
-    card.innerHTML = `
-      <div class="blog-favicon">${initials}</div>
-      <div class="blog-info">
-        <div class="blog-card-title">${a.title}</div>
-        <div class="blog-domain">${a.domain}</div>
-        ${stanceBadge}
-      </div>
-      <button class="blog-read" onclick="window.open('${a.url}','_blank')">Read</button>
-    `;
-    list.appendChild(card);
-  });
+  articles.forEach((a, i) => list.appendChild(buildArticleCard(a, i)));
 }
 
 // ═══════════════════════════════════════
@@ -4098,28 +4297,8 @@ function findBlogArticles() {
     list.style.pointerEvents = '';
 
     if (articles && articles.length) {
-      // Replace prototype cards with real results
-      list.innerHTML = '';
-      articles.forEach((a, i) => {
-        const initials = a.domain.split('.')[0].slice(0, 2).toUpperCase();
-        const card = document.createElement('div');
-        card.className = 'blog-card';
-        card.style.animationDelay = `${i * 0.05}s`;
-        if (i === 0) card.style.borderColor = 'var(--amber-dk)';
-        const stanceBadge = a.stance && a.stance !== 'neutral'
-          ? `<span class="stance-badge ${a.stance}">${a.stance}</span>`
-          : (a.stance === 'neutral' ? `<span class="stance-badge neutral">neutral</span>` : '');
-        card.innerHTML = `
-          <div class="blog-favicon">${initials}</div>
-          <div class="blog-info">
-            <div class="blog-card-title">${a.title}</div>
-            <div class="blog-domain">${a.domain}</div>
-            ${stanceBadge}
-          </div>
-          <button class="blog-read" onclick="window.open('${a.url}','_blank')">${i === 0 ? 'New' : 'Read'}</button>
-        `;
-        list.appendChild(card);
-      });
+      // Articles saved to DB by the API — reload from DB to get IDs + Remove buttons
+      await loadSavedArticles();
       addAI(`Found ${articles.length} relevant articles. The top result from ${articles[0]?.domain} looks particularly strong — want me to pull out the key ideas so you can cross-reference with your notes?`);
     } else {
       // Prototype fallback
@@ -4129,10 +4308,12 @@ function findBlogArticles() {
       card.innerHTML = `
         <div class="blog-favicon" style="background:var(--amber-glow);color:var(--amber-dk)">HB</div>
         <div class="blog-info">
-          <div class="blog-card-title">Kahneman's System 1 & 2: The Neuroscience Behind Why We Think What We Think</div>
+          <a class="article-title-link" href="https://hubermanlab.com" target="_blank" rel="noopener">Kahneman's System 1 &amp; 2: The Neuroscience Behind Why We Think What We Think</a>
           <div class="blog-domain">hubermanlab.com</div>
         </div>
-        <button class="blog-read" style="border-color:var(--amber-dk);color:var(--amber)">New</button>
+        <div class="article-card-actions">
+          <button class="blog-read" onclick="window.open('https://hubermanlab.com','_blank')">Read</button>
+        </div>
       `;
       list.insertBefore(card, list.firstChild);
       setTimeout(() => {
@@ -5854,10 +6035,19 @@ async function generateNarrative() {
 
   if (data.error) { showToast(data.error); return; }
 
-  if (data.narrative) {
+  if (data.narrative || (data.themes && data.themes.length > 0)) {
     const output = document.getElementById('narrativeOutput');
-    const prose  = document.getElementById('narrativeProse');
-    prose.textContent = data.narrative;
+
+    if (data.themes && data.themes.length > 0) {
+      renderNarrativeThemes(data.themes);
+    } else {
+      document.getElementById('narrativeThemes').innerHTML = '';
+    }
+
+    if (data.narrative) {
+      document.getElementById('narrativeProse').textContent = data.narrative;
+    }
+
     output.style.display = '';
     output.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }

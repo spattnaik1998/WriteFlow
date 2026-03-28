@@ -99,6 +99,13 @@ router.get('/scholarly', async (req, res) => {
   }
 });
 
+// DELETE /api/search/articles/:id — remove a saved article
+router.delete('/articles/:id', async (req, res) => {
+  const { error } = await supabase.from('articles').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true });
+});
+
 // GET /api/search/saved?book_id=... — get previously saved articles
 router.get('/saved', async (req, res) => {
   const { book_id } = req.query;
