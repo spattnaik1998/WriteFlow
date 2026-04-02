@@ -6555,10 +6555,14 @@ function _endSessionBeacon() {
   if (!SESSION_ID) return;
   const activity = Object.values(_sessionActivity);
   const payload  = JSON.stringify({ activity, ended: true });
-  navigator.sendBeacon(
-    `/api/sessions/${SESSION_ID}`,
-    new Blob([payload], { type: 'application/json' })
-  );
+  // sendBeacon only supports POST; use fetch + keepalive so the PATCH
+  // fires even as the page unloads and the server route matches correctly.
+  fetch(`/api/sessions/${SESSION_ID}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: payload,
+    keepalive: true
+  });
 }
 
 // ═══════════════════════════════════════
