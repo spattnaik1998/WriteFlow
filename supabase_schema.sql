@@ -185,6 +185,9 @@ create table if not exists sessions (
 create index if not exists sessions_ended_at_idx on sessions (ended_at desc nulls last);
 
 -- ===== MIGRATIONS (run once in Supabase SQL editor) =====
+-- Add quiz cache column to sessions (session quiz feature)
+alter table sessions add column if not exists quiz jsonb;
+
 -- Add completed flag to notes (chapter mark-done feature)
 alter table notes add column if not exists completed boolean default false;
 

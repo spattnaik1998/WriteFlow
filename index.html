@@ -2862,12 +2862,26 @@ body::after {
   width: 100%;
   max-width: 560px;
   max-height: 92vh;
-  overflow-y: auto;
+  /* overflow hidden — panels scroll individually inside rp-panel */
+  overflow: hidden;
   box-shadow: 0 32px 80px rgba(0,0,0,.75), 0 0 0 1px rgba(201,168,76,.06);
   animation: recapSlideUp .4s cubic-bezier(.16,1,.3,1) both;
-  scrollbar-width: none;
 }
-.recap-modal::-webkit-scrollbar { display: none; }
+
+/* Panel slider — 3 panels side by side, modal clips the off-screen ones */
+.rp-slider {
+  display: flex;
+  transition: transform .45s cubic-bezier(.16,1,.3,1);
+  will-change: transform;
+}
+.rp-panel {
+  min-width: 100%;   /* each panel = 100% of modal width */
+  max-height: 92vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  box-sizing: border-box;
+}
+.rp-panel::-webkit-scrollbar { display: none; }
 @keyframes recapSlideUp {
   from { opacity: 0; transform: translateY(28px) scale(.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
@@ -3116,6 +3130,300 @@ body::after {
   box-shadow: 0 8px 28px rgba(201,168,76,.3);
 }
 .recap-cta-btn:active { transform: translateY(0); }
+
+/* ══════════════════════════════════════════
+   QUIZ PANEL  (rpPanelQuiz)
+══════════════════════════════════════════ */
+.rq-header {
+  padding: 22px 28px 18px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  position: relative;
+}
+.rq-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.rq-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.rq-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rq-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.rq-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--amber), #c9a84c);
+  border-radius: 2px;
+  transition: width .4s ease;
+}
+.rq-progress-text {
+  font-size: 11px;
+  color: var(--text-4);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.rq-body {
+  padding: 24px 28px 28px;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.rq-question-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.45;
+}
+.rq-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rq-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 16px;
+  background: rgba(255,255,255,.04);
+  border: 1.5px solid rgba(255,255,255,.09);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all .18s ease;
+  text-align: left;
+  width: 100%;
+}
+.rq-option:hover:not(:disabled) {
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.18);
+}
+.rq-option.selected {
+  background: rgba(201,168,76,.1);
+  border-color: rgba(201,168,76,.45);
+}
+.rq-option.correct {
+  background: rgba(34,197,94,.1);
+  border-color: rgba(34,197,94,.5);
+}
+.rq-option.wrong {
+  background: rgba(239,68,68,.08);
+  border-color: rgba(239,68,68,.35);
+}
+.rq-option-letter {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  flex-shrink: 0;
+  transition: all .18s;
+}
+.rq-option.selected .rq-option-letter  { background: var(--amber); border-color: var(--amber); color: #0f0e0d; }
+.rq-option.correct  .rq-option-letter  { background: #22c55e; border-color: #22c55e; color: #fff; }
+.rq-option.wrong    .rq-option-letter  { background: #ef4444; border-color: #ef4444; color: #fff; }
+.rq-option-text {
+  font-size: 13.5px;
+  color: rgba(255,255,255,.72);
+  line-height: 1.5;
+  padding-top: 2px;
+}
+.rq-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: auto;
+}
+.rq-next-btn {
+  padding: 11px 24px;
+  border: none;
+  border-radius: 11px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  background: linear-gradient(135deg, #c9a84c 0%, #a07c2a 100%);
+  color: #0f0e0d;
+  transition: all .18s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rq-next-btn:disabled {
+  background: rgba(255,255,255,.07);
+  color: var(--text-4);
+  cursor: not-allowed;
+}
+.rq-next-btn:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(201,168,76,.28);
+}
+
+/* ══════════════════════════════════════════
+   SCORE PANEL  (rpPanelScore)
+══════════════════════════════════════════ */
+.rs-header {
+  padding: 22px 28px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rs-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.rs-body {
+  padding: 20px 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.rs-score-display {
+  text-align: center;
+  padding: 28px 0 20px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.rs-score-number {
+  font-family: 'Playfair Display', serif;
+  font-size: 58px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 10px;
+  /* colour set by JS: green / amber / default */
+}
+.rs-score-msg {
+  font-size: 15px;
+  color: var(--text-3);
+  font-family: 'Lora', serif;
+  font-style: italic;
+}
+.rs-review {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rs-review-item {
+  border-radius: 11px;
+  padding: 12px 15px;
+  border: 1px solid;
+}
+.rs-review-item.correct {
+  background: rgba(34,197,94,.07);
+  border-color: rgba(34,197,94,.25);
+}
+.rs-review-item.wrong {
+  background: rgba(239,68,68,.06);
+  border-color: rgba(239,68,68,.2);
+}
+.rs-review-q {
+  font-size: 12.5px;
+  color: rgba(255,255,255,.75);
+  font-weight: 500;
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+.rs-review-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  border-radius: 5px;
+  padding: 2px 7px;
+  margin-bottom: 4px;
+}
+.rs-review-badge.correct { background: rgba(34,197,94,.15); color: #22c55e; }
+.rs-review-badge.wrong   { background: rgba(239,68,68,.12); color: #f87171; }
+.rs-review-expl {
+  font-size: 12px;
+  color: var(--text-4);
+  line-height: 1.55;
+  margin-top: 4px;
+}
+
+/* ══════════════════════════════════════════
+   NOTES WRITE-GATE OVERLAY
+══════════════════════════════════════════ */
+#pane-notes { position: relative; }
+.notes-gate {
+  position: absolute;
+  inset: 0;
+  background: rgba(10,9,8,.87);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  animation: recapFadeIn .3s ease both;
+}
+.notes-gate-card {
+  text-align: center;
+  padding: 32px 28px;
+  max-width: 300px;
+}
+.notes-gate-icon {
+  width: 48px; height: 48px;
+  background: rgba(201,168,76,.1);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  color: var(--amber);
+}
+.notes-gate-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.notes-gate-desc {
+  font-size: 12.5px;
+  color: var(--text-4);
+  line-height: 1.65;
+  margin-bottom: 20px;
+}
+.notes-gate-btn {
+  padding: 10px 22px;
+  background: linear-gradient(135deg, var(--amber) 0%, var(--amber-dk) 100%);
+  color: #0f0e0d;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all .18s;
+}
+.notes-gate-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,168,76,.3); }
 
 /* Review mode overlay */
 .review-overlay {
@@ -3430,6 +3738,18 @@ body::after {
         </div>
 
         <textarea class="notes-textarea" id="mainNotes" rows="8" oninput="onNotesInput()">Kahneman opens with something brilliant — there are two ways we think. One is fast, automatic, like recognizing a face or reading anger in someone's voice. The other is slow, deliberate, like solving 17×24. The fast one (System 1) runs without us noticing. It's always on. The slow one (System 2) is lazy — it only engages when needed. Key: System 1 is constantly generating impressions and jumping to conclusions. System 2 mostly just endorses these without scrutiny. This is simultaneously terrifying and fascinating. The gorilla experiment. We don't see what we're not looking for.</textarea>
+
+        <!-- Write-gate: shown when a quiz is pending completion -->
+        <div class="notes-gate" id="notesGate" style="display:none">
+          <div class="notes-gate-card">
+            <div class="notes-gate-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+            <div class="notes-gate-title">Quick check-in first</div>
+            <div class="notes-gate-desc">Complete the 5-question quiz on your last session's notes to unlock writing.</div>
+            <button class="notes-gate-btn" onclick="openQuizFromGate()">Take the quiz →</button>
+          </div>
+        </div>
 
         <div id="savedLabel" class="saved-label">Saved</div>
 
@@ -6256,6 +6576,13 @@ async function checkLastSessionRecap() {
   if (alreadyShown === session.id) return;
 
   sessionStorage.setItem('recap_shown_for', session.id);
+
+  // Activate write-gate if quiz not yet completed for this session
+  const quizDoneFor = sessionStorage.getItem('quiz_done_for');
+  if (quizDoneFor !== session.id) {
+    _setQuizPending(true, session.id);
+  }
+
   _showRecapModal(session);
 
   // Trigger AI recap generation asynchronously — modal shows immediately
@@ -6307,8 +6634,19 @@ function _showRecapModal(session) {
     _renderRecapAI(session.recap);
   }
 
+  // CTA: if quiz is pending, offer "Take Quiz →"; otherwise just close
+  const ctaBtn = document.getElementById('recapCtaBtn');
+  if (_quizPending) {
+    ctaBtn.textContent = 'Take the Quiz →';
+    ctaBtn.onclick = _openQuizPanel;
+  } else {
+    ctaBtn.textContent = 'Ready — let\'s continue writing';
+    ctaBtn.onclick = closeRecapModal;
+  }
+
   // Show modal + start weather fetch
   document.getElementById('recapOverlay').style.display = 'flex';
+  _slideToPanel(0); // always start at recap panel
   _fetchWeather();
 }
 
@@ -6346,6 +6684,8 @@ function closeRecapModal() {
     overlay.style.display = '';
     overlay.style.opacity = '';
     overlay.style.transition = '';
+    // Reset slider back to panel 0 so next open starts at recap
+    _slideToPanel(0);
   }, 200);
 }
 
@@ -6382,6 +6722,185 @@ function _fetchWeather() {
   }, () => {
     document.getElementById('recapWeatherDesc').textContent = 'Location unavailable';
   }, { timeout: 6000, maximumAge: 600000 });
+}
+
+// ═══════════════════════════════════════
+// SESSION QUIZ STATE MACHINE
+// ═══════════════════════════════════════
+
+let _quizSessionId  = null;   // session whose quiz we're showing
+let _quizQuestions  = [];     // [{question, options, correct, explanation}]
+let _quizCurrent    = 0;      // index of question being answered
+let _quizAnswers    = [];     // selected option index per question (-1 = skipped)
+let _quizPending    = false;  // true = write-gate is active
+
+/** Slide the .rp-slider to panel index 0, 1, or 2 */
+function _slideToPanel(idx) {
+  // Each panel is 100/3 % of the slider's total width
+  document.getElementById('rpSlider').style.transform = `translateX(-${idx * 100 / 3}%)`;
+}
+
+/** Show or hide the write-gate overlay on the notes pane */
+function _setQuizPending(pending, sessionId) {
+  _quizPending   = pending;
+  _quizSessionId = sessionId || _quizSessionId;
+  const gate = document.getElementById('notesGate');
+  if (gate) gate.style.display = pending ? 'flex' : 'none';
+}
+
+/** Called from the CTA button on the recap panel — slide to quiz and load questions */
+async function _openQuizPanel() {
+  _slideToPanel(1);
+
+  // Reset state for a fresh run
+  _quizQuestions = [];
+  _quizCurrent   = 0;
+  _quizAnswers   = [];
+
+  // Show loading, hide content
+  document.getElementById('rqLoading').style.display  = 'flex';
+  document.getElementById('rqContent').style.display  = 'none';
+  document.getElementById('rqNextBtn').disabled       = true;
+
+  const data = await api('POST', `/sessions/${_quizSessionId}/quiz`, {});
+  _quizQuestions = Array.isArray(data?.questions) ? data.questions : [];
+
+  document.getElementById('rqLoading').style.display = 'none';
+
+  if (!_quizQuestions.length) {
+    // No questions — just close and lift gate
+    _quizDone();
+    return;
+  }
+
+  document.getElementById('rqContent').style.display = 'flex';
+  _showQuestion(0);
+}
+
+/** Render question at index idx */
+function _showQuestion(idx) {
+  const q = _quizQuestions[idx];
+  if (!q) return;
+
+  const total = _quizQuestions.length;
+
+  // Progress bar
+  document.getElementById('rqProgressFill').style.width = `${(idx / total) * 100}%`;
+  document.getElementById('rqProgressText').textContent  = `${idx + 1} of ${total}`;
+
+  // Question text
+  document.getElementById('rqQuestionText').textContent = q.question;
+
+  // Options
+  const letters = ['A', 'B', 'C', 'D'];
+  document.getElementById('rqOptions').innerHTML = q.options.map((opt, i) => `
+    <button class="rq-option" onclick="_selectOption(${i})" data-idx="${i}">
+      <span class="rq-option-letter">${letters[i]}</span>
+      <span class="rq-option-text">${escapeHtml(opt)}</span>
+    </button>`).join('');
+
+  // Next button
+  const nextBtn = document.getElementById('rqNextBtn');
+  nextBtn.disabled    = true;
+  nextBtn.textContent = idx < total - 1 ? 'Next' : 'See Results';
+  if (idx < total - 1) {
+    nextBtn.innerHTML = 'Next <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>';
+  }
+}
+
+/** Handle tapping an answer option */
+function _selectOption(optIdx) {
+  const q = _quizQuestions[_quizCurrent];
+  if (!q) return;
+
+  // Record answer
+  _quizAnswers[_quizCurrent] = optIdx;
+
+  // Highlight correct / wrong
+  const btns = document.querySelectorAll('.rq-option');
+  btns.forEach(btn => {
+    const i = parseInt(btn.dataset.idx, 10);
+    btn.classList.remove('selected', 'correct', 'wrong');
+    if (i === q.correct) btn.classList.add('correct');
+    else if (i === optIdx && optIdx !== q.correct) btn.classList.add('wrong');
+    btn.disabled = true;
+  });
+
+  document.getElementById('rqNextBtn').disabled = false;
+}
+
+/** Advance to next question or go to score panel */
+function _quizNext() {
+  // If nothing selected yet, skip (treat as wrong)
+  if (_quizAnswers[_quizCurrent] === undefined) {
+    _quizAnswers[_quizCurrent] = -1;
+  }
+
+  _quizCurrent++;
+  if (_quizCurrent < _quizQuestions.length) {
+    _showQuestion(_quizCurrent);
+  } else {
+    _renderScore();
+  }
+}
+
+/** Calculate score, populate review list, slide to score panel */
+function _renderScore() {
+  const total   = _quizQuestions.length;
+  const correct = _quizAnswers.filter((a, i) => a === _quizQuestions[i]?.correct).length;
+  const pct     = Math.round((correct / total) * 100);
+
+  document.getElementById('rsScoreNumber').textContent = `${correct}/${total}`;
+  document.getElementById('rsScoreMsg').textContent    =
+    pct >= 80 ? 'Excellent recall!' :
+    pct >= 60 ? 'Good effort — keep reading!' :
+    'Review your notes and try again.';
+
+  const letters = ['A', 'B', 'C', 'D'];
+  document.getElementById('rsReview').innerHTML = _quizQuestions.map((q, i) => {
+    const chosen  = _quizAnswers[i];
+    const isRight = chosen === q.correct;
+    return `
+      <div class="rs-review-item ${isRight ? 'correct' : 'wrong'}">
+        <div class="rs-review-q">${escapeHtml(q.question)}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+          <span class="rs-review-badge ${isRight ? 'correct' : 'wrong'}">
+            ${isRight ? '✓' : '✗'} ${chosen >= 0 ? escapeHtml(q.options[chosen]) : 'No answer'}
+          </span>
+          ${!isRight ? `<span style="font-size:11px;color:var(--text-3)">→ ${escapeHtml(q.options[q.correct])}</span>` : ''}
+        </div>
+        ${q.explanation ? `<div class="rs-review-expl">${escapeHtml(q.explanation)}</div>` : ''}
+      </div>`;
+  }).join('');
+
+  // Mark quiz done in sessionStorage so gate doesn't re-appear
+  sessionStorage.setItem('quiz_done_for', _quizSessionId);
+
+  // Progress bar to 100%
+  document.getElementById('rqProgressFill').style.width = '100%';
+
+  _slideToPanel(2);
+}
+
+/** Lift the write-gate and close the modal */
+function _quizDone() {
+  _setQuizPending(false);
+  closeRecapModal();
+}
+
+/** Called from the write-gate button — reopen modal at quiz panel */
+function openQuizFromGate() {
+  const overlay = document.getElementById('recapOverlay');
+  overlay.style.display = 'flex';
+  // Jump directly to quiz panel (skip recap)
+  _slideToPanel(1);
+  if (_quizQuestions.length) {
+    // Questions already loaded — resume where left off
+    _showQuestion(_quizCurrent);
+  } else {
+    // First time opening from gate — fetch questions
+    _openQuizPanel();
+  }
 }
 
 // ═══════════════════════════════════════
@@ -8092,79 +8611,122 @@ function outsideDigestClose(e) {
 init();
 </script>
 
-<!-- ══════════════ SESSION RECAP MODAL ══════════════ -->
+<!-- ══════════════ SESSION RECAP + QUIZ MODAL ══════════════ -->
 <div class="recap-overlay" id="recapOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Session recap">
   <div class="recap-modal">
+    <div class="rp-slider" id="rpSlider">
 
-    <!-- Hero header: greeting + date + weather -->
-    <div class="recap-hero">
-      <button class="recap-close" onclick="closeRecapModal()" title="Dismiss">×</button>
-      <div class="recap-greeting" id="recapGreeting">Good morning</div>
-      <div class="recap-date"     id="recapDate">Loading…</div>
-      <div class="recap-weather-row" id="recapWeatherRow">
-        <span class="recap-weather-icon" id="recapWeatherIcon">🌡️</span>
-        <span class="recap-weather-temp" id="recapWeatherTemp"></span>
-        <span class="recap-weather-desc" id="recapWeatherDesc">Fetching weather…</span>
-      </div>
-    </div>
-
-    <!-- Body -->
-    <div class="recap-body">
-
-      <!-- Stats strip -->
-      <div class="recap-stats">
-        <div class="recap-stat">
-          <div class="recap-stat-value" id="recapStatWords">—</div>
-          <div class="recap-stat-label">Words written</div>
+      <!-- ─── Panel 0: Recap ─────────────────────────────────── -->
+      <div class="rp-panel" id="rpPanelRecap">
+        <!-- Hero header: greeting + date + weather -->
+        <div class="recap-hero">
+          <button class="recap-close" onclick="closeRecapModal()" title="Dismiss">×</button>
+          <div class="recap-greeting" id="recapGreeting">Good morning</div>
+          <div class="recap-date"     id="recapDate">Loading…</div>
+          <div class="recap-weather-row">
+            <span class="recap-weather-icon" id="recapWeatherIcon">🌡️</span>
+            <span class="recap-weather-temp" id="recapWeatherTemp"></span>
+            <span class="recap-weather-desc" id="recapWeatherDesc">Fetching weather…</span>
+          </div>
         </div>
-        <div class="recap-stat">
-          <div class="recap-stat-value" id="recapStatChapters">—</div>
-          <div class="recap-stat-label">Chapters</div>
+        <!-- Body -->
+        <div class="recap-body">
+          <div class="recap-stats">
+            <div class="recap-stat">
+              <div class="recap-stat-value" id="recapStatWords">—</div>
+              <div class="recap-stat-label">Words written</div>
+            </div>
+            <div class="recap-stat">
+              <div class="recap-stat-value" id="recapStatChapters">—</div>
+              <div class="recap-stat-label">Chapters</div>
+            </div>
+            <div class="recap-stat">
+              <div class="recap-stat-value" id="recapStatBooks">—</div>
+              <div class="recap-stat-label">Books</div>
+            </div>
+          </div>
+          <div>
+            <div class="recap-sec-label">Last session</div>
+            <div id="recapBooks"></div>
+          </div>
+          <div id="recapAI">
+            <div class="recap-loading" id="recapLoading">
+              <div class="recap-dot"></div><div class="recap-dot"></div><div class="recap-dot"></div>
+              <span class="recap-loading-text">Generating your briefing…</span>
+            </div>
+            <div id="recapSummaryBlock" style="display:none">
+              <div class="recap-sec-label">What you were thinking about</div>
+              <div class="recap-summary-text" id="recapSummaryText"></div>
+            </div>
+            <div id="recapHighlightsBlock" style="display:none;margin-top:16px">
+              <div class="recap-sec-label">Key threads</div>
+              <div id="recapHighlightsList"></div>
+            </div>
+            <div class="recap-prep" id="recapPrepBlock" style="display:none">
+              <div class="recap-prep-label">To pick up where you left off</div>
+              <div class="recap-prep-text" id="recapPrepText"></div>
+            </div>
+          </div>
+          <!-- CTA: changes to "Take Quiz →" when quiz is pending -->
+          <button class="recap-cta-btn" id="recapCtaBtn" onclick="closeRecapModal()">
+            Ready — let's continue writing
+          </button>
         </div>
-        <div class="recap-stat">
-          <div class="recap-stat-value" id="recapStatBooks">—</div>
-          <div class="recap-stat-label">Books</div>
+      </div><!-- /rpPanelRecap -->
+
+      <!-- ─── Panel 1: Quiz ──────────────────────────────────── -->
+      <div class="rp-panel" id="rpPanelQuiz">
+        <div class="rq-header">
+          <div class="rq-top-row">
+            <span class="rq-label">Session Quiz</span>
+            <button class="recap-close" onclick="closeRecapModal()" title="Dismiss">×</button>
+          </div>
+          <div class="rq-progress-wrap">
+            <div class="rq-progress-bar">
+              <div class="rq-progress-fill" id="rqProgressFill" style="width:0%"></div>
+            </div>
+            <span class="rq-progress-text" id="rqProgressText">1 of 5</span>
+          </div>
         </div>
-      </div>
-
-      <!-- Books / chapters worked on -->
-      <div>
-        <div class="recap-sec-label">Last session</div>
-        <div id="recapBooks"></div>
-      </div>
-
-      <!-- AI-generated content (summary · highlights · prep question) -->
-      <div id="recapAI">
-        <!-- Loading state shown while GPT-4o generates -->
-        <div class="recap-loading" id="recapLoading">
-          <div class="recap-dot"></div>
-          <div class="recap-dot"></div>
-          <div class="recap-dot"></div>
-          <span class="recap-loading-text">Generating your briefing…</span>
+        <div class="rq-body">
+          <!-- Loading state while GPT-4o generates questions -->
+          <div id="rqLoading" class="recap-loading" style="padding:40px 0 20px">
+            <div class="recap-dot"></div><div class="recap-dot"></div><div class="recap-dot"></div>
+            <span class="recap-loading-text">Generating quiz questions…</span>
+          </div>
+          <!-- Question content (hidden until questions loaded) -->
+          <div id="rqContent" style="display:none;flex-direction:column;gap:20px">
+            <div class="rq-question-text" id="rqQuestionText"></div>
+            <div class="rq-options" id="rqOptions"></div>
+          </div>
+          <div class="rq-footer">
+            <button class="rq-next-btn" id="rqNextBtn" onclick="_quizNext()" disabled>
+              Next
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
+            </button>
+          </div>
         </div>
+      </div><!-- /rpPanelQuiz -->
 
-        <div id="recapSummaryBlock" style="display:none">
-          <div class="recap-sec-label">What you were thinking about</div>
-          <div class="recap-summary-text" id="recapSummaryText"></div>
+      <!-- ─── Panel 2: Score ─────────────────────────────────── -->
+      <div class="rp-panel" id="rpPanelScore">
+        <div class="rs-header">
+          <span class="rs-title">Quiz Complete</span>
+          <button class="recap-close" onclick="closeRecapModal()" title="Dismiss">×</button>
         </div>
-
-        <div id="recapHighlightsBlock" style="display:none;margin-top:16px">
-          <div class="recap-sec-label">Key threads</div>
-          <div id="recapHighlightsList"></div>
+        <div class="rs-body">
+          <div class="rs-score-display">
+            <div class="rs-score-number" id="rsScoreNumber">—</div>
+            <div class="rs-score-msg"    id="rsScoreMsg">—</div>
+          </div>
+          <div class="rs-review" id="rsReview"></div>
+          <button class="recap-cta-btn" onclick="_quizDone()">
+            Start Writing →
+          </button>
         </div>
+      </div><!-- /rpPanelScore -->
 
-        <div class="recap-prep" id="recapPrepBlock" style="display:none">
-          <div class="recap-prep-label">To pick up where you left off</div>
-          <div class="recap-prep-text" id="recapPrepText"></div>
-        </div>
-      </div>
-
-      <!-- Dismiss CTA -->
-      <button class="recap-cta-btn" onclick="closeRecapModal()">
-        Ready — let's continue writing
-      </button>
-
-    </div><!-- /recap-body -->
+    </div><!-- /rp-slider -->
   </div><!-- /recap-modal -->
 </div>
 

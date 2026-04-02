@@ -11,11 +11,12 @@
  *   PATCH  /api/sessions/:id        — update activity / mark ended
  *   GET    /api/sessions/last       — last ended session (excludes current)
  *   POST   /api/sessions/:id/recap  — generate or return cached recap
+ *   POST   /api/sessions/:id/quiz   — generate or return cached 5-question quiz
  */
 const express = require('express');
 const router  = express.Router();
 const supabase = require('../services/supabase');
-const { generateSessionRecap } = require('../services/openai');
+const { generateSessionRecap, generateSessionQuiz } = require('../services/openai');
 
 // ── Start a session ───────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
@@ -135,6 +136,50 @@ router.post('/:id/recap', async (req, res) => {
     .eq('id', req.params.id);
 
   res.json({ recap });
+});
+
+// ── Generate (or return cached) 5-question quiz for a session ────────────
+router.post('/:id/quiz', async (req, res) => {
+  const { data: session, error: sessErr } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('id', req.params.id)
+    .single();
+
+  if (sessErr || !session) return res.status(404).json({ error: 'Session not found' });
+
+  // Return cached quiz — no need to burn tokens again
+  if (session.quiz) return res.json({ questions: session.quiz });
+
+  const activity = session.activity || [];
+  if (!activity.length) return res.json({ questions: [] });
+
+  // Hydrate with current note content (same pattern as recap)
+  const bookMap = {};
+  for (const entry of activity) {
+    const { data: note } = await supabase
+      .from('notes')
+      .select('content')
+      .eq('book_id', entry.book_id)
+      .eq('chapter_name', entry.chapter_name)
+      .maybeSingle();
+
+    if (!bookMap[entry.book_id]) {
+      bookMap[entry.book_id] = { title: entry.book_title || 'Untitled', author: entry.book_author || '', chapters: [] };
+    }
+    bookMap[entry.book_id].chapters.push({
+      chapter_name: entry.chapter_name,
+      word_count:   entry.word_count || 0,
+      snippet:      (note?.content || '').slice(0, 800)   // slightly more context for quiz
+    });
+  }
+
+  const questions = await generateSessionQuiz({ books: Object.values(bookMap) });
+
+  // Cache so subsequent loads are instant
+  await supabase.from('sessions').update({ quiz: questions }).eq('id', req.params.id);
+
+  res.json({ questions });
 });
 
 module.exports = router;

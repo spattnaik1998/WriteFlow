@@ -754,4 +754,65 @@ Return valid JSON: { "summary": string, "highlights": string[], "prep_question":
   };
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, reconstructArgument, generateConceptMap, generateSessionRecap };
+/**
+ * Generate 5 multiple-choice quiz questions from session note content.
+ *
+ * Questions test genuine comprehension — not trivial recall — and span
+ * the full range of books/chapters the user worked on.
+ *
+ * @param {{ books: Array<{title,author,chapters}> }} opts
+ * @returns {Array<{question,options,correct,explanation}>}  — array of 5 questions
+ */
+async function generateSessionQuiz({ books }) {
+  const systemPrompt = `You are an expert reading tutor who designs rigorous comprehension quizzes.
+Given a reader's notes, create exactly 5 multiple-choice questions that:
+1. Test genuine understanding, not just surface recall
+2. Cover different ideas/chapters spread across the material
+3. Use 4 options (A–D) with exactly one clearly correct answer
+4. Include a concise, illuminating explanation (1–2 sentences) for the correct answer
+5. Mix difficulty: 2 straightforward, 2 conceptual, 1 that requires connecting ideas
+
+Return valid JSON only:
+{
+  "questions": [
+    {
+      "question": "string",
+      "options": ["string", "string", "string", "string"],
+      "correct": 0,
+      "explanation": "string"
+    }
+  ]
+}`;
+
+  const booksBlock = books.map(b => {
+    const chapters = b.chapters
+      .filter(c => c.snippet)
+      .map(c => `  [${c.chapter_name}]:\n  ${c.snippet}`)
+      .join('\n\n');
+    return `"${b.title}"${b.author ? ` by ${b.author}` : ''}:\n${chapters}`;
+  }).join('\n\n---\n\n');
+
+  const userPrompt = `Here are the reader's notes from their last session:\n\n${booksBlock}\n\nGenerate 5 quiz questions.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.7,
+    max_tokens: 1200
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  const qs  = Array.isArray(raw.questions) ? raw.questions : [];
+  return qs.slice(0, 5).map(q => ({
+    question:    q.question    || '',
+    options:     Array.isArray(q.options) ? q.options.slice(0, 4) : [],
+    correct:     typeof q.correct === 'number' ? Math.min(3, Math.max(0, q.correct)) : 0,
+    explanation: q.explanation || ''
+  }));
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, reconstructArgument, generateConceptMap, generateSessionRecap, generateSessionQuiz };
