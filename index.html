@@ -4982,6 +4982,11 @@ async function loadBookContent(bookId) {
       );
     });
   }
+  // Restore conversation history so the AI has context from prior turns
+  conversationHistory = (chatHistory || []).map(msg => ({
+    role:    msg.role === 'user' ? 'user' : 'assistant',
+    content: msg.content
+  }));
 
   // ── Post-load navigation (e.g. from search result click) ────
   if (_postLoadAction) {
@@ -6997,11 +7002,13 @@ async function distillIdeasFromAPI(bookId, chapterName, rawNotes) {
 
 // Real chat — calls OpenAI via backend
 async function chatWithAPI(bookId, message, useLibraryMode) {
+  const currentChapter = document.getElementById('chapterSelect')?.value || null;
   const data = await api('POST', '/chat', {
     book_id:              bookId,
     message,
-    conversation_history: conversationHistory.slice(-8),
-    library_mode:         useLibraryMode || false
+    conversation_history: conversationHistory.slice(-10),
+    library_mode:         useLibraryMode || false,
+    current_chapter:      currentChapter
   });
   if (data?.reply) {
     conversationHistory.push({ role: 'user',      content: message });

@@ -5,22 +5,33 @@ const { chatWithPartner, suggestWriting } = require('../services/openai');
 
 // POST /api/chat — send a message to the AI reading partner
 router.post('/', async (req, res) => {
-  const { book_id, message, conversation_history, library_mode } = req.body;
+  const { book_id, message, conversation_history, library_mode, current_chapter } = req.body;
   if (!book_id || !message) {
     return res.status(400).json({ error: 'book_id and message required' });
   }
 
-  // Fetch book + latest notes + ideas for context
+  // Fetch book + all chapter notes + idea cards in parallel
   const [{ data: book }, { data: notes }, { data: ideas }] = await Promise.all([
-    supabase.from('books').select('title, author').eq('id', book_id).single(),
-    supabase.from('notes').select('content').eq('book_id', book_id),
-    supabase.from('ideas').select('title, body').eq('book_id', book_id).limit(10)
+    supabase.from('books').select('title, author, category, why_reading').eq('id', book_id).single(),
+    supabase.from('notes').select('content, chapter_name').eq('book_id', book_id),
+    supabase.from('ideas').select('title, body, chapter_name, tags').eq('book_id', book_id).limit(25)
   ]);
 
   if (!book) return res.status(404).json({ error: 'Book not found' });
 
-  // Combine all notes into a single string for context
-  const allNotes = notes?.map(n => n.content).join('\n\n') || '';
+  // Build structured notes context — current chapter first, then others
+  // Each chapter is labelled so the AI knows what part of the book it belongs to
+  const sortedNotes = [...(notes || [])].sort((a, b) => {
+    if (a.chapter_name === current_chapter) return -1;
+    if (b.chapter_name === current_chapter) return 1;
+    return 0;
+  });
+
+  const allNotes = sortedNotes
+    .filter(n => n.content && n.content.trim())
+    .map(n => `[${n.chapter_name || 'Notes'}]\n${n.content.trim()}`)
+    .join('\n\n---\n\n')
+    .slice(0, 4000); // generous budget — GPT-4o handles long context well
 
   // Build cross-library context when library_mode is enabled
   let libraryContext = null;
@@ -58,6 +69,9 @@ router.post('/', async (req, res) => {
       userMessage:         message,
       bookTitle:           book.title,
       author:              book.author,
+      category:            book.category || '',
+      whyReading:          book.why_reading || '',
+      currentChapter:      current_chapter  || null,
       notes:               allNotes,
       ideaCards:           ideas || [],
       conversationHistory: conversation_history || [],

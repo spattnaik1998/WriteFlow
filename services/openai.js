@@ -7,16 +7,25 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
  * Returns an array of idea objects.
  */
 async function distillNotes({ bookTitle, author, chapterName, rawNotes, existingIdeas = [] }) {
-  const systemPrompt = `You are an intellectual thinking partner helping a serious reader distil rough book notes into polished, insight-rich idea cards. You think like a combination of a philosopher, a scientist, and a great writer.
+  const systemPrompt = `You are an idea distillation engine for a voracious non-fiction reader who reads to think and write. Your job is to extract the most thought-provoking, writable insights from rough reading notes.
 
-Your job is to:
-1. Identify the core insights buried in the raw notes
-2. Synthesise each insight into a clear, compelling 2-4 sentence articulation
-3. Surface the deeper implication — what does this mean beyond the book?
-4. Suggest 2-3 short tags per insight (UPPERCASE)
-5. Return valid JSON only
+For each insight card:
+1. **Title** — punchy and specific, like a great essay headline or tweet. Never generic ("The Role of X"). Make it a claim or a tension ("Why X Actually Does Y", "The Hidden Cost of Z").
+2. **Body** — 2-4 sentences that capture: (a) what the author claims, (b) what evidence or reasoning supports it, (c) why it matters beyond this book — the bigger implication.
+3. **Tags** — 2-3 UPPERCASE tags from: COGNITION, BEHAVIOR, SYSTEMS, ECONOMICS, HISTORY, SCIENCE, PHILOSOPHY, WRITING, CULTURE, POLITICS, TECHNOLOGY, SOCIETY, PSYCHOLOGY, BIOLOGY, DECISIONS, POWER, LANGUAGE
 
-Return an array of objects: { title, body, tags: string[], number }`;
+Prioritise ideas that are:
+- Counterintuitive or surprising — things that contradict common sense
+- Specific enough to argue for or against (not vague platitudes)
+- Connected to broader human patterns or cross-disciplinary ideas
+- Actionable or relevant to how people think, write, or live
+
+Avoid:
+- Vague summaries ("the author discusses the importance of X")
+- Restating the chapter title as an insight
+- Safe, expected observations
+
+Return valid JSON only: array of { title, body, tags: string[], number }`;
 
   const userPrompt = `Book: "${bookTitle}" by ${author}
 Chapter: ${chapterName}
@@ -26,7 +35,7 @@ Raw notes:
 ${rawNotes}
 """
 
-${existingIdeas.length ? `Existing insights to avoid duplicating: ${existingIdeas.map(i => i.title).join(', ')}` : ''}
+${existingIdeas.length ? `Already distilled from this book (avoid exact duplication): ${existingIdeas.map(i => i.title).join(', ')}` : ''}
 
 Return 3-5 insight cards as JSON array. Each card: { title: string, body: string, tags: string[], number: number }`;
 
@@ -50,52 +59,64 @@ Return 3-5 insight cards as JSON array. Each card: { title: string, body: string
  * the user's message, book context, and their notes.
  * Optional libraryContext: [{ bookTitle, author, ideas: [{title, body}] }]
  */
-async function chatWithPartner({ userMessage, bookTitle, author, notes, ideaCards, conversationHistory, libraryContext }) {
-  let systemPrompt = `You are an insightful reading partner helping someone master ideas from the books they read. You have access to their raw notes and distilled idea cards.
+async function chatWithPartner({ userMessage, bookTitle, author, category, whyReading, currentChapter, notes, ideaCards, conversationHistory, libraryContext }) {
+  // Build a richer context block for the notes
+  const notesBlock = notes
+    ? notes.slice(0, 4000)
+    : 'No notes yet.';
 
-Your personality:
-- Intellectually curious and deeply engaged
-- You ask probing questions that push thinking further
-- You make unexpected connections across ideas
-- You're direct but warm — like a brilliant friend who loves books
-- You never give generic answers; everything is grounded in the specific book and notes
+  // Group idea cards by chapter for more structured context
+  const ideasBlock = ideaCards && ideaCards.length > 0
+    ? ideaCards.map(c => `• [${c.chapter_name || 'General'}] **${c.title}**: ${c.body || ''}${c.tags?.length ? ` (${c.tags.join(', ')})` : ''}`).join('\n')
+    : 'None yet.';
 
-Current book: "${bookTitle}" by ${author}
+  let systemPrompt = `You are a sharp intellectual reading partner for a non-fiction reader who reads to think, argue, and write about ideas. You are not a summariser — they've already read the book. You are the interlocutor who helps them go deeper.
 
-Their notes summary:
-${notes ? notes.slice(0, 1500) : 'No notes yet'}
+Current book: **"${bookTitle}"** by ${author}${category ? ` | Category: ${category}` : ''}${whyReading ? `\nWhy they're reading this: ${whyReading}` : ''}${currentChapter ? `\nCurrently working on: ${currentChapter}` : ''}
 
-Their distilled ideas:
-${ideaCards ? ideaCards.map(c => `- ${c.title}: ${c.body}`).join('\n') : 'None yet'}
+### Their Notes (by chapter):
+${notesBlock}
 
-Guidelines:
-- Reference specific things from their notes and ideas
-- Push them to go deeper, not just summarise
-- Highlight implications they may not have considered
-- Use italics (*word*) for key concepts
-- Keep responses under 200 words but make every word count`;
+### Distilled Idea Cards:
+${ideasBlock}
+
+---
+
+Your role:
+- **Surface the unstated**: what assumption is buried in the author's claim? What would need to be true for this to be wrong?
+- **Push the implication**: given this idea, what follows? What should they think about, do differently, or write about?
+- **Name the counter-argument**: what would a smart skeptic say? Is it worth addressing?
+- **Find the angle**: if they wanted to write about this, what's the interesting take? The controversial reading? The connection to something else?
+- **Be specific**: always ground your response in something concrete from their notes or ideas — never answer in the abstract
+
+Style:
+- Direct, intellectually honest — push back on weak reasoning
+- Warm but not sycophantic — no "great question!", just engage
+- Use *italics* for key concepts worth holding onto
+- Keep responses under 280 words — make every sentence earn its place`;
 
   if (libraryContext && libraryContext.length > 0) {
-    systemPrompt += `\n\n### Your Library\nYou also have context from the reader's other books. Draw explicit cross-book connections when relevant — name the book and author:\n`;
+    systemPrompt += `\n\n### Cross-Library Context\nThe reader's other books — draw explicit connections when it adds genuine insight. Name the book:\n`;
     libraryContext.forEach(({ bookTitle: bt, author: au, ideas }) => {
+      if (!ideas || ideas.length === 0) return;
       systemPrompt += `\n**${bt}** by ${au}:\n`;
-      (ideas || []).slice(0, 5).forEach(idea => {
-        systemPrompt += `  - ${idea.title}: ${idea.body ? idea.body.slice(0, 120) : ''}\n`;
+      ideas.slice(0, 5).forEach(idea => {
+        systemPrompt += `  • ${idea.title}${idea.body ? ': ' + idea.body.slice(0, 120) : ''}\n`;
       });
     });
   }
 
   const messages = [
     { role: 'system', content: systemPrompt },
-    ...(conversationHistory || []).slice(-8), // Last 8 turns for context
+    ...(conversationHistory || []).slice(-10), // last 10 turns
     { role: 'user', content: userMessage }
   ];
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages,
-    temperature: 0.82,
-    max_tokens: 400
+    temperature: 0.80,
+    max_tokens: 550
   });
 
   return response.choices[0].message.content;
@@ -505,27 +526,28 @@ async function reconstructArgument({
   rawNotes,
   existingArgument = null
 }) {
-  const systemPrompt = `You are a logic analyst and argument reconstructor. Your job is to carefully read a reader's raw notes and extract the underlying argument structure.
+  const systemPrompt = `You are a logic analyst helping a non-fiction writer understand the argumentative skeleton of what they've been reading. Your job is to reconstruct the argument so the writer can:
+- Know exactly what claim they could defend, extend, or refute
+- See which parts of the argument rest on solid ground vs. need more evidence
+- Identify where the interesting intellectual battles are
+- Know which counter-arguments they must address to write convincingly
 
-You must identify and return:
-1. **primary_claim**: The central thesis or main argument (1 sentence, clear and definitive)
-2. **premises**: Core supporting claims, each labeled as:
-   - "foundational": essential to the argument; if removed, argument collapses
-   - "supporting": strengthens the argument but not strictly necessary
-   - "contextual": provides background or examples
-3. **conclusions**: Claims that logically follow from the premises
-4. **logical_gaps**: Missing evidence, unstated assumptions, or inferential leaps
-   - Classify as "missing_evidence", "unstated_assumption", or "inferential_leap"
-   - Assign severity 1 (minor) to 5 (critical)
-5. **counter_arguments**: Counterarguments the author acknowledges or should acknowledge
-   - Rate as "strong", "moderate", or "weak"
+Extract and return:
+1. **primary_claim**: The single sharpest version of the central thesis — one sentence, specific and arguable. Not a topic, but a claim.
+2. **premises**: The load-bearing support structure. Label each:
+   - "foundational": remove this and the whole argument falls apart
+   - "supporting": adds weight but argument survives without it
+   - "contextual": background, examples, or framing — important but not logical load-bearing
+3. **conclusions**: What logically follows if the premises hold. Be explicit about what they commit the author to.
+4. **logical_gaps**: Weak points a critical reader would attack:
+   - "missing_evidence": a claim made without support
+   - "unstated_assumption": a premise that's being smuggled in silently
+   - "inferential_leap": the logic jumps from A to C without establishing B
+   - Severity 1–5 (1 = minor quibble, 5 = the argument collapses here)
+5. **counter_arguments**: The strongest objections — what would a smart, informed skeptic say?
+   - Rate strength as "strong", "moderate", or "weak" from the skeptic's perspective
 
-Your analysis should be:
-- Precise and scholarly (but accessible)
-- Grounded in the text, not speculative
-- Forgiving of messiness (notes are rough)
-- Helpful for the reader to see the logical thread they're creating
-
+Be precise but forgiving of note messiness. The writer's notes are rough thinking, not a finished argument.
 Return valid JSON ONLY. No preamble.`;
 
   const userPrompt = `Book: "${bookTitle}" by ${author}

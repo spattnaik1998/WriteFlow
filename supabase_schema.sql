@@ -184,12 +184,62 @@ create table if not exists sessions (
 -- Index for fast "last ended session" query
 create index if not exists sessions_ended_at_idx on sessions (ended_at desc nulls last);
 
--- ===== MIGRATIONS (run once in Supabase SQL editor) =====
--- Add quiz cache column to sessions (session quiz feature)
+-- ===== MIGRATIONS (safe to re-run — all use IF NOT EXISTS) =====
+
+-- Session quiz cache
 alter table sessions add column if not exists quiz jsonb;
 
--- Add completed flag to notes (chapter mark-done feature)
+-- Chapter mark-done
 alter table notes add column if not exists completed boolean default false;
+
+-- Arguments table: add columns that may be missing in older deployments
+alter table arguments add column if not exists conclusions        jsonb default '[]';
+alter table arguments add column if not exists logical_gaps       jsonb default '[]';
+alter table arguments add column if not exists counter_arguments  jsonb default '[]';
+alter table arguments add column if not exists metadata           jsonb default '{}';
+
+-- Unique constraint on arguments (enables upsert by chapter)
+do $$ begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'arguments_book_id_chapter_name_key'
+  ) then
+    alter table arguments add constraint arguments_book_id_chapter_name_key unique (book_id, chapter_name);
+  end if;
+end $$;
+
+-- concept_maps table (create if not exists for older deployments)
+create table if not exists concept_maps (
+  id            uuid primary key default gen_random_uuid(),
+  book_id       uuid references books(id) on delete cascade,
+  chapter_name  text,
+  concepts      jsonb default '[]',
+  relationships jsonb default '[]',
+  hierarchy     jsonb default '[]',
+  metadata      jsonb default '{}',
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now(),
+  unique(book_id, chapter_name)
+);
+create trigger if not exists concept_maps_updated_at before update on concept_maps
+  for each row execute procedure set_updated_at();
+
+-- contradictions table (create if not exists for older deployments)
+create table if not exists contradictions (
+  id                 uuid primary key default gen_random_uuid(),
+  book_id            uuid references books(id) on delete cascade,
+  idea_a_id          uuid references ideas(id) on delete cascade,
+  idea_b_id          uuid references ideas(id) on delete cascade,
+  contradiction_type text check (contradiction_type in
+    ('direct_conflict', 'incompatible_premises', 'scope_mismatch')),
+  description        text,
+  severity           float default 0.5,
+  resolution_options jsonb default '[]',
+  status             text default 'unresolved'
+    check (status in ('unresolved', 'resolved', 'accepted_tension')),
+  created_at         timestamptz default now()
+);
+create unique index if not exists contradictions_pair on contradictions (idea_a_id, idea_b_id);
 
 -- ===== ROW LEVEL SECURITY (enable when you add auth) =====
 -- alter table books        enable row level security;
