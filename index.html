@@ -2835,6 +2835,288 @@ body::after {
   line-height: 1.65;
 }
 
+/* ══════════════════════════════════════════
+   SESSION RECAP MODAL
+══════════════════════════════════════════ */
+.recap-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5,4,3,.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: recapFadeIn .35s ease both;
+}
+@keyframes recapFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.recap-modal {
+  background: #18150f;
+  border: 1px solid rgba(201,168,76,.14);
+  border-radius: 22px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 92vh;
+  overflow-y: auto;
+  box-shadow: 0 32px 80px rgba(0,0,0,.75), 0 0 0 1px rgba(201,168,76,.06);
+  animation: recapSlideUp .4s cubic-bezier(.16,1,.3,1) both;
+  scrollbar-width: none;
+}
+.recap-modal::-webkit-scrollbar { display: none; }
+@keyframes recapSlideUp {
+  from { opacity: 0; transform: translateY(28px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Hero / header */
+.recap-hero {
+  background: linear-gradient(155deg, #211d10 0%, #0e0d0b 55%, #141210 100%);
+  padding: 30px 30px 26px;
+  border-radius: 22px 22px 0 0;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(201,168,76,.09);
+}
+.recap-hero::before {
+  content: '';
+  position: absolute;
+  top: -50px; right: -50px;
+  width: 240px; height: 240px;
+  background: radial-gradient(circle, rgba(201,168,76,.06) 0%, transparent 68%);
+  pointer-events: none;
+}
+.recap-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,76,.2), transparent);
+}
+.recap-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 9px;
+  color: rgba(255,255,255,.45);
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: var(--ease);
+}
+.recap-close:hover { color: #fff; background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.2); }
+
+.recap-greeting {
+  font-family: 'Playfair Display', serif;
+  font-size: 27px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+.recap-date {
+  font-size: 12.5px;
+  color: rgba(201,168,76,.65);
+  font-weight: 400;
+  margin-bottom: 18px;
+  letter-spacing: .2px;
+}
+.recap-weather-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  padding: 7px 14px;
+  width: fit-content;
+}
+.recap-weather-icon { font-size: 17px; line-height: 1; }
+.recap-weather-temp { font-size: 14px; font-weight: 600; color: #fff; }
+.recap-weather-desc { font-size: 12px; color: rgba(255,255,255,.38); margin-left: 3px; }
+
+/* Body */
+.recap-body {
+  padding: 22px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* Stats strip */
+.recap-stats {
+  display: flex;
+  align-items: stretch;
+  background: rgba(201,168,76,.04);
+  border: 1px solid rgba(201,168,76,.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.recap-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 8px;
+  gap: 3px;
+}
+.recap-stat + .recap-stat {
+  border-left: 1px solid rgba(201,168,76,.1);
+}
+.recap-stat-value {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--amber);
+  line-height: 1;
+}
+.recap-stat-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+
+/* Section label */
+.recap-sec-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 10px;
+}
+
+/* Book cards */
+.recap-book-card {
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+}
+.recap-book-card:last-child { margin-bottom: 0; }
+.recap-book-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.recap-chapter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+.recap-chapter-name { font-size: 12px; color: rgba(255,255,255,.55); }
+.recap-chapter-wc {
+  font-size: 10.5px;
+  background: rgba(201,168,76,.1);
+  color: rgba(201,168,76,.7);
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-weight: 600;
+}
+
+/* AI content */
+.recap-summary-text {
+  font-family: 'Lora', serif;
+  font-size: 14px;
+  color: rgba(255,255,255,.68);
+  line-height: 1.75;
+}
+.recap-highlight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: rgba(255,255,255,.62);
+  line-height: 1.65;
+  padding: 5px 0;
+}
+.recap-highlight-dot {
+  width: 5px; height: 5px;
+  background: var(--amber);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+.recap-prep {
+  background: linear-gradient(135deg, rgba(201,168,76,.08) 0%, rgba(201,168,76,.04) 100%);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: 13px;
+  padding: 16px 18px;
+}
+.recap-prep-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(201,168,76,.6);
+  margin-bottom: 8px;
+}
+.recap-prep-text {
+  font-size: 14px;
+  color: rgba(255,255,255,.82);
+  line-height: 1.65;
+  font-style: italic;
+  font-family: 'Lora', serif;
+}
+
+/* Loading dots */
+.recap-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+}
+.recap-loading-text { font-size: 12px; color: var(--text-4); margin-left: 4px; }
+.recap-dot {
+  width: 6px; height: 6px;
+  background: var(--amber);
+  border-radius: 50%;
+  animation: recapDotPulse 1.4s ease-in-out infinite;
+}
+.recap-dot:nth-child(2) { animation-delay: .2s; }
+.recap-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes recapDotPulse {
+  0%,80%,100% { opacity: .2; transform: scale(.75); }
+  40%         { opacity: 1;  transform: scale(1); }
+}
+
+/* CTA button */
+.recap-cta-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: .3px;
+  border: none;
+  border-radius: 13px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #c9a84c 0%, #a07c2a 100%);
+  color: #0f0e0d;
+  transition: all .2s;
+}
+.recap-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(201,168,76,.3);
+}
+.recap-cta-btn:active { transform: translateY(0); }
+
 /* Review mode overlay */
 .review-overlay {
   position: fixed;
@@ -4162,6 +4444,9 @@ function onNotesInput() {
       const lbl = document.getElementById('savedLabel');
       lbl.classList.add('visible');
       setTimeout(() => lbl.classList.remove('visible'), 2000);
+      // Track this write in the current session
+      const _b = BOOKS.find(b => b.id === CURRENT_BOOK_ID);
+      trackSessionNote(CURRENT_BOOK_ID, _b?.title || '', _b?.author || '', currentChapterId, content);
     }, 1500);
   }
 }
@@ -5889,6 +6174,217 @@ document.addEventListener('click', e => {
 });
 
 // ═══════════════════════════════════════
+// SESSION TRACKING
+// ═══════════════════════════════════════
+//
+// Abstraction: a Session is one writing period. We record which
+// books/chapters were touched (activity), then on the next login
+// generate a GPT-4o recap the user can read as a warm-up briefing.
+//
+// Public entry-points from the rest of the app:
+//   trackSessionNote(bookId, bookTitle, bookAuthor, chapterName, content)
+//   startSession()          — called once when backend connects
+//   checkLastSessionRecap() — called after books load; shows modal if needed
+
+let SESSION_ID        = null;
+// Activity map keyed by "bookId::chapterName" to deduplicate writes
+let _sessionActivity  = {};
+let _sessionSyncTimer = null;
+
+async function startSession() {
+  try {
+    const data = await api('POST', '/sessions', {});
+    if (data?.id) {
+      SESSION_ID = data.id;
+      // Flush activity + mark ended when the tab closes
+      window.addEventListener('beforeunload', _endSessionBeacon);
+      // Periodic sync so we don't lose data if the tab crashes
+      setInterval(_syncSessionActivity, 90000);
+    }
+  } catch { /* non-fatal — session tracking is best-effort */ }
+}
+
+/**
+ * Record that the user wrote content in a chapter.
+ * Called from the note-save debounce so we only track real writes.
+ */
+function trackSessionNote(bookId, bookTitle, bookAuthor, chapterName, content) {
+  if (!SESSION_ID) return;
+  const key = `${bookId}::${chapterName}`;
+  const wc  = content ? content.trim().split(/\s+/).filter(Boolean).length : 0;
+  _sessionActivity[key] = {
+    book_id:     bookId,
+    book_title:  bookTitle  || 'Untitled',
+    book_author: bookAuthor || '',
+    chapter_name: chapterName,
+    word_count:  wc
+  };
+  // Debounce sync: write to server 8 s after last note change
+  clearTimeout(_sessionSyncTimer);
+  _sessionSyncTimer = setTimeout(_syncSessionActivity, 8000);
+}
+
+async function _syncSessionActivity() {
+  if (!SESSION_ID) return;
+  const activity = Object.values(_sessionActivity);
+  if (!activity.length) return;
+  await api('PATCH', `/sessions/${SESSION_ID}`, { activity });
+}
+
+function _endSessionBeacon() {
+  if (!SESSION_ID) return;
+  const activity = Object.values(_sessionActivity);
+  const payload  = JSON.stringify({ activity, ended: true });
+  navigator.sendBeacon(
+    `/api/sessions/${SESSION_ID}`,
+    new Blob([payload], { type: 'application/json' })
+  );
+}
+
+// ═══════════════════════════════════════
+// SESSION RECAP MODAL
+// ═══════════════════════════════════════
+
+async function checkLastSessionRecap() {
+  if (!IS_LIVE_MODE || !SESSION_ID) return;
+
+  // One recap per browser session — sessionStorage is cleared on tab/window close
+  const alreadyShown = sessionStorage.getItem('recap_shown_for');
+
+  const session = await api('GET', `/sessions/last?current_id=${SESSION_ID}`);
+  if (!session?.id) return;
+  if (alreadyShown === session.id) return;
+
+  sessionStorage.setItem('recap_shown_for', session.id);
+  _showRecapModal(session);
+
+  // Trigger AI recap generation asynchronously — modal shows immediately
+  // with structural data; AI content fills in as it arrives
+  _fetchRecapContent(session.id);
+}
+
+function _showRecapModal(session) {
+  // ── Greeting & date ──
+  const now  = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 5 ? 'Good night' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('recapGreeting').textContent = greeting;
+  document.getElementById('recapDate').textContent = now.toLocaleDateString('en-US', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  // ── Stats ──
+  const activity     = session.activity || [];
+  const totalWords   = activity.reduce((s, e) => s + (e.word_count || 0), 0);
+  const uniqueBooks  = new Set(activity.map(e => e.book_id)).size;
+  document.getElementById('recapStatWords').textContent    = totalWords.toLocaleString();
+  document.getElementById('recapStatChapters').textContent = activity.length;
+  document.getElementById('recapStatBooks').textContent    = uniqueBooks;
+
+  // ── Books / chapters ──
+  const bookMap = {};
+  activity.forEach(e => {
+    if (!bookMap[e.book_id]) bookMap[e.book_id] = { title: e.book_title, chapters: [] };
+    bookMap[e.book_id].chapters.push(e);
+  });
+
+  document.getElementById('recapBooks').innerHTML = Object.values(bookMap).map(b => `
+    <div class="recap-book-card">
+      <div class="recap-book-name">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--amber);flex-shrink:0"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        ${escapeHtml(b.title)}
+      </div>
+      <div>${b.chapters.map(c => `
+        <div class="recap-chapter-row">
+          <span class="recap-chapter-name">${escapeHtml(c.chapter_name)}</span>
+          <span class="recap-chapter-wc">${c.word_count} words</span>
+        </div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  // If recap was already cached on the session, render it immediately
+  if (session.recap) {
+    _renderRecapAI(session.recap);
+  }
+
+  // Show modal + start weather fetch
+  document.getElementById('recapOverlay').style.display = 'flex';
+  _fetchWeather();
+}
+
+async function _fetchRecapContent(sessionId) {
+  const data = await api('POST', `/sessions/${sessionId}/recap`, {});
+  if (data?.recap) _renderRecapAI(data.recap);
+}
+
+function _renderRecapAI(recap) {
+  document.getElementById('recapLoading').style.display = 'none';
+
+  if (recap.summary) {
+    document.getElementById('recapSummaryText').textContent  = recap.summary;
+    document.getElementById('recapSummaryBlock').style.display = '';
+  }
+
+  if (recap.highlights?.length) {
+    document.getElementById('recapHighlightsList').innerHTML = recap.highlights.map(h =>
+      `<div class="recap-highlight-item"><div class="recap-highlight-dot"></div><span>${escapeHtml(h)}</span></div>`
+    ).join('');
+    document.getElementById('recapHighlightsBlock').style.display = '';
+  }
+
+  if (recap.prep_question) {
+    document.getElementById('recapPrepText').textContent = recap.prep_question;
+    document.getElementById('recapPrepBlock').style.display = '';
+  }
+}
+
+function closeRecapModal() {
+  const overlay = document.getElementById('recapOverlay');
+  overlay.style.opacity = '0';
+  overlay.style.transition = 'opacity .2s ease';
+  setTimeout(() => {
+    overlay.style.display = '';
+    overlay.style.opacity = '';
+    overlay.style.transition = '';
+  }, 200);
+}
+
+// ── Weather via Open-Meteo (free, no API key) ─────────────────────────────
+const _WMO = {
+  0:['☀️','Clear sky'], 1:['🌤️','Mainly clear'], 2:['⛅','Partly cloudy'], 3:['☁️','Overcast'],
+  45:['🌫️','Foggy'], 48:['🌫️','Foggy'],
+  51:['🌦️','Light drizzle'], 53:['🌦️','Drizzle'], 55:['🌧️','Heavy drizzle'],
+  61:['🌧️','Light rain'], 63:['🌧️','Rain'], 65:['🌧️','Heavy rain'],
+  71:['🌨️','Light snow'], 73:['❄️','Snow'], 75:['❄️','Heavy snow'], 77:['🌨️','Snow grains'],
+  80:['🌦️','Rain showers'], 81:['🌧️','Showers'], 82:['⛈️','Heavy showers'],
+  95:['⛈️','Thunderstorm'], 96:['⛈️','Thunderstorm'], 99:['⛈️','Thunderstorm']
+};
+
+function _fetchWeather() {
+  if (!navigator.geolocation) {
+    document.getElementById('recapWeatherDesc').textContent = 'Location unavailable';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,weathercode&temperature_unit=celsius`;
+      const r   = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      if (!r.ok) return;
+      const d   = await r.json();
+      const cur = d.current;
+      const [icon, desc] = _WMO[cur.weathercode] || ['🌡️', 'Weather'];
+      const temp = Math.round(cur.temperature_2m);
+      document.getElementById('recapWeatherIcon').textContent = icon;
+      document.getElementById('recapWeatherTemp').textContent = `${temp}°C`;
+      document.getElementById('recapWeatherDesc').textContent  = desc;
+    } catch { /* weather is non-critical */ }
+  }, () => {
+    document.getElementById('recapWeatherDesc').textContent = 'Location unavailable';
+  }, { timeout: 6000, maximumAge: 600000 });
+}
+
+// ═══════════════════════════════════════
 // KEYBOARD SHORTCUTS
 // ═══════════════════════════════════════
 document.addEventListener('keydown', e => {
@@ -5899,6 +6395,7 @@ document.addEventListener('keydown', e => {
     closeDigestModal();
     closeSearchPanel();
     closeReviewMode();
+    closeRecapModal();
   }
 
   // Review mode advance
@@ -7295,7 +7792,10 @@ fetch('/api/health').then(r => {
     document.getElementById('barAuthor').textContent = '';
     document.getElementById('writeArea').innerHTML = '';
 
-    loadBooksFromAPI();
+    loadBooksFromAPI().then(() => {
+      // Start session tracking, then check whether to show a recap
+      startSession().then(checkLastSessionRecap);
+    });
     loadBrandProfile();
     console.log('[WriteFlow] Backend connected ✓');
   }
@@ -7591,6 +8091,82 @@ function outsideDigestClose(e) {
 // ═══════════════════════════════════════
 init();
 </script>
+
+<!-- ══════════════ SESSION RECAP MODAL ══════════════ -->
+<div class="recap-overlay" id="recapOverlay" style="display:none" role="dialog" aria-modal="true" aria-label="Session recap">
+  <div class="recap-modal">
+
+    <!-- Hero header: greeting + date + weather -->
+    <div class="recap-hero">
+      <button class="recap-close" onclick="closeRecapModal()" title="Dismiss">×</button>
+      <div class="recap-greeting" id="recapGreeting">Good morning</div>
+      <div class="recap-date"     id="recapDate">Loading…</div>
+      <div class="recap-weather-row" id="recapWeatherRow">
+        <span class="recap-weather-icon" id="recapWeatherIcon">🌡️</span>
+        <span class="recap-weather-temp" id="recapWeatherTemp"></span>
+        <span class="recap-weather-desc" id="recapWeatherDesc">Fetching weather…</span>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="recap-body">
+
+      <!-- Stats strip -->
+      <div class="recap-stats">
+        <div class="recap-stat">
+          <div class="recap-stat-value" id="recapStatWords">—</div>
+          <div class="recap-stat-label">Words written</div>
+        </div>
+        <div class="recap-stat">
+          <div class="recap-stat-value" id="recapStatChapters">—</div>
+          <div class="recap-stat-label">Chapters</div>
+        </div>
+        <div class="recap-stat">
+          <div class="recap-stat-value" id="recapStatBooks">—</div>
+          <div class="recap-stat-label">Books</div>
+        </div>
+      </div>
+
+      <!-- Books / chapters worked on -->
+      <div>
+        <div class="recap-sec-label">Last session</div>
+        <div id="recapBooks"></div>
+      </div>
+
+      <!-- AI-generated content (summary · highlights · prep question) -->
+      <div id="recapAI">
+        <!-- Loading state shown while GPT-4o generates -->
+        <div class="recap-loading" id="recapLoading">
+          <div class="recap-dot"></div>
+          <div class="recap-dot"></div>
+          <div class="recap-dot"></div>
+          <span class="recap-loading-text">Generating your briefing…</span>
+        </div>
+
+        <div id="recapSummaryBlock" style="display:none">
+          <div class="recap-sec-label">What you were thinking about</div>
+          <div class="recap-summary-text" id="recapSummaryText"></div>
+        </div>
+
+        <div id="recapHighlightsBlock" style="display:none;margin-top:16px">
+          <div class="recap-sec-label">Key threads</div>
+          <div id="recapHighlightsList"></div>
+        </div>
+
+        <div class="recap-prep" id="recapPrepBlock" style="display:none">
+          <div class="recap-prep-label">To pick up where you left off</div>
+          <div class="recap-prep-text" id="recapPrepText"></div>
+        </div>
+      </div>
+
+      <!-- Dismiss CTA -->
+      <button class="recap-cta-btn" onclick="closeRecapModal()">
+        Ready — let's continue writing
+      </button>
+
+    </div><!-- /recap-body -->
+  </div><!-- /recap-modal -->
+</div>
 
 <!-- Review mode overlay -->
 <div class="review-overlay" id="reviewOverlay" style="display:none" role="dialog" aria-modal="true">

@@ -704,4 +704,54 @@ Extract concept structure. Return JSON:
   };
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, reconstructArgument, generateConceptMap };
+/**
+ * Generate a personal-assistant-style session recap.
+ *
+ * Takes the books/chapters the user worked on (with note snippets) and
+ * returns a structured briefing the user can read before starting the
+ * next session.
+ *
+ * @param {{ books: Array<{title,author,chapters}>, totalWords: number }} opts
+ * @returns {{ summary: string, highlights: string[], prep_question: string }}
+ */
+async function generateSessionRecap({ books, totalWords }) {
+  const systemPrompt = `You are a personal reading assistant. The user just ended a focused reading and note-taking session.
+Your job is to generate a sharp, insightful session briefing that:
+1. Summarises what the user was thinking about in 2-3 vivid sentences
+2. Extracts 3-5 intellectual highlights — the most interesting, thought-provoking threads
+3. Ends with one powerful open question that will reignite their thinking in the next session
+
+Tone: warm, precise, intellectually engaged — like a brilliant friend who read over their shoulder.
+Never use filler phrases. Be concrete. Reference actual ideas from the notes.
+Return valid JSON: { "summary": string, "highlights": string[], "prep_question": string }`;
+
+  const booksBlock = books.map(b => {
+    const chapters = b.chapters
+      .filter(c => c.snippet)
+      .map(c => `  Chapter "${c.chapter_name}" (${c.word_count} words):\n  ${c.snippet}`)
+      .join('\n\n');
+    return `Book: "${b.title}"${b.author ? ` by ${b.author}` : ''}\n${chapters}`;
+  }).join('\n\n---\n\n');
+
+  const userPrompt = `Here is what the reader wrote in their last session (${totalWords} words total):\n\n${booksBlock}\n\nGenerate the session recap.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.82,
+    max_tokens: 700
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return {
+    summary:       raw.summary        || '',
+    highlights:    Array.isArray(raw.highlights) ? raw.highlights : [],
+    prep_question: raw.prep_question  || ''
+  };
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, reconstructArgument, generateConceptMap, generateSessionRecap };
