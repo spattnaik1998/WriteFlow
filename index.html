@@ -4695,17 +4695,21 @@ function onNotesInput() {
     const preview = activeItem.querySelector('.acc-content');
     if (preview) preview.textContent = content || '';
   }
-  // Debounced save to backend (live mode only)
+  // Debounced save to backend (live mode only).
+  // Capture book/chapter NOW so a mid-flight book switch can't redirect the save.
   if (CURRENT_BOOK_ID) {
     clearTimeout(_saveTimer);
+    const _bookId   = CURRENT_BOOK_ID;
+    const _chapter  = currentChapterId;
     _saveTimer = setTimeout(async () => {
-      await api('POST', '/notes', { book_id: CURRENT_BOOK_ID, chapter_name: currentChapterId, content });
+      await api('POST', '/notes', { book_id: _bookId, chapter_name: _chapter, content });
+      // Only show indicator if the user is still on this book
+      if (CURRENT_BOOK_ID !== _bookId) return;
       const lbl = document.getElementById('savedLabel');
       lbl.classList.add('visible');
       setTimeout(() => lbl.classList.remove('visible'), 2000);
-      // Track this write in the current session
-      const _b = BOOKS.find(b => b.id === CURRENT_BOOK_ID);
-      trackSessionNote(CURRENT_BOOK_ID, _b?.title || '', _b?.author || '', currentChapterId, content);
+      const _b = BOOKS.find(b => b.id === _bookId);
+      trackSessionNote(_bookId, _b?.title || '', _b?.author || '', _chapter, content);
     }, 1500);
   }
 }
@@ -4759,6 +4763,11 @@ function renderBooks() {
 }
 
 function selectBook(id) {
+  // Cancel any pending auto-save for the outgoing book so it can't fire
+  // after CURRENT_BOOK_ID has been updated to the new book.
+  clearTimeout(_saveTimer);
+  _saveTimer = null;
+
   // Save current chapter before switching
   saveCurrentChapter();
 
@@ -6813,10 +6822,11 @@ let _quizCurrent    = 0;      // index of question being answered
 let _quizAnswers    = [];     // selected option index per question (-1 = skipped)
 let _quizPending    = false;  // true = write-gate is active
 
-/** Slide the .rp-slider to panel index 0, 1, or 2 */
+/** Slide the .rp-slider to panel index 0, 1, or 2.
+ *  translateX % is relative to the slider's own box width (= modal width),
+ *  and each panel is also 100% wide, so one panel = 100% of slider. */
 function _slideToPanel(idx) {
-  // Each panel is 100/3 % of the slider's total width
-  document.getElementById('rpSlider').style.transform = `translateX(-${idx * 100 / 3}%)`;
+  document.getElementById('rpSlider').style.transform = `translateX(-${idx * 100}%)`;
 }
 
 /** Show or hide the write-gate overlay on the notes pane */
