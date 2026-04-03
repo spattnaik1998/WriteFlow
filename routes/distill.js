@@ -1,7 +1,85 @@
 const express  = require('express');
 const router   = express.Router();
 const supabase = require('../services/supabase');
-const { distillNotes } = require('../services/openai');
+const { distillNotes, generateBroadIdeas } = require('../services/openai');
+
+// GET /api/distill/broad?book_id= — fetch cached broad ideas for a book
+router.get('/broad', async (req, res) => {
+  const { book_id } = req.query;
+  if (!book_id) return res.status(400).json({ error: 'book_id required' });
+
+  const { data, error } = await supabase
+    .from('ideas')
+    .select('*')
+    .eq('book_id', book_id)
+    .eq('chapter_name', '_broad')
+    .order('number', { ascending: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
+// POST /api/distill/broad — generate (or regenerate) 5 broad ideas for a whole book
+router.post('/broad', async (req, res) => {
+  const { book_id } = req.body;
+  if (!book_id) return res.status(400).json({ error: 'book_id required' });
+
+  const { data: book, error: bookErr } = await supabase
+    .from('books')
+    .select('title, author, category')
+    .eq('id', book_id)
+    .single();
+  if (bookErr || !book) return res.status(404).json({ error: 'Book not found' });
+
+  // Fetch all notes across all chapters
+  const { data: notes } = await supabase
+    .from('notes')
+    .select('chapter_name, content')
+    .eq('book_id', book_id)
+    .order('chapter_order', { ascending: true });
+
+  const allNotes = (notes || [])
+    .filter(n => n.content?.trim())
+    .map(n => `[${n.chapter_name || 'Chapter'}]:\n${n.content}`)
+    .join('\n\n');
+
+  let ideas;
+  try {
+    ideas = await generateBroadIdeas({
+      bookTitle: book.title,
+      author:    book.author   || '',
+      category:  book.category || '',
+      allNotes
+    });
+  } catch (e) {
+    console.error('[broad ideas] generation failed:', e.message);
+    return res.status(500).json({ error: 'Failed to generate ideas' });
+  }
+
+  // Delete old broad ideas for this book before saving new ones
+  await supabase.from('ideas').delete().eq('book_id', book_id).eq('chapter_name', '_broad');
+
+  const toInsert = ideas.map((idea, i) => ({
+    book_id,
+    chapter_name: '_broad',
+    title:        idea.title,
+    body:         idea.body,
+    tags:         idea.tags || [],
+    number:       i + 1
+  }));
+
+  const { data: saved, error: saveErr } = await supabase
+    .from('ideas')
+    .insert(toInsert)
+    .select();
+
+  if (saveErr) {
+    console.error('Supabase insert error:', saveErr.message);
+    return res.json({ ideas, saved: false });
+  }
+
+  res.json({ ideas: saved, saved: true });
+});
 
 // POST /api/distill — distil notes into idea cards
 router.post('/', async (req, res) => {

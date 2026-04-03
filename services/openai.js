@@ -837,4 +837,57 @@ Return valid JSON only:
   }));
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, reconstructArgument, generateConceptMap, generateSessionRecap, generateSessionQuiz };
+/**
+ * Generate 5 broad, book-level ideas from all of a book's notes.
+ * These are the intellectual backbone ideas that span the whole book —
+ * not per-chapter summaries.
+ */
+async function generateBroadIdeas({ bookTitle, author, category, allNotes }) {
+  const systemPrompt = `You are a book intelligence engine for a non-fiction reader who reads to think and write. Your job is to identify the 5 most powerful, cross-cutting ideas from an entire book — the intellectual backbone the whole work stands on.
+
+These are NOT chapter summaries. They are the 5 BIG IDEAS that:
+- Represent the author's most important original claims or frameworks
+- Are broad enough to span multiple chapters yet specific enough to argue for
+- Challenge conventional wisdom or introduce a powerful new lens
+- Would be most valuable to a writer crafting essays and arguments
+
+For each idea:
+1. **Title** — punchy, specific, like an essay thesis or great tweet. A claim, not a topic. Never "The importance of X". Instead: "Why X Actually Does Y" or "The Hidden Cost of Z".
+2. **Body** — 3-5 sentences: (a) the core claim, (b) how the author builds the case for it across the book, (c) why it matters beyond this book, (d) the implication for how we think, write, or act.
+3. **Tags** — 2-3 UPPERCASE tags from: COGNITION, BEHAVIOR, SYSTEMS, ECONOMICS, HISTORY, SCIENCE, PHILOSOPHY, WRITING, CULTURE, POLITICS, TECHNOLOGY, SOCIETY, PSYCHOLOGY, BIOLOGY, DECISIONS, POWER, LANGUAGE
+
+Prioritise ideas that are counterintuitive, cross-disciplinary, and argue-able. Avoid vague platitudes.
+
+Return valid JSON: { "ideas": [ { "title": string, "body": string, "tags": string[] } ] }`;
+
+  const notesBlock = allNotes ? allNotes.slice(0, 6000) : 'No notes provided.';
+  const userPrompt = `Book: "${bookTitle}"${author ? ` by ${author}` : ''}${category ? ` | Category: ${category}` : ''}
+
+Reader's notes across all chapters:
+"""
+${notesBlock}
+"""
+
+Identify the 5 biggest ideas from this book. Return as JSON.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.65,
+    max_tokens: 2000
+  });
+
+  const raw   = JSON.parse(response.choices[0].message.content);
+  const ideas = Array.isArray(raw) ? raw : (raw.ideas || raw.insights || raw.cards || []);
+  return ideas.slice(0, 5).map(idea => ({
+    title: idea.title || '',
+    body:  idea.body  || '',
+    tags:  Array.isArray(idea.tags) ? idea.tags : []
+  }));
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, reconstructArgument, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas };

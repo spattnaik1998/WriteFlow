@@ -3826,19 +3826,10 @@ body::after {
       <!-- IDEAS TAB -->
       <div class="tab-pane" id="pane-ideas">
         <div class="ideas-tab-header">
-          <div class="themes-bar" style="margin-bottom:0">
+          <div id="ideasThemesBar" class="themes-bar" style="margin-bottom:0;display:none">
             <span class="themes-bar-label">Themes</span>
-            <span class="theme-pill active" onclick="togglePill(this)">Cognition</span>
-            <span class="theme-pill" onclick="togglePill(this)">Decision-Making</span>
-            <span class="theme-pill" onclick="togglePill(this)">Bias</span>
-            <span class="theme-pill" onclick="togglePill(this)">Psychology</span>
-            <span class="theme-pill" onclick="togglePill(this)">Behavior</span>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
-            <button class="btn-sec btn-sm" onclick="openReviewMode()">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              Review
-            </button>
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;margin-left:auto">
             <button class="btn-sec btn-sm" onclick="copyIdeasAsMarkdown()">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
               Copy MD
@@ -3847,7 +3838,8 @@ body::after {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               Export PDF
             </button>
-            <button class="btn-sec btn-sm" onclick="showAddInsightForm()">+ Add Insight</button>
+            <button class="btn-sec btn-sm" onclick="showAddInsightForm()">+ Add</button>
+            <button class="btn-amber btn-sm" id="generateIdeasBtn" onclick="triggerGenerateBroadIdeas()">Generate Ideas</button>
           </div>
         </div>
         <div id="addInsightForm" class="add-insight-form" style="display:none">
@@ -3860,65 +3852,22 @@ body::after {
           </div>
         </div>
 
-        <div class="ideas-grid" id="ideasGrid">
-          <div class="idea-card">
-            <div class="idea-num">INSIGHT 01</div>
-            <div class="idea-title">System 1 vs System 2 Thinking</div>
-            <div class="idea-body">Human cognition runs on two parallel tracks. System 1 is automatic, instant, and constantly running — shaping almost every moment-to-moment perception. System 2 is deliberate and effortful, but dangerously passive: it tends to endorse whatever System 1 serves up, rarely questioning the source.</div>
-            <div class="idea-tags">
-              <span class="idea-tag">DUAL PROCESS</span>
-              <span class="idea-tag">AUTOMATICITY</span>
-            </div>
-            <button class="idea-explore" onclick="exploreIdea('System 1 vs System 2')">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
-              Explore Further
-            </button>
+        <!-- Loading state -->
+        <div id="ideasLoading" style="display:none;flex-direction:column;align-items:center;padding:56px 0;gap:14px">
+          <div class="recap-loading">
+            <div class="recap-dot"></div><div class="recap-dot"></div><div class="recap-dot"></div>
           </div>
-
-          <div class="idea-card">
-            <div class="idea-num">INSIGHT 02</div>
-            <div class="idea-title">The WYSIATI Principle</div>
-            <div class="idea-body">What You See Is All There Is. System 1 constructs the most coherent narrative possible from available data — without ever noting what information is absent. This is why snap judgments feel complete and confident even when built on a fraction of what's relevant.</div>
-            <div class="idea-tags">
-              <span class="idea-tag">NARRATIVE BIAS</span>
-              <span class="idea-tag">OVERCONFIDENCE</span>
-            </div>
-            <button class="idea-explore" onclick="exploreIdea('WYSIATI')">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
-              Explore Further
-            </button>
-          </div>
-
-          <div class="idea-card">
-            <div class="idea-num">INSIGHT 03</div>
-            <div class="idea-title">Anchoring Effect in Decision Making</div>
-            <div class="idea-body">The first number encountered in any estimation contaminates all subsequent judgments — even when you know it's arbitrary. Kahneman showed that judges assigned shorter sentences after rolling low dice numbers. The anchor operates below the threshold of conscious awareness, making it nearly impossible to correct for.</div>
-            <div class="idea-tags">
-              <span class="idea-tag">ANCHORING</span>
-              <span class="idea-tag">PRIMING</span>
-              <span class="idea-tag">HEURISTICS</span>
-            </div>
-            <button class="idea-explore" onclick="exploreIdea('Anchoring Effect')">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
-              Explore Further
-            </button>
-          </div>
-
-          <div class="idea-card">
-            <div class="idea-num">INSIGHT 04</div>
-            <div class="idea-title">Cognitive Ease &amp; the Illusion of Truth</div>
-            <div class="idea-body">When information is easy to process, we experience it as familiar, true, and credible. This is cognitive ease — and it's weaponizable. Repetition doesn't create truth, but it creates the <em>feeling</em> of truth. This is why propaganda relies on repetition, not argument. Fluency masquerades as validity.</div>
-            <div class="idea-tags">
-              <span class="idea-tag">COGNITIVE EASE</span>
-              <span class="idea-tag">FLUENCY</span>
-              <span class="idea-tag">TRUTH PERCEPTION</span>
-            </div>
-            <button class="idea-explore" onclick="exploreIdea('Cognitive Ease')">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
-              Explore Further
-            </button>
-          </div>
+          <span style="font-size:12.5px;color:var(--text-4)">Reading all your notes…</span>
         </div>
+
+        <!-- Empty state -->
+        <div id="ideasEmpty" style="display:none;flex-direction:column;align-items:center;padding:64px 24px;gap:14px;text-align:center">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--text-4)" stroke-width="1.4"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+          <div style="font-size:13.5px;color:var(--text-2);font-weight:500">No ideas generated yet</div>
+          <div style="font-size:12.5px;color:var(--text-4);max-width:280px">Add notes to your chapters, then click <strong style="color:var(--text-3)">Generate Ideas</strong> to extract the 5 key ideas from this book.</div>
+        </div>
+
+        <div class="ideas-grid" id="ideasGrid"></div>
 
         <!-- CONTRADICTIONS SECTION -->
         <div class="contradictions-section" id="contradictionsSection" style="display:none">
@@ -4525,20 +4474,10 @@ function loadProtoContent(bookId) {
   chapterSelect.value = proto.activeChapter;
   renderAccordion();
 
-  // ── Ideas tab ──────────────────────────────────────────
-  const grid = document.getElementById('ideasGrid');
-  grid.innerHTML = proto.ideas.map((idea, i) => `
-    <div class="idea-card">
-      <div class="idea-num">INSIGHT ${String(i + 1).padStart(2, '0')}</div>
-      <div class="idea-title">${idea.title}</div>
-      <div class="idea-body">${idea.body}</div>
-      <div class="idea-tags">${idea.tags.map(t => `<span class="idea-tag">${t}</span>`).join('')}</div>
-      <button class="idea-explore" onclick="exploreIdea('${idea.title.replace(/'/g, "\\'")}')">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
-        Explore Further
-      </button>
-    </div>
-  `).join('');
+  // ── Ideas tab — show empty state in prototype mode (no API to call)
+  document.getElementById('ideasGrid').innerHTML = '';
+  document.getElementById('ideasEmpty').style.display = 'flex';
+  document.getElementById('generateIdeasBtn').textContent = 'Generate Ideas';
 }
 
 // ═══════════════════════════════════════
@@ -4860,6 +4799,7 @@ function selectBook(id) {
   connectionsLoaded = false; // force graph refresh on next tab visit
   argumentsLoaded = false;
   conceptsLoaded = false;
+  _ideasLoadedFor = null; // force broad ideas refresh on next tab visit
 }
 
 function deleteBook(bookId, event) {
@@ -4966,24 +4906,7 @@ async function loadBookContent(bookId) {
   }
 
   // ── Ideas tab ──────────────────────────────────────────
-  if (ideas !== null) {
-    const grid = document.getElementById('ideasGrid');
-    grid.innerHTML = '';
-
-    if (ideas.length > 0) {
-      ideas.forEach((idea, i) => grid.appendChild(buildIdeaCard(idea, i)));
-
-      // Show contradictions section if >= 2 ideas
-      if (ideas.length >= 2) {
-        document.getElementById('contradictionsSection').style.display = 'block';
-        // Load saved contradictions
-        loadContradictions(bookId);
-      }
-    } else {
-      grid.innerHTML = `<div style="padding:24px 0;font-size:12.5px;color:var(--text-4);grid-column:1/-1">No ideas yet — write some notes and hit Distill Ideas.</div>`;
-      document.getElementById('contradictionsSection').style.display = 'none';
-    }
-  }
+  // Broad ideas load lazily when the user clicks the Ideas tab (switchTab → loadBroadIdeas)
 
   // ── Blog panel ─────────────────────────────────────────
   loadSavedArticles();
@@ -5137,12 +5060,16 @@ function toggleSidebar() {
 let connectionsLoaded = false;
 let argumentsLoaded = false;
 let conceptsLoaded = false;
+let _ideasLoadedFor = null; // book_id whose broad ideas are currently displayed
 function switchTab(tab) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(`pane-${tab}`).classList.add('active');
   document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
   activeTab = tab;
+  if (tab === 'ideas' && CURRENT_BOOK_ID && _ideasLoadedFor !== CURRENT_BOOK_ID) {
+    loadBroadIdeas(CURRENT_BOOK_ID);
+  }
   if (tab === 'connections') {
     if (!connectionsLoaded) {
       connectionsLoaded = true;
@@ -5368,7 +5295,108 @@ async function submitManualInsight() {
 }
 
 // ═══════════════════════════════════════
-// RENDER REAL IDEA CARDS
+// BROAD IDEAS — load and generate
+// ═══════════════════════════════════════
+async function loadBroadIdeas(bookId) {
+  if (!bookId) return;
+  _ideasLoadedFor = bookId;
+
+  const grid    = document.getElementById('ideasGrid');
+  const loading = document.getElementById('ideasLoading');
+  const empty   = document.getElementById('ideasEmpty');
+  const genBtn  = document.getElementById('generateIdeasBtn');
+
+  grid.innerHTML        = '';
+  loading.style.display = 'flex';
+  empty.style.display   = 'none';
+
+  const ideas = await api('GET', `/distill/broad?book_id=${bookId}`);
+
+  if (CURRENT_BOOK_ID !== bookId) return; // guard: book changed while loading
+  loading.style.display = 'none';
+
+  if (!ideas || ideas.length === 0) {
+    empty.style.display   = 'flex';
+    if (genBtn) { genBtn.textContent = 'Generate Ideas'; genBtn.disabled = false; }
+    return;
+  }
+
+  _renderBroadIdeas(ideas);
+  if (genBtn) { genBtn.textContent = 'Regenerate'; genBtn.disabled = false; }
+}
+
+async function triggerGenerateBroadIdeas() {
+  if (!CURRENT_BOOK_ID) { showToast('Select a book first'); return; }
+
+  const btn     = document.getElementById('generateIdeasBtn');
+  const grid    = document.getElementById('ideasGrid');
+  const loading = document.getElementById('ideasLoading');
+  const empty   = document.getElementById('ideasEmpty');
+
+  btn.disabled          = true;
+  btn.textContent       = 'Generating…';
+  grid.innerHTML        = '';
+  empty.style.display   = 'none';
+  loading.style.display = 'flex';
+
+  const bookId = CURRENT_BOOK_ID;
+  let result;
+  try {
+    const res = await fetch(`${API_BASE}/distill/broad`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ book_id: bookId }),
+      signal:  AbortSignal.timeout(60000)
+    });
+    if (res.ok) result = await res.json();
+  } catch (e) {
+    console.warn('[broad ideas]', e.message);
+  }
+
+  loading.style.display = 'none';
+  if (CURRENT_BOOK_ID !== bookId) return; // guard: book changed
+
+  if (!result?.ideas?.length) {
+    showToast('Could not generate ideas — add some notes first');
+    empty.style.display   = 'flex';
+    btn.disabled          = false;
+    btn.textContent       = 'Generate Ideas';
+    return;
+  }
+
+  _ideasLoadedFor = bookId;
+  _renderBroadIdeas(result.ideas);
+  btn.disabled    = false;
+  btn.textContent = 'Regenerate';
+}
+
+function _renderBroadIdeas(ideas) {
+  const grid  = document.getElementById('ideasGrid');
+  const empty = document.getElementById('ideasEmpty');
+  empty.style.display = 'none';
+  grid.innerHTML      = '';
+  ideas.forEach((idea, i) => grid.appendChild(buildIdeaCard(idea, i)));
+
+  // Populate dynamic theme pills from idea tags
+  const allTags = [...new Set(ideas.flatMap(idea => idea.tags || []))];
+  const bar = document.getElementById('ideasThemesBar');
+  if (allTags.length) {
+    bar.style.display = '';
+    bar.innerHTML = `<span class="themes-bar-label">Themes</span>` +
+      allTags.map(t => `<span class="theme-pill">${escapeHtml(t)}</span>`).join('');
+  } else {
+    bar.style.display = 'none';
+  }
+
+  // Show contradictions section
+  if (ideas.length >= 2) {
+    document.getElementById('contradictionsSection').style.display = 'block';
+    loadContradictions(CURRENT_BOOK_ID);
+  }
+}
+
+// ═══════════════════════════════════════
+// RENDER REAL IDEA CARDS (chapter-level distill)
 // ═══════════════════════════════════════
 function renderIdeasFromAPI(ideas) {
   const grid = document.getElementById('ideasGrid');
