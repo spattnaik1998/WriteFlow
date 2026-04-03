@@ -6990,10 +6990,12 @@ function _renderScore() {
   _slideToPanel(2);
 }
 
-/** Lift the write-gate and close the modal */
+/** Lift the write-gate, close the modal, and open the writing editor */
 function _quizDone() {
   _setQuizPending(false);
   closeRecapModal();
+  // Navigate to the Write tab after the modal fades out
+  setTimeout(() => switchTab('write'), 250);
 }
 
 /** Called from the write-gate button — reopen modal at quiz panel */
