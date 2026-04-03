@@ -4837,6 +4837,18 @@ function selectBook(id) {
   const b = BOOKS.find(x => x.id === id);
   document.getElementById('barTitle').textContent = b.title;
   document.getElementById('barAuthor').textContent = `— ${b.author}`;
+
+  // ── Wipe all content panes immediately so stale content from the
+  //    previous book never bleeds into the new one while the API loads ──
+  document.getElementById('mainNotes').value = '';
+  document.getElementById('chapterSelect').innerHTML = '';
+  document.querySelector('.accordion').innerHTML = '';
+  document.getElementById('ideasGrid').innerHTML =
+    '<div style="padding:24px 0;font-size:12.5px;color:var(--text-4);grid-column:1/-1">Loading…</div>';
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('writeArea').innerHTML = '';
+  document.getElementById('contradictionsSection').style.display = 'none';
+
   renderBooks();
   showToast(`Switched to "${b.title}"`);
 
@@ -4906,6 +4918,10 @@ async function loadBookContent(bookId) {
     api('GET', `/distill?book_id=${bookId}`)
   ]);
 
+  // Race-condition guard: if the user switched to a different book while
+  // these requests were in flight, discard this response entirely.
+  if (CURRENT_BOOK_ID !== bookId) return;
+
   // Both null means backend is unreachable — load per-book prototype content
   if (notes === null && ideas === null) {
     loadProtoContent(bookId);
@@ -4971,6 +4987,8 @@ async function loadBookContent(bookId) {
 
   // ── Chat history ────────────────────────────────────────
   const chatHistory = await api('GET', `/chat/history?book_id=${bookId}`);
+  // Second guard: another switch could have happened while chat history loaded
+  if (CURRENT_BOOK_ID !== bookId) return;
   const chatPanel = document.getElementById('chatMessages');
   chatPanel.innerHTML = '';
   if (chatHistory && chatHistory.length > 0) {
@@ -6249,7 +6267,11 @@ async function addBook() {
   if (saved?.id) {
     const idx = BOOKS.findIndex(b => b.id === tempId);
     if (idx > -1) BOOKS[idx].id = saved.id;
-    if (!CURRENT_BOOK_ID) CURRENT_BOOK_ID = saved.id;
+    // If this book is currently selected, update CURRENT_BOOK_ID to the real UUID
+    if (CURRENT_BOOK_ID === tempId) CURRENT_BOOK_ID = saved.id;
+    if (selectedBook === tempId) selectedBook = saved.id;
+    // Re-render so onclick handlers use the real UUID, not the temp one
+    renderBooks();
   }
 }
 
