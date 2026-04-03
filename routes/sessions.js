@@ -174,7 +174,13 @@ router.post('/:id/quiz', async (req, res) => {
     });
   }
 
-  const questions = await generateSessionQuiz({ books: Object.values(bookMap) });
+  let questions;
+  try {
+    questions = await generateSessionQuiz({ books: Object.values(bookMap) });
+  } catch (e) {
+    console.error('[quiz] generateSessionQuiz failed:', e.message);
+    return res.json({ questions: [] });
+  }
 
   // Cache so subsequent loads are instant
   await supabase.from('sessions').update({ quiz: questions }).eq('id', req.params.id);

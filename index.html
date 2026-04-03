@@ -6809,22 +6809,41 @@ async function _openQuizPanel() {
   _quizAnswers   = [];
 
   // Show loading, hide content
-  document.getElementById('rqLoading').style.display  = 'flex';
-  document.getElementById('rqContent').style.display  = 'none';
-  document.getElementById('rqNextBtn').disabled       = true;
+  const rqLoading = document.getElementById('rqLoading');
+  const rqContent = document.getElementById('rqContent');
+  rqLoading.style.display = 'flex';
+  rqContent.style.display = 'none';
+  rqContent.innerHTML = `<div class="rq-question-text" id="rqQuestionText"></div><div class="rq-options" id="rqOptions"></div>`;
+  document.getElementById('rqNextBtn').disabled = true;
 
-  const data = await api('POST', `/sessions/${_quizSessionId}/quiz`, {});
+  let data = null;
+  try {
+    const res = await fetch(`${API_BASE}/sessions/${_quizSessionId}/quiz`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+      signal: AbortSignal.timeout(40000)
+    });
+    if (res.ok) data = await res.json();
+  } catch (e) {
+    console.warn('[quiz] fetch failed:', e.message);
+  } finally {
+    rqLoading.style.display = 'none';
+  }
+
   _quizQuestions = Array.isArray(data?.questions) ? data.questions : [];
 
-  document.getElementById('rqLoading').style.display = 'none';
-
   if (!_quizQuestions.length) {
-    // No questions — just close and lift gate
-    _quizDone();
+    rqContent.innerHTML = `
+      <div style="text-align:center;padding:24px 16px;opacity:0.75">
+        <p style="margin-bottom:16px;color:#c9a84c">Couldn't load quiz questions right now.</p>
+        <button onclick="_quizDone()" style="background:#c9a84c;color:#0f0e0d;border:none;padding:9px 20px;border-radius:6px;cursor:pointer;font-weight:600;font-size:14px">Continue Writing →</button>
+      </div>`;
+    rqContent.style.display = 'flex';
     return;
   }
 
-  document.getElementById('rqContent').style.display = 'flex';
+  rqContent.style.display = 'flex';
   _showQuestion(0);
 }
 
@@ -8760,7 +8779,7 @@ init();
         </div>
         <div class="rq-body">
           <!-- Loading state while GPT-4o generates questions -->
-          <div id="rqLoading" class="recap-loading" style="padding:40px 0 20px">
+          <div id="rqLoading" class="recap-loading" style="padding:40px 0 20px;display:none">
             <div class="recap-dot"></div><div class="recap-dot"></div><div class="recap-dot"></div>
             <span class="recap-loading-text">Generating quiz questions…</span>
           </div>
