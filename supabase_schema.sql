@@ -186,6 +186,28 @@ create index if not exists sessions_ended_at_idx on sessions (ended_at desc null
 
 -- ===== MIGRATIONS (safe to re-run — all use IF NOT EXISTS) =====
 
+-- !! CRITICAL: Disable RLS on all tables (app uses server-side Supabase anon key,
+--    no auth yet — RLS with no policies blocks ALL reads and writes silently)
+alter table books         disable row level security;
+alter table notes         disable row level security;
+alter table ideas         disable row level security;
+alter table articles      disable row level security;
+alter table conversations disable row level security;
+alter table essays        disable row level security;
+alter table arguments     disable row level security;
+alter table concept_maps  disable row level security;
+alter table contradictions disable row level security;
+alter table user_profile  disable row level security;
+alter table sessions      disable row level security;
+
+-- Books: add columns that may be missing in older deployments
+alter table books add column if not exists source_type  text    default 'book'    check (source_type in ('book','article','paper','blog'));
+alter table books add column if not exists status       text    default 'reading' check (status in ('to_read','reading','completed','archived'));
+alter table books add column if not exists source_url   text;
+alter table books add column if not exists category     text;
+alter table books add column if not exists why_reading  text;
+alter table books add column if not exists finished_at  timestamptz;
+
 -- Notes: chapter ordering and completion flag (may be missing in older deployments)
 alter table notes add column if not exists chapter_order integer default 0;
 alter table notes add column if not exists completed boolean default false;

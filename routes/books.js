@@ -4,10 +4,20 @@ const supabase = require('../services/supabase');
 
 // GET /api/books — list all books
 router.get('/', async (req, res) => {
-  const { data, error } = await supabase
+  // Try full column set first; fall back to guaranteed-safe columns if
+  // the deployment hasn't run the latest schema migrations yet.
+  let { data, error } = await supabase
     .from('books')
-    .select('*')
+    .select('id, title, author, spine_color, progress, source_type, status, source_url, category, why_reading, created_at')
     .order('created_at', { ascending: false });
+
+  if (error && error.message.includes('does not exist')) {
+    // Older schema — select only the base columns that always exist
+    ({ data, error } = await supabase
+      .from('books')
+      .select('id, title, author, spine_color, progress, created_at')
+      .order('created_at', { ascending: false }));
+  }
 
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
@@ -64,16 +74,31 @@ router.post('/', async (req, res) => {
           source_type, status, source_url } = req.body;
   if (!title) return res.status(400).json({ error: 'title is required' });
 
+  // Build insert row with required fields first
+  const row = { title, author, spine_color, progress: 0 };
+
+  // Probe which optional columns exist before inserting so we don't get a
+  // "column does not exist" error on deployments with older schemas.
+  // We do a single cheap probe and cache the result for the process lifetime.
+  if (!router._colsProbed) {
+    const { error: probeErr } = await supabase
+      .from('books')
+      .select('source_type, status, source_url, category, why_reading')
+      .limit(0);
+    router._hasExtCols = !probeErr;
+    router._colsProbed = true;
+  }
+
+  if (router._hasExtCols) {
+    row.source_type = source_type || 'book';
+    row.status      = status      || 'reading';
+    row.source_url  = source_url  || null;
+    row.category    = category    || null;
+    row.why_reading = why_reading || null;
+  }
+
   const { data, error } = await supabase
-    .from('books')
-    .insert([{
-      title, author, category, why_reading, spine_color, progress: 0,
-      source_type: source_type || 'book',
-      status:      status      || 'reading',
-      source_url:  source_url  || null
-    }])
-    .select()
-    .single();
+    .from('books').insert([row]).select().single();
 
   if (error) return res.status(500).json({ error: error.message });
   res.status(201).json(data);
