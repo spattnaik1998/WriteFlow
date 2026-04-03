@@ -186,11 +186,12 @@ create index if not exists sessions_ended_at_idx on sessions (ended_at desc null
 
 -- ===== MIGRATIONS (safe to re-run — all use IF NOT EXISTS) =====
 
+-- Notes: chapter ordering and completion flag (may be missing in older deployments)
+alter table notes add column if not exists chapter_order integer default 0;
+alter table notes add column if not exists completed boolean default false;
+
 -- Session quiz cache
 alter table sessions add column if not exists quiz jsonb;
-
--- Chapter mark-done
-alter table notes add column if not exists completed boolean default false;
 
 -- Arguments table: add columns that may be missing in older deployments
 alter table arguments add column if not exists conclusions        jsonb default '[]';

@@ -4922,8 +4922,9 @@ async function loadBookContent(bookId) {
   // these requests were in flight, discard this response entirely.
   if (CURRENT_BOOK_ID !== bookId) return;
 
-  // Both null means backend is unreachable — load per-book prototype content
-  if (notes === null && ideas === null) {
+  // Both null only happens when the backend is completely unreachable —
+  // fall back to hardcoded prototype content for the demo books.
+  if (notes === null && ideas === null && !IS_LIVE_MODE) {
     loadProtoContent(bookId);
     return;
   }
@@ -4931,9 +4932,8 @@ async function loadBookContent(bookId) {
   // ── Notes tab ──────────────────────────────────────────
   const chapterSelect = document.getElementById('chapterSelect');
   const mainNotes     = document.getElementById('mainNotes');
-  const accordion     = document.querySelector('.accordion');
 
-  if (notes !== null && notes.length > 0) {
+  if (notes && notes.length > 0) {
     // Initialise mutable chapter state from API data
     chapterNotes[bookId] = {};
     chapterIds[bookId] = {};
@@ -4952,13 +4952,16 @@ async function loadBookContent(bookId) {
 
     // Activate first chapter
     switchChapter(notes[0].chapter_name);
-  } else if (notes !== null) {
-    // Backend responded but no notes yet — seed one blank chapter
-    chapterNotes[bookId] = { 'Chapter 1': '' };
-    chapterSelect.innerHTML = '<option value="Chapter 1">Chapter 1</option>';
-    chapterSelect.onchange = () => switchChapter(chapterSelect.value);
-    currentChapterId = 'Chapter 1';
-    mainNotes.value = '';
+  } else {
+    // No notes yet (or notes query failed) — always seed a blank Chapter 1
+    // so the user has somewhere to start writing immediately.
+    chapterNotes[bookId]     = { 'Chapter 1': '' };
+    chapterIds[bookId]       = {};
+    chapterCompleted[bookId] = {};
+    chapterSelect.innerHTML  = '<option value="Chapter 1">Chapter 1</option>';
+    chapterSelect.onchange   = () => switchChapter(chapterSelect.value);
+    currentChapterId         = 'Chapter 1';
+    mainNotes.value          = '';
     renderAccordion();
   }
 
@@ -6267,11 +6270,28 @@ async function addBook() {
   if (saved?.id) {
     const idx = BOOKS.findIndex(b => b.id === tempId);
     if (idx > -1) BOOKS[idx].id = saved.id;
-    // If this book is currently selected, update CURRENT_BOOK_ID to the real UUID
+
+    // Update state pointers from the temp ID to the real UUID
     if (CURRENT_BOOK_ID === tempId) CURRENT_BOOK_ID = saved.id;
-    if (selectedBook === tempId) selectedBook = saved.id;
+    if (selectedBook    === tempId) selectedBook     = saved.id;
+
     // Re-render so onclick handlers use the real UUID, not the temp one
     renderBooks();
+
+    // Now that the book exists in the DB, load its (empty) content properly.
+    // Any earlier loadBookContent('temp-...') would have aborted via the
+    // race-condition guard, so we must trigger a fresh load here.
+    if (CURRENT_BOOK_ID === saved.id) {
+      loadBookContent(saved.id);
+    }
+  } else {
+    // API save failed — remove the optimistic book entry so it doesn't ghost
+    const idx = BOOKS.findIndex(b => b.id === tempId);
+    if (idx > -1) BOOKS.splice(idx, 1);
+    if (CURRENT_BOOK_ID === tempId) CURRENT_BOOK_ID = null;
+    if (selectedBook    === tempId) selectedBook     = null;
+    renderBooks();
+    showToast('Failed to save book — check your connection', 'error');
   }
 }
 
@@ -6989,28 +7009,45 @@ async function api(method, path, body) {
 // Load books from backend on init (if available)
 async function loadBooksFromAPI() {
   const data = await api('GET', '/books');
-  if (data && Array.isArray(data) && data.length > 0) {
-    // Merge API books with prototype books array
-    data.forEach(b => {
-      if (!BOOKS.find(x => x.id === b.id)) {
-        BOOKS.unshift({
-          id:          b.id,
-          title:       b.title,
-          author:      b.author || '',
-          spine:       b.spine_color || '#1e3a6e',
-          progress:    b.progress || 0,
-          source_type: b.source_type || 'book',
-          status:      b.status || 'reading'
-        });
-      }
-    });
-    CURRENT_BOOK_ID = BOOKS[0].id;
-    selectedBook = BOOKS[0].id;
-    document.getElementById('barTitle').textContent = BOOKS[0].title;
-    document.getElementById('barAuthor').textContent = `— ${BOOKS[0].author}`;
-    renderBooks();
-    loadBookContent(CURRENT_BOOK_ID);
+
+  // null means the API call itself failed (network error, Supabase down, etc.)
+  if (data === null) {
+    showToast('Could not load library — check your database connection', 'error');
+    // Restore a visible empty state so the user isn't looking at a blank screen
+    document.getElementById('barTitle').textContent = 'Database error';
+    document.getElementById('barAuthor').textContent = 'Check console for details';
+    return;
   }
+
+  // Empty array: valid response, user just has no books yet
+  if (!Array.isArray(data) || data.length === 0) {
+    document.getElementById('barTitle').textContent = 'Add your first book';
+    document.getElementById('barAuthor').textContent = '← click + to get started';
+    renderBooks(); // renders empty list
+    return;
+  }
+
+  // Populate BOOKS array (deduplicate by id)
+  data.forEach(b => {
+    if (!BOOKS.find(x => x.id === b.id)) {
+      BOOKS.unshift({
+        id:          b.id,
+        title:       b.title,
+        author:      b.author || '',
+        spine:       b.spine_color || '#1e3a6e',
+        progress:    b.progress || 0,
+        source_type: b.source_type || 'book',
+        status:      b.status || 'reading'
+      });
+    }
+  });
+
+  CURRENT_BOOK_ID = BOOKS[0].id;
+  selectedBook    = BOOKS[0].id;
+  document.getElementById('barTitle').textContent  = BOOKS[0].title;
+  document.getElementById('barAuthor').textContent = `— ${BOOKS[0].author}`;
+  renderBooks();
+  loadBookContent(CURRENT_BOOK_ID);
 }
 
 // Real distill — calls OpenAI via backend
