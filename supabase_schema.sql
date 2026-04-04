@@ -271,3 +271,6 @@ create unique index if not exists contradictions_pair on contradictions (idea_a_
 -- alter table articles     enable row level security;
 -- alter table conversations enable row level security;
 -- alter table essays       enable row level security;
+
+-- Analytics: add reading goal column to user_profile
+alter table user_profile add column if not exists reading_goal_annual integer default 12;
