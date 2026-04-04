@@ -87,6 +87,16 @@ router.get('/', async (req, res) => {
     // ── Reading goal ─────────────────────────────────────────────────────────
     const readingGoal = profile?.reading_goal_annual || 12;
 
+    // 60-day activity heatmap (oldest → newest)
+    const heatmap = Array.from({ length: 60 }, (_, i) => {
+      const d   = new Date(Date.now() - (59 - i) * 86400000);
+      const key = d.toISOString().slice(0, 10);
+      return { date: key, words: wordsByDay[key] || 0 };
+    });
+
+    const avgIdeasPerBook = allBooks.length > 0
+      ? Math.round((ideasTotal || 0) / allBooks.length) : 0;
+
     res.json({
       books: {
         total:        allBooks.length,
@@ -100,8 +110,10 @@ router.get('/', async (req, res) => {
       wordsThisWeek,
       wordsLastWeek,
       totalWords,
+      avgIdeasPerBook,
       ideas: { total: ideasTotal || 0, thisWeek: ideasThisWeek || 0 },
-      sparkline
+      sparkline,
+      heatmap
     });
   } catch (err) {
     console.error('[analytics]', err.message);

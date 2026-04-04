@@ -2007,22 +2007,239 @@ body::after {
 }
 
 /* ═══════════════════════════════════════
-   RIGHT PANEL — SPLIT LAYOUT (50/50)
+   RIGHT PANEL — FULL DASHBOARD
 ═══════════════════════════════════════ */
 
-/* Dashboard — top half */
+/* Dashboard — full panel */
 .dash-panel {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 12px 13px 14px;
+  padding: 14px 14px 100px;
   display: flex;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
   scrollbar-width: none;
-  border-bottom: 1px solid var(--border);
 }
 .dash-panel::-webkit-scrollbar { display: none; }
+
+/* Dashboard header */
+.dash-hdr {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 2px 0 4px;
+}
+.dash-hdr-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: .2px;
+}
+.dash-hdr-date {
+  font-size: 10px;
+  color: var(--text-4);
+  letter-spacing: .3px;
+}
+
+/* Library health strip (3-col) */
+.dash-lib-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 7px;
+}
+.dash-lib-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 11px 8px 10px;
+  text-align: center;
+  transition: border-color var(--ease);
+}
+.dash-lib-card:hover { border-color: var(--border-hi); }
+.dash-lib-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+  color: var(--text-1);
+}
+.dash-lib-label {
+  font-size: 9px;
+  color: var(--text-4);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+.dash-lib-card.lib-reading .dash-lib-num { color: var(--amber); }
+.dash-lib-card.lib-done .dash-lib-num    { color: #10b981; }
+
+/* Activity heatmap */
+.dash-heatmap-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 13px 14px;
+}
+.hm-grid {
+  display: grid;
+  grid-template-rows: repeat(7, 14px);
+  grid-auto-flow: column;
+  grid-auto-columns: 14px;
+  gap: 3px;
+  margin-top: 10px;
+}
+.hm-cell {
+  border-radius: 2px;
+  background: var(--bg-dim);
+  cursor: default;
+  transition: outline .1s;
+}
+.hm-cell:hover { outline: 1px solid rgba(201,168,76,.6); }
+.hm-cell.hm-empty { background: transparent; pointer-events: none; }
+.hm-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}
+.hm-legend-label { font-size: 9px; color: var(--text-4); }
+.hm-legend-cells { display: flex; gap: 2px; }
+.hm-legend-cell  { width: 9px; height: 9px; border-radius: 2px; }
+
+/* Ideas velocity card (2-col) */
+.dash-ideas-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.dash-ideas-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 12px 13px;
+}
+.dash-ideas-card.accent {
+  border-color: rgba(201,168,76,.28);
+  background: rgba(201,168,76,.05);
+}
+.dash-ideas-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1;
+  margin-bottom: 3px;
+}
+.dash-ideas-label {
+  font-size: 10px;
+  color: var(--text-4);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 2px;
+}
+.dash-ideas-delta {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #10b981;
+  margin-top: 3px;
+}
+
+/* Floating Chat FAB */
+.chat-fab {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 54px;
+  height: 54px;
+  background: var(--amber);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1010;
+  box-shadow: 0 4px 20px rgba(201,168,76,.55), 0 2px 10px rgba(0,0,0,.45);
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .2s ease, background .2s ease;
+  color: #0f0e0d;
+  flex-shrink: 0;
+}
+.chat-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 28px rgba(201,168,76,.65), 0 2px 10px rgba(0,0,0,.4);
+}
+.chat-fab.open {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-3);
+  box-shadow: 0 2px 12px rgba(0,0,0,.5);
+}
+.chat-fab-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  background: #10b981;
+  border: 2px solid var(--amber);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.chat-fab.open .chat-fab-badge { display: none; }
+
+/* Chat Popup */
+.chat-popup {
+  position: fixed;
+  bottom: 94px;
+  right: 24px;
+  width: 368px;
+  height: 510px;
+  background: var(--bg-right);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.65), 0 0 0 1px rgba(201,168,76,.08);
+  z-index: 1009;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transform: translateY(18px) scale(.97);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .28s cubic-bezier(.34,1.56,.64,1), opacity .22s ease;
+}
+.chat-popup.open {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  pointer-events: all;
+}
+.chat-popup-hdr {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(201,168,76,.06) 0%, transparent 100%);
+}
+.chat-popup-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.chat-popup-sub { font-size: 11px; color: var(--text-4); margin-top: 1px; }
+
+/* Chat panel — kept for popup */
+.rp-chat-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 /* Annual goal card */
 .dash-goal-card {
@@ -2187,24 +2404,6 @@ body::after {
   font-style: italic;
 }
 
-/* Chat sub-header (inside chat panel) */
-.rp-chat-sub-hdr {
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-/* Chat panel — bottom half */
-.rp-chat-panel {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
 
 /* Blog Discoveries */
 .blog-panel {
@@ -4212,8 +4411,14 @@ body::after {
   <!-- ═══════════ RIGHT PANEL ═══════════ -->
   <aside class="right-panel">
 
-    <!-- ── DASHBOARD (top 50%) ── -->
+    <!-- ── FULL DASHBOARD ── -->
     <div class="dash-panel">
+
+      <!-- Header -->
+      <div class="dash-hdr">
+        <div class="dash-hdr-title">Dashboard</div>
+        <div class="dash-hdr-date" id="dashDate"></div>
+      </div>
 
       <!-- Annual reading goal ring -->
       <div class="dash-goal-card">
@@ -4231,12 +4436,28 @@ body::after {
           </div>
         </div>
         <div class="dash-goal-info">
-          <div class="dash-goal-title">Annual Goal</div>
+          <div class="dash-goal-title">Annual Reading Goal</div>
           <div class="dash-goal-sub" id="dashGoalSub">books completed</div>
           <div class="dash-goal-set">
             <input type="number" class="dash-goal-input" id="dashGoalInput" min="1" max="365" value="12">
             <button class="dash-goal-set-btn" onclick="updateReadingGoal()">Set</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Library health (3-col) -->
+      <div class="dash-lib-row">
+        <div class="dash-lib-card">
+          <div class="dash-lib-num" id="dashLibTotal">—</div>
+          <div class="dash-lib-label">Total Books</div>
+        </div>
+        <div class="dash-lib-card lib-reading">
+          <div class="dash-lib-num" id="dashLibReading">—</div>
+          <div class="dash-lib-label">Reading</div>
+        </div>
+        <div class="dash-lib-card lib-done">
+          <div class="dash-lib-num" id="dashLibDone">—</div>
+          <div class="dash-lib-label">Completed</div>
         </div>
       </div>
 
@@ -4259,55 +4480,50 @@ body::after {
         <svg class="dash-sparkline" id="dashSparklineSvg" viewBox="0 0 280 52" preserveAspectRatio="none"></svg>
       </div>
 
-      <!-- Ideas mined + total words -->
-      <div class="dash-stat-row">
-        <div class="dash-stat-card accent">
-          <div class="dash-stat-num" id="dashIdeasTotal">—</div>
-          <div class="dash-stat-label">Ideas mined 💡</div>
-          <div class="dash-stat-delta" id="dashIdeasDelta"></div>
+      <!-- 60-day activity heatmap -->
+      <div class="dash-heatmap-card">
+        <div class="dash-section-hdr">Activity · 60 days</div>
+        <div class="hm-grid" id="dashHeatmap"></div>
+        <div class="hm-legend">
+          <span class="hm-legend-label">Less</span>
+          <div class="hm-legend-cells">
+            <div class="hm-legend-cell" style="background:var(--bg-dim)"></div>
+            <div class="hm-legend-cell" style="background:rgba(201,168,76,.20)"></div>
+            <div class="hm-legend-cell" style="background:rgba(201,168,76,.45)"></div>
+            <div class="hm-legend-cell" style="background:rgba(201,168,76,.70)"></div>
+            <div class="hm-legend-cell" style="background:rgba(201,168,76,.95)"></div>
+          </div>
+          <span class="hm-legend-label">More</span>
         </div>
-        <div class="dash-stat-card">
-          <div class="dash-stat-num" id="dashTotalWords">—</div>
-          <div class="dash-stat-label">Total words ✍️</div>
+      </div>
+
+      <!-- Ideas mined + avg per book -->
+      <div class="dash-ideas-row">
+        <div class="dash-ideas-card accent">
+          <div class="dash-ideas-label">Ideas mined 💡</div>
+          <div class="dash-ideas-num" id="dashIdeasTotal">—</div>
+          <div class="dash-ideas-delta" id="dashIdeasDelta"></div>
         </div>
+        <div class="dash-ideas-card">
+          <div class="dash-ideas-label">Avg / book</div>
+          <div class="dash-ideas-num" id="dashAvgIdeas">—</div>
+          <div class="dash-ideas-delta" id="dashTotalWords" style="font-size:11px;color:var(--text-4);font-weight:400;margin-top:3px"></div>
+        </div>
+      </div>
+
+      <!-- Book progress list -->
+      <div class="dash-books-card" id="dashBooksCard" style="display:none">
+        <div class="dash-section-hdr">In Progress</div>
+        <div id="dashBookRows" class="dash-book-row"></div>
       </div>
 
       <!-- Mentor note -->
       <div class="dash-mentor-card">
-        <div class="dash-mentor-label">Your Mentor</div>
+        <div class="dash-mentor-label">Your Mentor Says</div>
         <div class="dash-mentor-msg" id="dashMentorMsg">Loading your stats…</div>
       </div>
 
     </div><!-- /dash-panel -->
-
-    <!-- ── CHAT (bottom 50%) ── -->
-    <div class="rp-chat-panel">
-      <div class="rp-chat-sub-hdr">
-        <div class="status-dot"></div>
-        <div class="right-hdr-info" style="flex:1">
-          <div class="right-hdr-title">Reading Partner</div>
-          <div class="right-hdr-sub" id="chatSubLine">Ready to explore ideas with you</div>
-        </div>
-        <button class="lib-mode-btn" id="libModeBtn" onclick="toggleLibraryMode()" title="Toggle Library Mode — gives the AI context from all your books">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-          Library
-        </button>
-      </div>
-      <div class="chat-section">
-        <div class="chat-messages" id="chatMessages">
-          <div class="chat-msg ai">
-            <div class="msg-sender">Partner</div>
-            <div class="msg-bubble">Select a book and start adding notes — I'll help you think through the ideas, find the arguments, and push toward writing.</div>
-          </div>
-        </div>
-        <div class="chat-input-row">
-          <textarea class="chat-input" id="chatInput" placeholder="Ask about your notes, push an idea further..." rows="1" onkeydown="onChatKey(event)" oninput="autoResize(this)"></textarea>
-          <button class="send-btn" onclick="sendMsg()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
-      </div>
-    </div><!-- /rp-chat-panel -->
 
   </aside>
 
@@ -8005,6 +8221,12 @@ async function loadAnalytics() {
 function renderDashboard(d) {
   const fmt = n => n >= 10000 ? `${(n/1000).toFixed(0)}k` : n >= 1000 ? `${(n/1000).toFixed(1)}k` : String(n);
 
+  // Header date
+  const dateEl = document.getElementById('dashDate');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
   // Goal ring (circumference of r=31 circle ≈ 194.8)
   const circ = 2 * Math.PI * 31;
   const pct  = Math.min((d.books.completed) / d.readingGoal, 1);
@@ -8016,6 +8238,11 @@ function renderDashboard(d) {
   const left = Math.max(d.readingGoal - d.books.completed, 0);
   document.getElementById('dashGoalSub').textContent =
     left === 0 ? '🎉 Goal smashed!' : `${left} book${left !== 1 ? 's' : ''} to go`;
+
+  // Library health
+  document.getElementById('dashLibTotal').textContent   = d.books.total;
+  document.getElementById('dashLibReading').textContent = d.books.inProgress;
+  document.getElementById('dashLibDone').textContent    = d.books.completed;
 
   // Streak
   document.getElementById('dashStreak').textContent = d.streak;
@@ -8032,16 +8259,40 @@ function renderDashboard(d) {
   // Sparkline
   _renderSparkline(d.sparkline);
 
+  // Heatmap
+  if (d.heatmap) _renderHeatmap(d.heatmap);
+
   // Ideas
   document.getElementById('dashIdeasTotal').textContent = d.ideas.total;
   const idDelta = document.getElementById('dashIdeasDelta');
   if (d.ideas.thisWeek > 0) {
     idDelta.textContent = `+${d.ideas.thisWeek} this week`;
-    idDelta.className   = 'dash-stat-delta up';
+    idDelta.className   = 'dash-ideas-delta';
   } else { idDelta.textContent = ''; }
 
-  // Total words
-  document.getElementById('dashTotalWords').textContent = fmt(d.totalWords);
+  // Avg ideas / book
+  const avg = d.avgIdeasPerBook != null
+    ? d.avgIdeasPerBook
+    : (d.books.total > 0 ? Math.round(d.ideas.total / d.books.total) : 0);
+  document.getElementById('dashAvgIdeas').textContent   = avg;
+  document.getElementById('dashTotalWords').textContent = fmt(d.totalWords) + ' words written';
+
+  // Book progress list
+  if (d.books.withProgress && d.books.withProgress.length > 0) {
+    const card = document.getElementById('dashBooksCard');
+    const rows = document.getElementById('dashBookRows');
+    card.style.display = '';
+    rows.innerHTML = d.books.withProgress.map(b => {
+      const pct = d.books.maxWords > 0 ? Math.round((b.wordCount / d.books.maxWords) * 100) : 0;
+      return `<div class="dash-book-row">
+        <div class="dash-book-meta">
+          <div class="dash-book-title">${escapeHtml(b.title)}</div>
+          <div class="dash-book-words">${fmt(b.wordCount)} w</div>
+        </div>
+        <div class="dash-book-track"><div class="dash-book-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  }
 
   // Mentor message
   document.getElementById('dashMentorMsg').textContent = _mentorMessage(d);
@@ -8051,14 +8302,44 @@ function _renderSparkline(sparkline) {
   const svg = document.getElementById('dashSparklineSvg');
   if (!sparkline?.length) { svg.innerHTML = ''; return; }
   const maxW = Math.max(...sparkline.map(d => d.words), 1);
-  const barW = 14, gap = 6; // 20px per bar × 14 = 280
+  const barW = 14, gap = 6;
   svg.innerHTML = sparkline.map((d, i) => {
-    const h   = Math.max((d.words / maxW) * 46, d.words > 0 ? 3 : 0);
-    const x   = i * (barW + gap);
-    const y   = 52 - h;
+    const h    = Math.max((d.words / maxW) * 46, d.words > 0 ? 3 : 0);
+    const x    = i * (barW + gap);
+    const y    = 52 - h;
     const fill = i === sparkline.length - 1 ? '#c9a84c' : 'rgba(201,168,76,0.32)';
-    return `<rect x="${x}" y="${y.toFixed(1)}" width="${barW}" height="${h.toFixed(1)}" rx="2" fill="${fill}"/>`;
+    const tip  = `${d.label}: ${d.words} words`;
+    return `<rect x="${x}" y="${y.toFixed(1)}" width="${barW}" height="${h.toFixed(1)}" rx="2" fill="${fill}"><title>${tip}</title></rect>`;
   }).join('');
+}
+
+function _renderHeatmap(heatmap) {
+  const container = document.getElementById('dashHeatmap');
+  if (!container || !heatmap?.length) return;
+  container.innerHTML = '';
+
+  const maxW = Math.max(...heatmap.map(d => d.words), 1);
+
+  // Pad to start of week (Sunday = 0)
+  const firstDate = new Date(heatmap[0].date + 'T12:00:00');
+  const dow = firstDate.getDay();
+  for (let i = 0; i < dow; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'hm-cell hm-empty';
+    container.appendChild(cell);
+  }
+
+  // Render cells
+  heatmap.forEach(d => {
+    const cell = document.createElement('div');
+    if (d.words > 0) {
+      const intensity = Math.max(0.15, d.words / maxW);
+      cell.style.background = `rgba(201,168,76,${Math.min(intensity, 1).toFixed(2)})`;
+    }
+    cell.className = 'hm-cell';
+    cell.title = `${d.date}: ${d.words > 0 ? d.words + ' words' : 'no activity'}`;
+    container.appendChild(cell);
+  });
 }
 
 
@@ -8104,6 +8385,46 @@ async function updateReadingGoal() {
     loadAnalytics();
   }
 }
+
+// ═══════════════════════════════════════
+// FLOATING CHAT TOGGLE
+// ═══════════════════════════════════════
+let _chatOpen = false;
+function toggleChat() {
+  _chatOpen = !_chatOpen;
+  const fab   = document.getElementById('chatFab');
+  const popup = document.getElementById('chatPopup');
+  const iconO = document.getElementById('chatFabIconOpen');
+  const iconC = document.getElementById('chatFabIconClose');
+
+  fab.classList.toggle('open', _chatOpen);
+  popup.classList.toggle('open', _chatOpen);
+  iconO.style.display = _chatOpen ? 'none'  : '';
+  iconC.style.display = _chatOpen ? ''      : 'none';
+
+  if (_chatOpen) {
+    // Scroll messages to bottom and focus input
+    const msgs = document.getElementById('chatMessages');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+    setTimeout(() => {
+      const input = document.getElementById('chatInput');
+      if (input) input.focus();
+    }, 260);
+  }
+}
+
+// Close chat when pressing Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && _chatOpen) toggleChat();
+});
+
+// Dismiss chat on outside click
+document.addEventListener('click', e => {
+  if (!_chatOpen) return;
+  const fab   = document.getElementById('chatFab');
+  const popup = document.getElementById('chatPopup');
+  if (!fab.contains(e.target) && !popup.contains(e.target)) toggleChat();
+});
 
 // Swap to real implementation if backend is available
 fetch('/api/health').then(r => {
@@ -8556,6 +8877,51 @@ init();
         <button class="btn-amber btn-sm" id="reviewNextBtn" onclick="reviewNext()">
           Next
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:4px"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ FLOATING CHAT ═══════════ -->
+<!-- FAB trigger -->
+<button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Reading Partner">
+  <div class="chat-fab-badge"></div>
+  <!-- Chat icon (shown when closed) -->
+  <svg id="chatFabIconOpen" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+  <!-- Close icon (shown when open) -->
+  <svg id="chatFabIconClose" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+</button>
+
+<!-- Chat popup -->
+<div class="chat-popup" id="chatPopup">
+  <div class="chat-popup-hdr">
+    <div class="status-dot"></div>
+    <div style="flex:1">
+      <div class="chat-popup-name">Reading Partner</div>
+      <div class="chat-popup-sub" id="chatSubLine">Ready to explore ideas with you</div>
+    </div>
+    <button class="lib-mode-btn" id="libModeBtn" onclick="toggleLibraryMode()" title="Toggle Library Mode — gives the AI context from all your books">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Library
+    </button>
+  </div>
+  <div class="rp-chat-panel">
+    <div class="chat-section">
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg ai">
+          <div class="msg-sender">Partner</div>
+          <div class="msg-bubble">Select a book and start adding notes — I'll help you think through the ideas, find the arguments, and push toward writing.</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chatInput" placeholder="Ask about your notes, push an idea further..." rows="1" onkeydown="onChatKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" onclick="sendMsg()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
     </div>
