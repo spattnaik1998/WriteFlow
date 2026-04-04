@@ -5083,7 +5083,25 @@ function selectBook(id) {
   if (CURRENT_BOOK_ID) loadBookContent(CURRENT_BOOK_ID);
   connectionsLoaded = false; // force graph refresh on next tab visit
   argumentsLoaded = false;
-  _conceptsLoadedFor = null; // force concept map refresh on next tab visit
+  // Clear concept map display immediately so the old book's map never bleeds
+  // into the new book view. If the Concepts tab is already open, also trigger
+  // a fresh load for the incoming book right now.
+  _conceptsLoadedFor = null;
+  const _cmViz     = document.getElementById('conceptsViz');
+  const _cmList    = document.getElementById('conceptsList');
+  const _cmSummary = document.getElementById('conceptsSummary');
+  const _cmEmpty   = document.getElementById('conceptsEmpty');
+  const _cmToggle  = document.getElementById('conceptViewToggle');
+  if (_cmViz)     { _cmViz.innerHTML = ''; _cmViz.style.display = 'none'; }
+  if (_cmList)    { _cmList.innerHTML = ''; _cmList.style.display = 'none'; }
+  if (_cmSummary) _cmSummary.style.display = 'none';
+  if (_cmEmpty)   _cmEmpty.style.display = 'flex';
+  if (_cmToggle)  _cmToggle.style.display = 'none';
+  if (activeTab === 'concepts') {
+    _conceptsLoadedFor = id;
+    loadConceptMapsForBook();
+  }
+
   _ideasLoadedFor = null; // force broad ideas refresh on next tab visit
 }
 
