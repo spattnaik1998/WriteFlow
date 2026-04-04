@@ -1335,201 +1335,241 @@ body::after {
 /* ═══════════════════════════════════════
    CONCEPTS TAB
 ═══════════════════════════════════════ */
+
+/* Container flows naturally — tab-pane handles the scroll */
 .concepts-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
 }
 
 .concepts-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 4px 0 20px;
   border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  margin-bottom: 0;
 }
 
+/* Summary: amber-tinted block, each concept on its own line */
 .concepts-summary {
-  margin: 12px 16px 0;
-  padding: 12px 16px;
-  background: rgba(201,168,76,.07);
-  border: 1px solid rgba(201,168,76,.2);
+  margin: 20px 0 0;
+  padding: 16px 20px;
+  background: rgba(201,168,76,.06);
+  border: 1px solid rgba(201,168,76,.18);
   border-radius: var(--radius);
 }
 .concepts-summary-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 .concepts-summary-item {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: baseline;
-  font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.6;
 }
 .concepts-summary-name {
   font-family: 'Inter', sans-serif;
   font-weight: 700;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--amber);
   white-space: nowrap;
   flex-shrink: 0;
+  padding-top: 1px;
 }
 .concepts-summary-def {
   font-family: 'Lora', serif;
   color: var(--text-2);
   font-size: 13px;
+  line-height: 1.65;
 }
 
+/* Card list: natural flow, no internal scroll */
 .concepts-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
+  padding: 20px 0 32px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
+/* Card: no overflow:hidden so expanded body isn't clipped */
 .concept-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  overflow: hidden;
-  transition: var(--ease);
+  transition: border-color .2s ease, box-shadow .2s ease;
 }
-
 .concept-card:hover {
-  border-color: var(--amber-lt);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+  border-color: rgba(201,168,76,.4);
+  box-shadow: 0 3px 14px rgba(0,0,0,.18);
+}
+.concept-card.is-open {
+  border-color: rgba(201,168,76,.35);
+  box-shadow: 0 4px 20px rgba(0,0,0,.22);
 }
 
 .concept-header {
-  padding: 14px 16px;
-  background: linear-gradient(135deg, var(--bg-card), var(--amber-glow));
-  border-bottom: 1px solid var(--border);
+  padding: 16px 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  transition: var(--ease);
+  gap: 10px;
+  user-select: none;
+  transition: background .18s ease;
+  border-radius: var(--radius);
 }
-
+.concept-card.is-open .concept-header {
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-bottom: 1px solid var(--border);
+  background: rgba(201,168,76,.06);
+}
 .concept-header:hover {
-  background: linear-gradient(135deg, var(--bg-card-hover), var(--amber-glow2));
-}
-
-.concept-header.open {
-  background: linear-gradient(135deg, var(--amber-glow2), var(--amber-glow3));
-  border-bottom-color: var(--amber-lt);
+  background: rgba(201,168,76,.04);
 }
 
 .concept-name {
-  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-1);
   flex: 1;
+  line-height: 1.35;
 }
 
 .concept-centrality {
-  font-size: 11px;
-  color: var(--text-4);
-  margin-left: 8px;
-  padding: 2px 6px;
-  background: rgba(37, 99, 235, 0.08);
-  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--amber);
+  background: rgba(201,168,76,.12);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: 20px;
+  padding: 2px 9px;
+  flex-shrink: 0;
 }
 
 .concept-chevron {
   width: 16px;
   height: 16px;
-  color: var(--text-3);
-  margin-left: 8px;
-  transition: transform 0.2s ease;
+  color: var(--text-4);
   flex-shrink: 0;
+  transition: transform .28s cubic-bezier(.4,0,.2,1), color .18s ease;
 }
-
-.concept-header.open .concept-chevron {
+.concept-card.is-open .concept-chevron {
   transform: rotate(180deg);
+  color: var(--amber);
 }
 
+/* Smooth height animation via max-height */
 .concept-body {
-  padding: 16px;
-  display: none;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .35s cubic-bezier(.4,0,.2,1),
+              opacity .28s ease,
+              padding .28s ease;
+  padding: 0 20px;
+  opacity: 0;
 }
-
 .concept-body.open {
-  display: block;
+  max-height: 1200px;
+  padding: 20px;
+  opacity: 1;
 }
 
 .concept-definition {
-  margin-bottom: 12px;
-  padding-bottom: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
   border-bottom: 1px solid var(--border);
 }
-
 .concept-definition-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  color: var(--text-3);
-  margin-bottom: 4px;
+  letter-spacing: 1px;
+  color: var(--text-4);
+  margin-bottom: 7px;
   display: block;
 }
-
 .concept-definition-text {
-  font-size: 12px;
+  font-family: 'Lora', serif;
+  font-size: 13.5px;
   color: var(--text-2);
-  line-height: 1.5;
+  line-height: 1.75;
 }
 
 .concept-type {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: rgba(37, 99, 235, 0.1);
+  letter-spacing: 0.7px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  margin-left: 8px;
+  flex-shrink: 0;
+  background: rgba(201,168,76,.1);
   color: var(--amber-dk);
-  margin-left: 6px;
+  border: 1px solid rgba(201,168,76,.2);
 }
-
 .concept-type.primary {
-  background: rgba(37, 99, 235, 0.15);
+  background: rgba(201,168,76,.15);
+  border-color: rgba(201,168,76,.3);
 }
-
 .concept-type.secondary {
-  background: rgba(99, 102, 241, 0.1);
-  color: #4f46e5;
+  background: rgba(99,102,241,.08);
+  border-color: rgba(99,102,241,.2);
+  color: #a5b4fc;
 }
-
 .concept-type.supporting {
-  background: rgba(148, 163, 184, 0.1);
+  background: rgba(148,163,184,.08);
+  border-color: rgba(148,163,184,.2);
   color: var(--text-3);
 }
 
 .relationships-section {
-  margin-top: 12px;
+  margin-top: 4px;
 }
-
 .relationships-label {
-  font-size: 11px;
-  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  color: var(--text-3);
-  margin-bottom: 8px;
+  letter-spacing: 1px;
+  color: var(--text-4);
+  margin-bottom: 10px;
   display: block;
 }
-
 .relationship-item {
-  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12.5px;
   color: var(--text-2);
-  padding: 6px 0;
-  line-height: 1.4;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  background: var(--bg-deep);
+  border-radius: 6px;
+  line-height: 1.45;
+  border-left: 2px solid var(--border);
+}
+.relationship-item:last-child { margin-bottom: 0; }
+.relationship-type {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  background: rgba(201,168,76,.1);
+  color: var(--amber-dk);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-right: 5px;
+}
+.relationship-strength {
+  font-size: 10px;
+  color: var(--text-4);
+  margin-left: 4px;
 }
 
 .relationship-type {
@@ -7440,14 +7480,14 @@ function renderConceptList(conceptMap, listEl) {
 
   listEl.innerHTML = concepts.map(concept => {
     const outgoing = relationships.filter(r => r.from === concept.name);
+    const pct      = ((concept.centrality || 0) * 100).toFixed(0);
+    const typeStr  = concept.type || '';
     return `
       <div class="concept-card" data-concept-id="${escapeHtml(concept.name)}">
         <div class="concept-header" onclick="toggleConceptItem(this)">
-          <div class="concept-name">
-            ${escapeHtml(concept.name)}
-            <span class="concept-type ${concept.type || ''}">${concept.type || ''}</span>
-          </div>
-          <div class="concept-centrality">${((concept.centrality || 0) * 100).toFixed(0)}%</div>
+          <span class="concept-name">${escapeHtml(concept.name)}</span>
+          ${typeStr ? `<span class="concept-type ${typeStr}">${typeStr}</span>` : ''}
+          <span class="concept-centrality">${pct}%</span>
           <svg class="concept-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
         </div>
         <div class="concept-body">
@@ -7457,12 +7497,12 @@ function renderConceptList(conceptMap, listEl) {
           </div>
           ${outgoing.length > 0 ? `
             <div class="relationships-section">
-              <label class="relationships-label">Relationships (${outgoing.length})</label>
+              <label class="relationships-label">Connects to (${outgoing.length})</label>
               ${outgoing.map(rel => `
                 <div class="relationship-item">
                   <span class="relationship-type">${escapeHtml(rel.type)}</span>
-                  → ${escapeHtml(rel.to)}
-                  <span class="relationship-strength">(${((rel.strength || 0) * 100).toFixed(0)}%)</span>
+                  ${escapeHtml(rel.to)}
+                  <span class="relationship-strength">${((rel.strength || 0) * 100).toFixed(0)}%</span>
                 </div>
               `).join('')}
             </div>` : ''}
@@ -7472,18 +7512,28 @@ function renderConceptList(conceptMap, listEl) {
 }
 
 /**
- * Toggle concept item expansion (list view)
+ * Toggle concept item expansion — smooth max-height accordion.
+ * Toggles .is-open on the card (drives header/body/chevron via CSS).
  */
 function toggleConceptItem(headerEl) {
-  const body   = headerEl.nextElementSibling;
-  const isOpen = body.classList.contains('open');
-  document.querySelectorAll('.concept-body.open').forEach(b => {
-    b.classList.remove('open');
-    b.previousElementSibling.classList.remove('open');
+  const card   = headerEl.closest('.concept-card');
+  const body   = card.querySelector('.concept-body');
+  const isOpen = card.classList.contains('is-open');
+
+  // Close all open cards first
+  document.querySelectorAll('.concept-card.is-open').forEach(c => {
+    c.classList.remove('is-open');
+    c.querySelector('.concept-body').classList.remove('open');
   });
+
+  // Open this one if it was closed
   if (!isOpen) {
+    card.classList.add('is-open');
     body.classList.add('open');
-    headerEl.classList.add('open');
+    // Scroll the card into view smoothly after the animation starts
+    requestAnimationFrame(() => {
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   }
 }
 
