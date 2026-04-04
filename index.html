@@ -2088,44 +2088,20 @@ body::after {
 }
 
 /* ═══════════════════════════════════════
-   RIGHT PANEL — TAB BAR + DASHBOARD
+   RIGHT PANEL — SPLIT LAYOUT (50/50)
 ═══════════════════════════════════════ */
-.rp-tab-bar {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: var(--bg-right);
-}
-.rp-tab {
-  flex: 1;
-  padding: 11px 8px;
-  border: none;
-  background: none;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: .6px;
-  text-transform: uppercase;
-  color: var(--text-4);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border-bottom: 2px solid transparent;
-  transition: color .18s, border-color .18s;
-}
-.rp-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
-.rp-tab:hover:not(.active) { color: var(--text-2); }
 
-/* Dashboard scroll container */
+/* Dashboard — top half */
 .dash-panel {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 14px 13px 20px;
+  padding: 12px 13px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
 }
 .dash-panel::-webkit-scrollbar { display: none; }
 
@@ -2302,13 +2278,13 @@ body::after {
   flex-shrink: 0;
 }
 
-/* Chat panel wrapper */
+/* Chat panel — bottom half */
 .rp-chat-panel {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-height: 0;
 }
 
 /* Blog Discoveries */
@@ -4317,21 +4293,8 @@ body::after {
   <!-- ═══════════ RIGHT PANEL ═══════════ -->
   <aside class="right-panel">
 
-    <!-- Tab bar -->
-    <div class="rp-tab-bar">
-      <button class="rp-tab active" id="rpTabDash" onclick="switchRightPanel('dash')">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
-        Dashboard
-      </button>
-      <button class="rp-tab" id="rpTabChat" onclick="switchRightPanel('chat')">
-        <div class="status-dot" style="width:6px;height:6px;flex-shrink:0;animation:dotPulse 2.2s ease-in-out infinite"></div>
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        Partner
-      </button>
-    </div>
-
-    <!-- ── DASHBOARD PANEL ── -->
-    <div id="rpPanelDash" class="dash-panel">
+    <!-- ── DASHBOARD (top 50%) ── -->
+    <div class="dash-panel">
 
       <!-- Annual reading goal ring -->
       <div class="dash-goal-card">
@@ -4377,12 +4340,6 @@ body::after {
         <svg class="dash-sparkline" id="dashSparklineSvg" viewBox="0 0 280 52" preserveAspectRatio="none"></svg>
       </div>
 
-      <!-- Books in progress -->
-      <div class="dash-books-card" id="dashBooksCard">
-        <div class="dash-section-hdr">In progress</div>
-        <div id="dashBooksList"><div style="font-size:11px;color:var(--text-4)">No books in progress</div></div>
-      </div>
-
       <!-- Ideas mined + total words -->
       <div class="dash-stat-row">
         <div class="dash-stat-card accent">
@@ -4404,8 +4361,8 @@ body::after {
 
     </div><!-- /dash-panel -->
 
-    <!-- ── CHAT PANEL ── -->
-    <div id="rpPanelChat" class="rp-chat-panel" style="display:none">
+    <!-- ── CHAT (bottom 50%) ── -->
+    <div class="rp-chat-panel">
       <div class="rp-chat-sub-hdr">
         <div class="status-dot"></div>
         <div class="right-hdr-info" style="flex:1">
@@ -8738,19 +8695,9 @@ async function generateNarrative() {
 }
 
 // ═══════════════════════════════════════
-// RIGHT PANEL SWITCHER
+// ANALYTICS DASHBOARD STATE
 // ═══════════════════════════════════════
-let _rightPanel     = 'dash';
 let _analyticsLoaded = false;
-
-function switchRightPanel(panel) {
-  _rightPanel = panel;
-  document.getElementById('rpTabDash').classList.toggle('active', panel === 'dash');
-  document.getElementById('rpTabChat').classList.toggle('active', panel === 'chat');
-  document.getElementById('rpPanelDash').style.display = panel === 'dash' ? 'flex' : 'none';
-  document.getElementById('rpPanelChat').style.display = panel === 'chat' ? 'flex' : 'none';
-  if (panel === 'dash' && !_analyticsLoaded && IS_LIVE_MODE) loadAnalytics();
-}
 
 // ═══════════════════════════════════════
 // ANALYTICS DASHBOARD
@@ -8792,9 +8739,6 @@ function renderDashboard(d) {
   // Sparkline
   _renderSparkline(d.sparkline);
 
-  // Books in progress
-  _renderBooksProgress(d.books);
-
   // Ideas
   document.getElementById('dashIdeasTotal').textContent = d.ideas.total;
   const idDelta = document.getElementById('dashIdeasDelta');
@@ -8824,29 +8768,6 @@ function _renderSparkline(sparkline) {
   }).join('');
 }
 
-function _renderBooksProgress(books) {
-  const list = document.getElementById('dashBooksList');
-  if (!books.withProgress?.length) {
-    list.innerHTML = '<div style="font-size:11px;color:var(--text-4)">No books in progress</div>';
-    return;
-  }
-  const maxW = books.maxWords || 1;
-  list.innerHTML = books.withProgress.map(b => {
-    const pct   = Math.max(Math.round((b.wordCount / maxW) * 100), b.wordCount > 0 ? 4 : 0);
-    const label = b.wordCount >= 1000
-      ? `${(b.wordCount/1000).toFixed(1)}k words`
-      : `${b.wordCount} words`;
-    return `<div class="dash-book-row">
-      <div class="dash-book-meta">
-        <span class="dash-book-title">${escapeHtml(b.title)}</span>
-        <span class="dash-book-words">${label}</span>
-      </div>
-      <div class="dash-book-track">
-        <div class="dash-book-fill" style="width:${pct}%"></div>
-      </div>
-    </div>`;
-  }).join('');
-}
 
 function _mentorMessage(d) {
   const { streak, wordsThisWeek, wordsLastWeek, books, readingGoal, ideas } = d;
