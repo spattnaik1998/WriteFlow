@@ -7036,7 +7036,7 @@ function closeRecapModal() {
   overlay.style.opacity = '0';
   overlay.style.transition = 'opacity .2s ease';
   setTimeout(() => {
-    overlay.style.display = '';
+    overlay.style.display = 'none';
     overlay.style.opacity = '';
     overlay.style.transition = '';
     // Reset slider back to panel 0 so next open starts at recap
