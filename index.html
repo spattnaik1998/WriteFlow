@@ -1620,6 +1620,18 @@ body::after {
   flex-shrink: 0;
 }
 
+.concepts-summary {
+  margin: 12px 16px 0;
+  padding: 12px 16px;
+  background: rgba(201,168,76,.07);
+  border: 1px solid rgba(201,168,76,.2);
+  border-radius: var(--radius);
+  font-family: Lora, serif;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
 .concepts-list {
   flex: 1;
   overflow-y: auto;
@@ -4267,6 +4279,8 @@ body::after {
             </div>
           </div>
 
+          <div id="conceptsSummary" class="concepts-summary" style="display:none"></div>
+
           <div id="conceptsViz"></div>
 
           <div id="conceptsList" class="concepts-list" style="display:none">
@@ -5069,7 +5083,7 @@ function selectBook(id) {
   if (CURRENT_BOOK_ID) loadBookContent(CURRENT_BOOK_ID);
   connectionsLoaded = false; // force graph refresh on next tab visit
   argumentsLoaded = false;
-  conceptsLoaded = false;
+  _conceptsLoadedFor = null; // force concept map refresh on next tab visit
   _ideasLoadedFor = null; // force broad ideas refresh on next tab visit
 }
 
@@ -5335,7 +5349,7 @@ function toggleSidebar() {
 // ═══════════════════════════════════════
 let connectionsLoaded = false;
 let argumentsLoaded = false;
-let conceptsLoaded = false;
+let _conceptsLoadedFor = null; // book_id whose concept map is currently displayed
 let _ideasLoadedFor = null; // book_id whose broad ideas are currently displayed
 function switchTab(tab) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
@@ -5360,8 +5374,8 @@ function switchTab(tab) {
     argumentsLoaded = true;
     loadArgumentsForBook();
   }
-  if (tab === 'concepts' && !conceptsLoaded) {
-    conceptsLoaded = true;
+  if (tab === 'concepts' && _conceptsLoadedFor !== CURRENT_BOOK_ID) {
+    _conceptsLoadedFor = CURRENT_BOOK_ID;
     loadConceptMapsForBook();
   }
 }
@@ -7792,19 +7806,11 @@ function generatePrototypeArgument(chapterName, rawNotes) {
 }
 
 /**
- * Generate concept map from chapter notes
+ * Generate a book-level concept map from all notes of the active book
  */
 async function generateConceptMap() {
   if (!CURRENT_BOOK_ID) {
-    alert('Please select a book first');
-    return;
-  }
-
-  const chapterName = (selectedBook?.currentChapter || 'Unknown Chapter');
-  const rawNotes = document.querySelector('.notes-textarea')?.value || '';
-
-  if (!rawNotes.trim()) {
-    alert('Please enter notes to generate concept map');
+    showToast('Please select a book first', 'error');
     return;
   }
 
@@ -7813,29 +7819,30 @@ async function generateConceptMap() {
   btn.disabled = true;
   btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10"/></svg> Mapping...';
 
+  const bookId = CURRENT_BOOK_ID;
   try {
     if (IS_LIVE_MODE) {
-      // Real API call
-      const response = await fetch('/api/concepts/map', {
+      const response = await fetch('/api/concepts/book', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          book_id: CURRENT_BOOK_ID,
-          chapter_name: chapterName,
-          raw_notes: rawNotes
-        })
+        body: JSON.stringify({ book_id: bookId }),
+        signal: AbortSignal.timeout(60000)
       });
 
-      if (!response.ok) throw new Error('Concept map generation failed');
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || 'Concept map generation failed');
+      }
       const data = await response.json();
 
+      if (CURRENT_BOOK_ID !== bookId) return; // book switched while generating
       if (data.conceptMap) {
+        _conceptsLoadedFor = bookId;
         displayConceptMap(data.conceptMap);
-        showToast('Concept map generated successfully');
+        showToast('Concept map generated');
       }
     } else {
-      // Prototype mode: use sample data
-      const sampleMap = generatePrototypeConceptMap(chapterName, rawNotes);
+      const sampleMap = generatePrototypeConceptMap('All Chapters', '');
       displayConceptMap(sampleMap);
       showToast('(Prototype) Sample concept map displayed');
     }
@@ -7849,21 +7856,21 @@ async function generateConceptMap() {
 }
 
 /**
- * Load and display concept maps for the current book (live mode: most recent)
+ * Load the cached book-level concept map for the active book
  */
 async function loadConceptMapsForBook() {
   if (!CURRENT_BOOK_ID) return;
+  const bookId = CURRENT_BOOK_ID;
   try {
     if (IS_LIVE_MODE) {
-      const maps = await api('GET', `/concepts?book_id=${CURRENT_BOOK_ID}`);
-      if (maps && maps.length > 0) {
-        displayConceptMap(maps[maps.length - 1]); // most recent
-      }
+      const map = await api('GET', `/concepts/book?book_id=${bookId}`);
+      if (CURRENT_BOOK_ID !== bookId) return;
+      displayConceptMap(map || null);
     } else {
       displayConceptMap(PROTOTYPE_CONCEPT_MAP);
     }
   } catch (err) {
-    console.error('Error loading concept maps:', err);
+    console.error('Error loading concept map:', err);
   }
 }
 
@@ -7875,13 +7882,23 @@ function displayConceptMap(conceptMap) {
   const listEl     = document.getElementById('conceptsList');
   const emptyState = document.getElementById('conceptsEmpty');
   const toggleBtn  = document.getElementById('conceptViewToggle');
+  const summaryEl  = document.getElementById('conceptsSummary');
 
   if (!conceptMap || !conceptMap.concepts || conceptMap.concepts.length === 0) {
-    viz.style.display      = 'none';
-    listEl.style.display   = 'none';
+    viz.style.display        = 'none';
+    listEl.style.display     = 'none';
+    summaryEl.style.display  = 'none';
     emptyState.style.display = 'flex';
     toggleBtn.style.display  = 'none';
     return;
+  }
+
+  // Summary paragraph
+  if (conceptMap.summary) {
+    summaryEl.textContent   = conceptMap.summary;
+    summaryEl.style.display = 'block';
+  } else {
+    summaryEl.style.display = 'none';
   }
 
   emptyState.style.display = 'none';

@@ -247,6 +247,9 @@ create table if not exists concept_maps (
 create trigger if not exists concept_maps_updated_at before update on concept_maps
   for each row execute procedure set_updated_at();
 
+-- Add summary column for book-level concept map explanation
+alter table concept_maps add column if not exists summary text default '';
+
 -- contradictions table (create if not exists for older deployments)
 create table if not exists contradictions (
   id                 uuid primary key default gen_random_uuid(),

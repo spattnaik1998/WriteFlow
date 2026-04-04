@@ -646,6 +646,8 @@ For each chapter, identify:
    - parent: more abstract concept name
    - children: [concrete instances or specifications]
 
+4. **Summary**: A 2–3 sentence paragraph explaining the overall concept structure in plain language — written for someone who has never read a concept map before. Describe the central ideas and how they relate to each other.
+
 Return valid JSON only.`;
 
   const userPrompt = `Book: "${bookTitle}" by ${author}
@@ -684,7 +686,8 @@ Extract concept structure. Return JSON:
     "concept_count": number,
     "primary_concepts": [string],
     "complexity_score": number
-  }
+  },
+  "summary": string
 }`;
 
   const response = await openai.chat.completions.create({
@@ -722,7 +725,8 @@ Extract concept structure. Return JSON:
       concept_count: (raw.concepts || []).length,
       primary_concepts: raw.metadata?.primary_concepts || [],
       complexity_score: Math.min(1, Math.max(0, raw.metadata?.complexity_score || 0.5))
-    }
+    },
+    summary: typeof raw.summary === 'string' ? raw.summary : ''
   };
 }
 
