@@ -14,12 +14,12 @@ const profileRouter       = require('./routes/profile');
 const linkedinRouter      = require('./routes/linkedin');
 const digestRouter        = require('./routes/digest');
 const contradictionsRouter = require('./routes/contradictions');
-const argumentsRouter      = require('./routes/arguments');
 const conceptsRouter      = require('./routes/concepts');
 const exportRouter        = require('./routes/export');
 const essaysRouter        = require('./routes/essays');
 const sessionsRouter      = require('./routes/sessions');
 const analyticsRouter     = require('./routes/analytics');
+const advocateRouter      = require('./routes/advocate');
 
 const app = express();
 
@@ -39,12 +39,12 @@ app.use('/api/profile',       profileRouter);
 app.use('/api/linkedin',      linkedinRouter);
 app.use('/api/digest',        digestRouter);
 app.use('/api/contradictions', contradictionsRouter);
-app.use('/api/arguments',      argumentsRouter);
 app.use('/api/concepts',      conceptsRouter);
 app.use('/api/export',        exportRouter);
 app.use('/api/essays',        essaysRouter);
 app.use('/api/sessions',      sessionsRouter);
 app.use('/api/analytics',    analyticsRouter);
+app.use('/api/advocate',     advocateRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

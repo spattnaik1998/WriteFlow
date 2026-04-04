@@ -894,4 +894,74 @@ Identify the 5 biggest ideas from this book. Return as JSON.`;
   }));
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, reconstructArgument, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas };
+/**
+ * Devil's Advocate Engine — stress-tests an essay using the SKILL 3 framework.
+ * Returns a structured critique with weaknesses, counterarguments, stress tests,
+ * an alternative view, and a verdict.
+ *
+ * @param {{ topic: string, essayText: string }} opts
+ * @returns {{ argument_summary, core_weaknesses, counterarguments, stress_tests, alternative_view, verdict }}
+ */
+async function runDevilsAdvocate({ topic, essayText }) {
+  const systemPrompt = `You are a Devil's Advocate engine — a high-quality adversarial thinker whose sole job is to systematically challenge the user's argument with maximum intellectual rigor.
+
+Core objective: Disprove, weaken, or stress-test the argument as forcefully as possible — without being dishonest or strawmanning.
+
+Operating principles:
+1. Assume the argument is flawed until proven otherwise
+2. Attack the reasoning, not the tone or style
+3. Maximize intellectual pressure on every premise
+4. Expose hidden assumptions the author hasn't examined
+5. Prioritize truth over agreement
+
+Modes of attack to use:
+- Assumption Breakdown: What must be true for this to hold? Are those assumptions valid?
+- Logical Weakness: Missing inferential steps, invalid moves, circular reasoning
+- Counterexamples: Real or plausible scenarios that break the claim
+- Alternative Explanations: Competing theories that explain the same facts better
+- Edge Cases: Where does the argument fail under stress or at scale?
+- Empirical Challenge: What evidence is missing? What data would falsify this?
+- Perspective Shift: How does this look from an economist, historian, or adversary?
+
+Return ONLY valid JSON with these exact fields:
+{
+  "argument_summary": "A fair, precise restatement of the user's core claim (2-3 sentences)",
+  "core_weaknesses": ["weakness 1", "weakness 2", "weakness 3"],
+  "counterarguments": ["counterargument 1", "counterargument 2", "counterargument 3"],
+  "stress_tests": ["edge case or failure scenario 1", "edge case or failure scenario 2"],
+  "alternative_view": "A competing explanation or thesis that accounts for the same evidence (2-3 sentences)",
+  "verdict": "How strong is the argument overall, and what specific changes would make it substantially stronger (3-4 sentences)"
+}`;
+
+  const userPrompt = `Topic: "${topic}"
+
+Essay:
+"""
+${essayText}
+"""
+
+Challenge this argument as a devil's advocate. Identify hidden assumptions, logical flaws, counterexamples, and alternative explanations. Stress-test the reasoning and provide a rigorous critique.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt   }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.8,
+    max_tokens: 2000
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return {
+    argument_summary:  raw.argument_summary  || '',
+    core_weaknesses:   Array.isArray(raw.core_weaknesses)   ? raw.core_weaknesses   : [],
+    counterarguments:  Array.isArray(raw.counterarguments)  ? raw.counterarguments  : [],
+    stress_tests:      Array.isArray(raw.stress_tests)      ? raw.stress_tests      : [],
+    alternative_view:  raw.alternative_view  || '',
+    verdict:           raw.verdict           || ''
+  };
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate };
