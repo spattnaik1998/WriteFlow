@@ -1,7 +1,7 @@
 const express  = require('express');
 const router   = express.Router();
 const supabase = require('../services/supabase');
-const { generateMacroNarrative } = require('../services/openai');
+const { generateMacroNarrative, generateBookKnowledgeMap } = require('../services/openai');
 
 // GET /api/narrative/ideas — fetch all books with their ideas
 router.get('/ideas', async (req, res) => {
@@ -82,6 +82,38 @@ router.post('/', async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('Narrative generation error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/narrative/book — knowledge map + micro-narrative for a single selected book
+router.post('/book', async (req, res) => {
+  const { book_id } = req.body;
+  if (!book_id) return res.status(400).json({ error: 'book_id is required' });
+
+  const { data: book, error: bookErr } = await supabase
+    .from('books')
+    .select('id, title, author')
+    .eq('id', book_id)
+    .single();
+
+  if (bookErr || !book) return res.status(404).json({ error: 'Book not found' });
+
+  const { data: ideas, error: ideasErr } = await supabase
+    .from('ideas')
+    .select('title, body, tags')
+    .eq('book_id', book_id);
+
+  if (ideasErr) return res.status(500).json({ error: ideasErr.message });
+  if (!ideas || ideas.length < 2) {
+    return res.status(400).json({ error: 'Need at least 2 idea cards to generate a knowledge map — distil some notes first' });
+  }
+
+  try {
+    const result = await generateBookKnowledgeMap({ book, ideas });
+    res.json(result);
+  } catch (err) {
+    console.error('[narrative/book] error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

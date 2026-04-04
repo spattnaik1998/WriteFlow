@@ -2851,6 +2851,73 @@ body::after {
 }
 .connections-empty svg { margin-bottom: 12px; opacity: .4; }
 
+/* Knowledge Map */
+.km-wrap {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.km-book-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--amber-dk);
+  padding: 12px 16px 0;
+}
+.km-svg-container {
+  width: 100%;
+  height: 340px;
+  position: relative;
+  background: radial-gradient(ellipse at center, #1a1814 0%, #0f0e0d 100%);
+}
+.km-svg { width: 100%; height: 100%; }
+.km-tooltip {
+  position: absolute;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  max-width: 240px;
+  pointer-events: none;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.15s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+.km-tooltip.visible { opacity: 1; }
+.km-tooltip-title { font-size: 12px; font-weight: 600; color: var(--text-1); margin-bottom: 4px; }
+.km-tooltip-centrality { font-size: 10px; color: var(--amber-dk); font-weight: 600; letter-spacing: 0.5px; }
+.km-micro-narrative {
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--border);
+}
+.km-narrative-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 12px;
+}
+.km-narrative-prose {
+  border-left: 3px solid var(--amber-dk);
+  padding-left: 18px;
+  font-family: 'Lora', serif;
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--text-2);
+  font-style: italic;
+}
+.km-hint {
+  font-size: 10.5px;
+  color: var(--text-4);
+  margin-top: 8px;
+  font-style: italic;
+}
+
 /* Empty state (Arguments / Concepts tabs) */
 .empty-state {
   display: flex;
@@ -3998,7 +4065,38 @@ body::after {
       <!-- CONNECTIONS TAB -->
       <div class="tab-pane" id="pane-connections">
 
-        <!-- Section A: Related Reading -->
+        <!-- Section A: Book Knowledge Map -->
+        <div class="conn-section" id="kmSection">
+          <div class="conn-section-head">
+            <div>
+              <span class="conn-section-label">Knowledge Map</span>
+              <div id="kmBookSubtitle" class="connections-sub">Select a book to generate its knowledge map</div>
+            </div>
+            <button class="btn-amber btn-sm" id="kmBtn" onclick="generateBookKnowledgeMap()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="19" r="1"/><line x1="12" y1="13" x2="18" y2="5"/><line x1="11" y1="12" x2="5" y2="18"/></svg>
+              Generate Map
+            </button>
+          </div>
+          <div id="kmOutput" style="display:none">
+            <div class="km-wrap">
+              <div class="km-book-badge" id="kmBookBadge"></div>
+              <div class="km-svg-container" id="kmSvgContainer">
+                <svg class="km-svg" id="kmSvg"></svg>
+                <div class="km-tooltip" id="kmTooltip">
+                  <div class="km-tooltip-title" id="kmTooltipTitle"></div>
+                  <div class="km-tooltip-centrality" id="kmTooltipCentrality"></div>
+                </div>
+              </div>
+              <div class="km-micro-narrative">
+                <div class="km-narrative-label">Micro-Narrative</div>
+                <div class="km-narrative-prose" id="kmNarrativeProse"></div>
+              </div>
+            </div>
+            <div class="km-hint">Drag nodes to rearrange · Scroll to zoom · Hover for details</div>
+          </div>
+        </div>
+
+        <!-- Section B: Related Reading -->
         <div class="conn-section">
           <div class="conn-section-head">
             <span class="conn-section-label">Related Reading</span>
@@ -4047,7 +4145,7 @@ body::after {
           </div>
         </div>
 
-        <!-- Section B: Cross-Library Synthesis -->
+        <!-- Section C: Cross-Library Synthesis -->
         <div class="conn-section">
           <div class="conn-section-head">
             <span class="conn-section-label">Cross-Library Synthesis</span>
@@ -4886,6 +4984,7 @@ function selectBook(id) {
   // Load this book's notes + ideas from the API
   if (CURRENT_BOOK_ID) loadBookContent(CURRENT_BOOK_ID);
   connectionsLoaded = false; // force connections refresh on next tab visit
+  _kmLoadedFor = null; // reset knowledge map for new book
   // Clear concept map display so old book's map never bleeds into new book view.
   _conceptsLoadedFor = null;
   const _cmList    = document.getElementById('conceptsList');
@@ -5176,6 +5275,7 @@ function switchTab(tab) {
       connectionsLoaded = true;
     }
     loadSavedArticles();
+    _updateKmSubtitle();
   }
   // Write tab is a self-contained focus session — no load needed
   if (tab === 'concepts' && _conceptsLoadedFor !== CURRENT_BOOK_ID) {
@@ -7670,7 +7770,176 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
-async function loadCrossBookIdeas() { /* Knowledge Map removed */ }
+async function loadCrossBookIdeas() { /* stub kept for safety */ }
+
+// ═══════════════════════════════════════
+// KNOWLEDGE MAP
+// ═══════════════════════════════════════
+let _kmLoadedFor = null;
+
+function _updateKmSubtitle() {
+  const subtitle = document.getElementById('kmBookSubtitle');
+  if (!subtitle) return;
+  const book = BOOKS.find(b => b.id === CURRENT_BOOK_ID);
+  subtitle.textContent = book
+    ? `"${book.title}"${book.author ? ' · ' + book.author : ''}`
+    : 'Select a book to generate its knowledge map';
+  // Hide stale output when book has changed
+  if (_kmLoadedFor !== CURRENT_BOOK_ID) {
+    document.getElementById('kmOutput').style.display = 'none';
+  }
+}
+
+async function generateBookKnowledgeMap() {
+  if (!CURRENT_BOOK_ID) { showToast('Select a book first'); return; }
+
+  const btn = document.getElementById('kmBtn');
+  if (btn.classList.contains('loading')) return;
+  btn.classList.add('loading');
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Mapping…`;
+
+  const book = BOOKS.find(b => b.id === CURRENT_BOOK_ID) || { title: 'Unknown Book', author: '' };
+  let data = await api('POST', '/narrative/book', { book_id: CURRENT_BOOK_ID });
+
+  btn.classList.remove('loading');
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="19" r="1"/><line x1="12" y1="13" x2="18" y2="5"/><line x1="11" y1="12" x2="5" y2="18"/></svg> Generate Map`;
+
+  if (!data) {
+    // Prototype fallback — build a simple map from PROTO_CONTENT
+    const proto = PROTO_CONTENT[book.title] || Object.values(PROTO_CONTENT)[0];
+    const protoIdeas = (proto?.ideas || []).slice(0, 8);
+    if (protoIdeas.length < 2) { showToast('No ideas found — distil some notes first'); return; }
+    data = {
+      nodes: protoIdeas.map((idea, i) => ({ id: i, title: idea.title, centrality: i === 0 ? 'high' : i < 3 ? 'medium' : 'low' })),
+      edges: protoIdeas.slice(1).map((_, i) => ({ source: i, target: i + 1, label: 'leads to' })),
+      narrative: `This is a prototype knowledge map. The ideas extracted from your notes have been arranged into a web of interconnected insights. In a live session, GPT-4o traces the intellectual arc of the selected book — identifying which ideas are central to the thesis, how they connect, and what argument the author is ultimately building. Distil your notes and connect to the backend to see the real map.`
+    };
+  }
+
+  if (data.error) { showToast(data.error); return; }
+
+  _renderBookKnowledgeMap(data, book);
+  _kmLoadedFor = CURRENT_BOOK_ID;
+  showToast('Knowledge map generated');
+}
+
+function _renderBookKnowledgeMap(data, book) {
+  document.getElementById('kmBookBadge').textContent = `${book.title}${book.author ? ' — ' + book.author : ''}`.toUpperCase();
+  document.getElementById('kmNarrativeProse').textContent = data.narrative;
+
+  const container = document.getElementById('kmSvgContainer');
+  const svgEl     = document.getElementById('kmSvg');
+  svgEl.innerHTML = '';
+
+  const W = container.offsetWidth  || 600;
+  const H = 340;
+
+  // Node visual properties by centrality
+  const nodeColor  = { high: '#c9a84c', medium: '#7a6530', low: '#3a3020' };
+  const nodeStroke = { high: '#e8c96e', medium: '#c9a84c', low: '#6a5838' };
+  const nodeR      = { high: 13, medium: 9, low: 6 };
+
+  // Build mutable node/edge arrays for D3
+  const nodes = data.nodes.map(n => ({ ...n }));
+  const nodeById = {};
+  nodes.forEach(n => { nodeById[n.id] = n; });
+
+  const edges = data.edges
+    .map(e => ({ source: nodeById[e.source], target: nodeById[e.target], label: e.label }))
+    .filter(e => e.source && e.target);
+
+  const svg = d3.select('#kmSvg')
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .style('overflow', 'visible');
+
+  // Zoom behaviour
+  const g = svg.append('g');
+  svg.call(d3.zoom().scaleExtent([0.4, 4]).on('zoom', ev => g.attr('transform', ev.transform)));
+
+  // Arrow marker
+  svg.append('defs').append('marker')
+    .attr('id', 'km-arrow')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 22).attr('refY', 0)
+    .attr('markerWidth', 5).attr('markerHeight', 5)
+    .attr('orient', 'auto')
+    .append('path').attr('d', 'M0,-5L10,0L0,5').attr('fill', '#4a4030');
+
+  // Simulation
+  const sim = d3.forceSimulation(nodes)
+    .force('link',      d3.forceLink(edges).id(n => n.id).distance(110).strength(0.4))
+    .force('charge',    d3.forceManyBody().strength(-260))
+    .force('center',    d3.forceCenter(W / 2, H / 2))
+    .force('collision', d3.forceCollide(n => (nodeR[n.centrality] || 8) + 18));
+
+  // Edges
+  const link = g.append('g')
+    .selectAll('line').data(edges).enter().append('line')
+    .attr('stroke', '#3a3020').attr('stroke-width', 1.5)
+    .attr('marker-end', 'url(#km-arrow)');
+
+  // Edge labels
+  const linkLabel = g.append('g')
+    .selectAll('text').data(edges).enter().append('text')
+    .attr('font-size', '8.5px').attr('fill', '#5a5040')
+    .attr('text-anchor', 'middle').attr('dy', '-4')
+    .text(e => e.label || '');
+
+  // Tooltip
+  const tooltip = document.getElementById('kmTooltip');
+  const ttTitle  = document.getElementById('kmTooltipTitle');
+  const ttCent   = document.getElementById('kmTooltipCentrality');
+
+  // Nodes
+  const node = g.append('g')
+    .selectAll('circle').data(nodes).enter().append('circle')
+    .attr('r',           n => nodeR[n.centrality] || 8)
+    .attr('fill',        n => nodeColor[n.centrality] || '#5a4828')
+    .attr('stroke',      n => nodeStroke[n.centrality] || '#c9a84c')
+    .attr('stroke-width', 1.5)
+    .attr('cursor', 'pointer')
+    .on('mouseover', function(event, n) {
+      ttTitle.textContent = n.title;
+      ttCent.textContent  = n.centrality.toUpperCase();
+      tooltip.classList.add('visible');
+      const rect = container.getBoundingClientRect();
+      tooltip.style.left = `${event.clientX - rect.left + 14}px`;
+      tooltip.style.top  = `${event.clientY - rect.top  - 12}px`;
+    })
+    .on('mousemove', function(event) {
+      const rect = container.getBoundingClientRect();
+      tooltip.style.left = `${event.clientX - rect.left + 14}px`;
+      tooltip.style.top  = `${event.clientY - rect.top  - 12}px`;
+    })
+    .on('mouseout', () => tooltip.classList.remove('visible'))
+    .call(d3.drag()
+      .on('start', (ev, n) => { if (!ev.active) sim.alphaTarget(0.3).restart(); n.fx = n.x; n.fy = n.y; })
+      .on('drag',  (ev, n) => { n.fx = ev.x; n.fy = ev.y; })
+      .on('end',   (ev, n) => { if (!ev.active) sim.alphaTarget(0); n.fx = null; n.fy = null; }));
+
+  // Node labels
+  const label = g.append('g')
+    .selectAll('text').data(nodes).enter().append('text')
+    .attr('font-size', '9.5px').attr('fill', '#c9a84c')
+    .attr('text-anchor', 'middle')
+    .attr('dy', n => -(nodeR[n.centrality] || 8) - 6)
+    .attr('pointer-events', 'none')
+    .text(n => n.title.length > 22 ? n.title.slice(0, 22) + '…' : n.title);
+
+  // Tick
+  sim.on('tick', () => {
+    link
+      .attr('x1', e => e.source.x).attr('y1', e => e.source.y)
+      .attr('x2', e => e.target.x).attr('y2', e => e.target.y);
+    linkLabel
+      .attr('x', e => (e.source.x + e.target.x) / 2)
+      .attr('y', e => (e.source.y + e.target.y) / 2);
+    node.attr('cx', n => n.x).attr('cy', n => n.y);
+    label.attr('x', n => n.x).attr('y', n => n.y);
+  });
+
+  document.getElementById('kmOutput').style.display = '';
+}
 
 
 async function generateNarrative() {

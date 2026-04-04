@@ -964,4 +964,55 @@ Challenge this argument as a devil's advocate. Identify hidden assumptions, logi
   };
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate };
+/**
+ * Generate a knowledge map (nodes + edges) and a micro-narrative
+ * for a single book's idea cards.
+ * Input: book = { title, author }, ideas = [{ title, body, tags }]
+ * Returns: { nodes: [{id, title, centrality}], edges: [{source, target, label}], narrative: string }
+ */
+async function generateBookKnowledgeMap({ book, ideas }) {
+  const ideasText = ideas.map((idea, i) =>
+    `[${i}] "${idea.title}": ${idea.body || ''} [tags: ${(idea.tags || []).join(', ')}]`
+  ).join('\n');
+
+  const systemPrompt = `You are an intellectual cartographer. Given idea cards from a single book, your job is to:
+1. Treat each idea card as a node in a knowledge graph
+2. Identify meaningful conceptual edges between ideas — where one idea builds on, resolves, contradicts, or enables another
+3. Write a micro-narrative (200–250 words) that traces the intellectual arc of this book — the argument the author is constructing and how the ideas stack into a thesis
+
+Return ONLY valid JSON:
+{
+  "nodes": [{ "id": number, "title": string, "centrality": "high"|"medium"|"low" }],
+  "edges": [{ "source": number, "target": number, "label": string }],
+  "narrative": string
+}
+
+Rules:
+- id in nodes must match the index from the input (e.g. node id 0 = idea [0])
+- Every source and target in edges must be a valid node id
+- centrality: "high" = core thesis idea, "medium" = supporting idea, "low" = peripheral
+- edge label must be 2–4 words: e.g. "builds on", "contradicts", "enables", "resolves", "extends"
+- narrative must be 200–250 words, written in the voice of an intellectual essayist — specific to this book`;
+
+  const userPrompt = `Book: "${book.title}" by ${book.author}\n\nIdea cards:\n${ideasText}\n\nGenerate the knowledge map and micro-narrative.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.7,
+    max_tokens: 2000
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return {
+    nodes:     Array.isArray(raw.nodes)     ? raw.nodes     : [],
+    edges:     Array.isArray(raw.edges)     ? raw.edges     : [],
+    narrative: raw.narrative || ''
+  };
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap };
