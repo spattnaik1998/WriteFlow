@@ -5,13 +5,13 @@ const { chatWithPartner, suggestWriting } = require('../services/openai');
 
 // POST /api/chat — send a message to the AI reading partner
 router.post('/', async (req, res) => {
-  const { book_id, message, conversation_history, library_mode, current_chapter } = req.body;
+  const { book_id, message, conversation_history, library_mode, current_chapter, notes_snapshot } = req.body;
   if (!book_id || !message) {
     return res.status(400).json({ error: 'book_id and message required' });
   }
 
   // Fetch book + all chapter notes + idea cards in parallel
-  const [{ data: book }, { data: notes }, { data: ideas }] = await Promise.all([
+  const [{ data: book }, { data: dbNotes }, { data: ideas }] = await Promise.all([
     supabase.from('books').select('title, author, category, why_reading').eq('id', book_id).single(),
     supabase.from('notes').select('content, chapter_name').eq('book_id', book_id),
     supabase.from('ideas').select('title, body, chapter_name, tags').eq('book_id', book_id).limit(25)
@@ -19,9 +19,23 @@ router.post('/', async (req, res) => {
 
   if (!book) return res.status(404).json({ error: 'Book not found' });
 
+  // Merge in-memory snapshot over DB rows so the AI sees the very latest
+  // content — including notes typed within the auto-save debounce window.
+  let notes = dbNotes || [];
+  if (notes_snapshot && typeof notes_snapshot === 'object') {
+    const noteMap = {};
+    notes.forEach(n => { noteMap[n.chapter_name] = { ...n }; });
+    Object.entries(notes_snapshot).forEach(([chapter, content]) => {
+      if (typeof content === 'string' && content.trim()) {
+        noteMap[chapter] = { ...(noteMap[chapter] || {}), chapter_name: chapter, content };
+      }
+    });
+    notes = Object.values(noteMap);
+  }
+
   // Build structured notes context — current chapter first, then others
   // Each chapter is labelled so the AI knows what part of the book it belongs to
-  const sortedNotes = [...(notes || [])].sort((a, b) => {
+  const sortedNotes = [...notes].sort((a, b) => {
     if (a.chapter_name === current_chapter) return -1;
     if (b.chapter_name === current_chapter) return 1;
     return 0;

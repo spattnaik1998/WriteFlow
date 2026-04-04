@@ -4871,6 +4871,11 @@ async function loadBookContent(bookId) {
   // these requests were in flight, discard this response entirely.
   if (CURRENT_BOOK_ID !== bookId) return;
 
+  // Clear stale chapter pointer so that saveCurrentChapter() inside the
+  // first switchChapter() call below doesn't write the OLD book's chapter
+  // name as a ghost entry into this book's chapterNotes map.
+  currentChapterId = null;
+
   // Both null only happens when the backend is completely unreachable —
   // fall back to hardcoded prototype content for the demo books.
   if (notes === null && ideas === null && !IS_LIVE_MODE) {
@@ -7121,12 +7126,16 @@ async function distillIdeasFromAPI(bookId, chapterName, rawNotes) {
 // Real chat — calls OpenAI via backend
 async function chatWithAPI(bookId, message, useLibraryMode) {
   const currentChapter = document.getElementById('chapterSelect')?.value || null;
+  // Send the in-memory note map so the backend can include unsaved content
+  // (notes typed within the last ~1.5s that haven't been persisted yet).
+  const notesSnapshot = chapterNotes[bookId] || {};
   const data = await api('POST', '/chat', {
     book_id:              bookId,
     message,
     conversation_history: conversationHistory.slice(-10),
     library_mode:         useLibraryMode || false,
-    current_chapter:      currentChapter
+    current_chapter:      currentChapter,
+    notes_snapshot:       notesSnapshot
   });
   if (data?.reply) {
     conversationHistory.push({ role: 'user',      content: message });
