@@ -2457,6 +2457,12 @@ body::after {
 .book-card:hover .book-complete-btn { opacity: 1; }
 .book-complete-btn:hover { background: #10b981; color: #fff; border-color: #10b981; }
 .book-card.archived .book-complete-btn { display: none !important; }
+.book-revert-btn {
+  background: rgba(201,168,76,.1);
+  border-color: rgba(201,168,76,.3);
+  color: var(--amber-dk);
+}
+.book-revert-btn:hover { background: var(--amber-dk) !important; color: #fff !important; border-color: var(--amber-dk) !important; }
 
 /* Mentor note */
 .dash-mentor-card {
@@ -5338,24 +5344,7 @@ async function toggleChapterDone() {
   await api('PATCH', `/notes/${noteId}`, { completed: nowDone });
 
   if (nowDone) {
-    // Check if all chapters are now done → auto-complete the book
-    const allDone = Object.keys(chapterNotes[CURRENT_BOOK_ID] || {}).every(
-      ch => chapterCompleted[CURRENT_BOOK_ID]?.[ch]
-    );
-    if (allDone) {
-      const book = BOOKS.find(b => b.id === CURRENT_BOOK_ID);
-      if (book && book.status !== 'completed') {
-        book.status = 'completed';
-        renderBooks();
-        await api('PATCH', `/books/${CURRENT_BOOK_ID}`, {
-          status: 'completed',
-          finished_at: new Date().toISOString()
-        });
-        showToast('All chapters done — book marked as Completed!');
-      }
-    } else {
-      showToast(`"${currentChapterId}" marked done`);
-    }
+    showToast(`"${currentChapterId}" marked done`);
   } else {
     showToast(`"${currentChapterId}" unmarked`);
   }
@@ -5547,7 +5536,7 @@ function renderBooks() {
         <div class="book-author">${escapeHtml(b.author)}</div>
         <span class="book-type-pill ${typeLabel}">${typeLabel}</span>
       </div>
-      ${(st !== 'completed' && st !== 'done' && st !== 'archived') ? `<button class="book-complete-btn" onclick="markBookComplete('${b.id}', event)" title="Mark as completed">✓</button>` : ''}
+      ${(st === 'completed' || st === 'done') ? `<button class="book-complete-btn book-revert-btn" onclick="markBookReading('${b.id}', event)" title="Mark as reading">↩</button>` : st !== 'archived' ? `<button class="book-complete-btn" onclick="markBookComplete('${b.id}', event)" title="Mark as completed">✓</button>` : ''}
       <button class="book-delete-btn" onclick="deleteBook('${b.id}', event)" title="Delete book">×</button>
     </div>`;
   }).join('');
@@ -5677,6 +5666,26 @@ async function markBookComplete(bookId, event) {
     loadAnalytics();
   }
   // Refresh synthesis dropdowns in case user is on connections tab
+  populateSynthesisDropdowns();
+}
+
+async function markBookReading(bookId, event) {
+  event.stopPropagation();
+  const book = BOOKS.find(b => b.id === bookId);
+  if (!book) return;
+
+  const idx = BOOKS.findIndex(b => b.id === bookId);
+  BOOKS[idx].status = 'reading';
+  renderBooks();
+  showToast(`"${book.title}" moved back to reading`);
+
+  const result = await api('PATCH', `/books/${bookId}`, { status: 'reading' });
+  if (result) {
+    BOOKS[idx].status = result.status || 'reading';
+    renderBooks();
+    _analyticsLoaded = false;
+    loadAnalytics();
+  }
   populateSynthesisDropdowns();
 }
 
