@@ -2190,47 +2190,77 @@ body::after {
 }
 .chat-fab.open .chat-fab-badge { display: none; }
 
-/* Chat Popup */
+/* Chat backdrop overlay */
+.chat-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.58);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 1008;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease;
+}
+.chat-backdrop.open { opacity: 1; pointer-events: all; }
+
+/* Chat Popup — centered modal */
 .chat-popup {
   position: fixed;
-  bottom: 94px;
-  right: 24px;
-  width: 368px;
-  height: 510px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -46%) scale(.97);
+  width: 480px;
+  height: 600px;
   background: var(--bg-right);
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 24px 64px rgba(0,0,0,.65), 0 0 0 1px rgba(201,168,76,.08);
+  border: 1px solid rgba(201,168,76,.18);
+  border-radius: 20px;
+  box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(201,168,76,.08);
   z-index: 1009;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transform: translateY(18px) scale(.97);
   opacity: 0;
   pointer-events: none;
-  transition: transform .28s cubic-bezier(.34,1.56,.64,1), opacity .22s ease;
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .22s ease;
 }
 .chat-popup.open {
-  transform: translateY(0) scale(1);
+  transform: translate(-50%, -50%) scale(1);
   opacity: 1;
   pointer-events: all;
 }
 .chat-popup-hdr {
-  padding: 14px 16px 12px;
+  padding: 16px 18px 14px;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-shrink: 0;
-  background: linear-gradient(135deg, rgba(201,168,76,.06) 0%, transparent 100%);
+  background: linear-gradient(135deg, rgba(201,168,76,.07) 0%, transparent 100%);
 }
 .chat-popup-name {
   font-family: 'Playfair Display', serif;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-1);
 }
-.chat-popup-sub { font-size: 11px; color: var(--text-4); margin-top: 1px; }
+.chat-popup-sub { font-size: 11px; color: var(--text-4); margin-top: 2px; }
+.chat-popup-close {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: var(--bg-dim);
+  border-radius: 8px;
+  color: var(--text-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--ease);
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.chat-popup-close:hover { background: var(--bg-card-hover); color: var(--text-1); }
 
 /* Chat panel — kept for popup */
 .rp-chat-panel {
@@ -2351,34 +2381,82 @@ body::after {
 }
 .dash-sparkline { width: 100%; height: 52px; display: block; overflow: visible; }
 
-/* Book progress list */
-.dash-books-card {
+/* Recently read books */
+.dash-recent-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 12px 13px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
-.dash-book-row { display: flex; flex-direction: column; gap: 5px; }
-.dash-book-meta { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-.dash-book-title {
-  font-size: 11.5px;
-  color: var(--text-2);
-  font-weight: 500;
+.dash-recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--bg-dim);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--ease);
+}
+.dash-recent-item:hover { border-color: var(--border); background: var(--bg-card-hover); }
+.dash-recent-spine { width: 4px; height: 34px; border-radius: 2px; flex-shrink: 0; }
+.dash-recent-info { flex: 1; min-width: 0; }
+.dash-recent-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.dash-recent-author {
+  font-size: 10.5px;
+  color: var(--text-4);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.dash-book-words { font-size: 10px; color: var(--text-4); flex-shrink: 0; }
-.dash-book-track { height: 3px; background: var(--bg-dim); border-radius: 2px; overflow: hidden; }
-.dash-book-fill {
-  height: 100%;
-  background: linear-gradient(90deg, rgba(201,168,76,.5), var(--amber));
-  border-radius: 2px;
-  transition: width 1.1s cubic-bezier(.16,1,.3,1);
+.dash-recent-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
 }
+.dash-recent-badge.reading   { color: var(--amber);  background: rgba(201,168,76,.14); }
+.dash-recent-badge.completed { color: #10b981;        background: rgba(16,185,129,.14); }
+.dash-recent-badge.to_read   { color: var(--text-4);  background: var(--bg-deep);      }
+
+/* Mark-complete button on book cards */
+.book-complete-btn {
+  position: absolute;
+  top: 8px;
+  right: 40px;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: rgba(16,185,129,.1);
+  border: 1px solid rgba(16,185,129,.3);
+  color: #10b981;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all var(--ease);
+  line-height: 1;
+}
+.book-card:hover .book-complete-btn { opacity: 1; }
+.book-complete-btn:hover { background: #10b981; color: #fff; border-color: #10b981; }
+.book-card.archived .book-complete-btn { display: none !important; }
 
 /* Mentor note */
 .dash-mentor-card {
@@ -4511,10 +4589,10 @@ body::after {
         </div>
       </div>
 
-      <!-- Book progress list -->
-      <div class="dash-books-card" id="dashBooksCard" style="display:none">
-        <div class="dash-section-hdr">In Progress</div>
-        <div id="dashBookRows" class="dash-book-row"></div>
+      <!-- Recently read books -->
+      <div class="dash-recent-card" id="dashRecentCard" style="display:none">
+        <div class="dash-section-hdr">Recently Read</div>
+        <div id="dashRecentBooks"></div>
       </div>
 
       <!-- Mentor note -->
@@ -5152,6 +5230,7 @@ function renderBooks() {
         <div class="book-author">${escapeHtml(b.author)}</div>
         <span class="book-type-pill ${typeLabel}">${typeLabel}</span>
       </div>
+      ${(st !== 'completed' && st !== 'done' && st !== 'archived') ? `<button class="book-complete-btn" onclick="markBookComplete('${b.id}', event)" title="Mark as completed">✓</button>` : ''}
       <button class="book-delete-btn" onclick="deleteBook('${b.id}', event)" title="Delete book">×</button>
     </div>`;
   }).join('');
@@ -5261,6 +5340,25 @@ function deleteBook(bookId, event) {
 
   // Delete from backend (live mode only)
   api('DELETE', `/books/${bookId}`);
+}
+
+async function markBookComplete(bookId, event) {
+  event.stopPropagation();
+  const book = BOOKS.find(b => b.id === bookId);
+  if (!book) return;
+
+  const idx = BOOKS.findIndex(b => b.id === bookId);
+  BOOKS[idx].status = 'completed';
+  renderBooks();
+  showToast(`"${book.title}" marked as completed 🎉`);
+
+  const result = await api('PATCH', `/books/${bookId}`, { status: 'completed' });
+  if (result) {
+    BOOKS[idx].status = result.status || 'completed';
+    renderBooks();
+    _analyticsLoaded = false;
+    loadAnalytics();
+  }
 }
 
 async function loadBookContent(bookId) {
@@ -8277,19 +8375,24 @@ function renderDashboard(d) {
   document.getElementById('dashAvgIdeas').textContent   = avg;
   document.getElementById('dashTotalWords').textContent = fmt(d.totalWords) + ' words written';
 
-  // Book progress list
-  if (d.books.withProgress && d.books.withProgress.length > 0) {
-    const card = document.getElementById('dashBooksCard');
-    const rows = document.getElementById('dashBookRows');
+  // Recently read books
+  if (d.books.recent && d.books.recent.length > 0) {
+    const card      = document.getElementById('dashRecentCard');
+    const container = document.getElementById('dashRecentBooks');
     card.style.display = '';
-    rows.innerHTML = d.books.withProgress.map(b => {
-      const pct = d.books.maxWords > 0 ? Math.round((b.wordCount / d.books.maxWords) * 100) : 0;
-      return `<div class="dash-book-row">
-        <div class="dash-book-meta">
-          <div class="dash-book-title">${escapeHtml(b.title)}</div>
-          <div class="dash-book-words">${fmt(b.wordCount)} w</div>
+    container.innerHTML = d.books.recent.map(b => {
+      const local = BOOKS.find(lb => lb.id === b.id);
+      const spine  = local?.spine || '#c9a84c';
+      const st     = (b.status === 'completed' || b.status === 'done') ? 'completed'
+                   : b.status === 'to_read' ? 'to_read' : 'reading';
+      const label  = st === 'completed' ? 'Done' : st === 'to_read' ? 'To Read' : 'Reading';
+      return `<div class="dash-recent-item" onclick="selectBook('${b.id}')">
+        <div class="dash-recent-spine" style="background:${spine}"></div>
+        <div class="dash-recent-info">
+          <div class="dash-recent-title">${escapeHtml(b.title)}</div>
+          <div class="dash-recent-author">${escapeHtml(b.author || '')}</div>
         </div>
-        <div class="dash-book-track"><div class="dash-book-fill" style="width:${pct}%"></div></div>
+        <span class="dash-recent-badge ${st}">${label}</span>
       </div>`;
     }).join('');
   }
@@ -8392,38 +8495,31 @@ async function updateReadingGoal() {
 let _chatOpen = false;
 function toggleChat() {
   _chatOpen = !_chatOpen;
-  const fab   = document.getElementById('chatFab');
-  const popup = document.getElementById('chatPopup');
-  const iconO = document.getElementById('chatFabIconOpen');
-  const iconC = document.getElementById('chatFabIconClose');
+  const fab      = document.getElementById('chatFab');
+  const popup    = document.getElementById('chatPopup');
+  const backdrop = document.getElementById('chatBackdrop');
+  const iconO    = document.getElementById('chatFabIconOpen');
+  const iconC    = document.getElementById('chatFabIconClose');
 
   fab.classList.toggle('open', _chatOpen);
   popup.classList.toggle('open', _chatOpen);
-  iconO.style.display = _chatOpen ? 'none'  : '';
-  iconC.style.display = _chatOpen ? ''      : 'none';
+  backdrop.classList.toggle('open', _chatOpen);
+  iconO.style.display = _chatOpen ? 'none' : '';
+  iconC.style.display = _chatOpen ? ''     : 'none';
 
   if (_chatOpen) {
-    // Scroll messages to bottom and focus input
     const msgs = document.getElementById('chatMessages');
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
     setTimeout(() => {
       const input = document.getElementById('chatInput');
       if (input) input.focus();
-    }, 260);
+    }, 280);
   }
 }
 
-// Close chat when pressing Escape
+// Close chat on Escape key
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && _chatOpen) toggleChat();
-});
-
-// Dismiss chat on outside click
-document.addEventListener('click', e => {
-  if (!_chatOpen) return;
-  const fab   = document.getElementById('chatFab');
-  const popup = document.getElementById('chatPopup');
-  if (!fab.contains(e.target) && !popup.contains(e.target)) toggleChat();
 });
 
 // Swap to real implementation if backend is available
@@ -8884,6 +8980,9 @@ init();
 </div>
 
 <!-- ═══════════ FLOATING CHAT ═══════════ -->
+<!-- Backdrop -->
+<div class="chat-backdrop" id="chatBackdrop" onclick="toggleChat()"></div>
+
 <!-- FAB trigger -->
 <button class="chat-fab" id="chatFab" onclick="toggleChat()" title="Reading Partner">
   <div class="chat-fab-badge"></div>
@@ -8908,6 +9007,9 @@ init();
     <button class="lib-mode-btn" id="libModeBtn" onclick="toggleLibraryMode()" title="Toggle Library Mode — gives the AI context from all your books">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
       Library
+    </button>
+    <button class="chat-popup-close" onclick="toggleChat()" title="Close chat">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
   <div class="rp-chat-panel">

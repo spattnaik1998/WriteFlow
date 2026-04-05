@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
       { count: ideasTotal },
       { count: ideasThisWeek }
     ] = await Promise.all([
-      supabase.from('books').select('id, title, status'),
+      supabase.from('books').select('id, title, author, status, updated_at').order('updated_at', { ascending: false }),
       supabase.from('sessions')
         .select('started_at, activity')
         .gte('started_at', sixtyDaysAgo)
@@ -97,13 +97,23 @@ router.get('/', async (req, res) => {
     const avgIdeasPerBook = allBooks.length > 0
       ? Math.round((ideasTotal || 0) / allBooks.length) : 0;
 
+    // Last 4 recently active books (already ordered by updated_at desc)
+    const recentBooks = allBooks.slice(0, 4).map(b => ({
+      id:     b.id,
+      title:  b.title,
+      author: b.author || '',
+      status: b.status || 'reading',
+      date:   b.updated_at ? b.updated_at.slice(0, 10) : null
+    }));
+
     res.json({
       books: {
         total:        allBooks.length,
         completed:    completed.length,
         inProgress:   inProgress.length,
         withProgress: booksWithProgress,
-        maxWords
+        maxWords,
+        recent:       recentBooks
       },
       readingGoal,
       streak,
