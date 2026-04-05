@@ -1015,4 +1015,98 @@ Rules:
   };
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap };
+/**
+ * Cross-Book Synthesis Essayist (AGENTS.md — Cross-Book Synthesis Agent)
+ *
+ * Reads notes and idea cards from two completed books and writes a
+ * deep synthesis essay identifying 5–6 core ideas at their intersection.
+ * Modeled on the style of "The Dragon and Its Contradictions".
+ *
+ * Returns: {
+ *   title:    string,
+ *   subtitle: string,
+ *   sections: [{ label, title, body }]   ← intro + 5-6 numbered + conclusion
+ * }
+ */
+async function generateCrossSynthesis({ book1, book2, notes1, notes2, ideas1, ideas2 }) {
+  // Build compact text representations of each book's knowledge
+  const formatBook = (book, notes, ideas) => {
+    const notesText = (notes || [])
+      .filter(n => n.content && n.content.trim().length > 20)
+      .map(n => `[${n.chapter_name}]\n${n.content.trim()}`)
+      .join('\n\n')
+      .slice(0, 4000); // cap to avoid context overflow
+
+    const ideasText = (ideas || [])
+      .map(i => `• ${i.title}: ${i.body || ''} [${(i.tags || []).join(', ')}]`)
+      .join('\n');
+
+    return `=== ${book.title} by ${book.author} ===\n\nIDEA CARDS:\n${ideasText}\n\nRAW NOTES:\n${notesText}`;
+  };
+
+  const book1Text = formatBook(book1, notes1, ideas1);
+  const book2Text = formatBook(book2, notes2, ideas2);
+
+  const systemPrompt = `You are a cross-book synthesis essayist. Your task is to read notes and idea cards from two books a reader has completed, then write a deep, original synthesis essay in the exact style described below.
+
+STYLE MANDATE — model every formal choice on "The Dragon and Its Contradictions: Six Ideas at the Heart of China's Economic Transformation":
+
+1. Open with an INTRODUCTION section that:
+   - Names an intellectual problem or paradox that both books circle but neither fully resolves
+   - Briefly describes each author's angle without summarizing
+   - States that the essay will identify 5–6 foundational ideas at the conceptual intersection
+
+2. Write exactly 5–6 numbered body sections (I, II, III, IV, V, and optionally VI), each with:
+   - A Roman numeral label
+   - A bold title and subtitle separated by a colon  (e.g. "The Hybrid State: Political Centralization and Economic Decentralization")
+   - 3–5 dense paragraphs of essayistic prose — no bullet points, no sub-headers
+   - At least one direct reference to each book per section
+   - A new idea that NEITHER book explicitly states — built from their tension or complementarity
+
+3. Close with a CONCLUSION that names the emergent intellectual framework — what the two books together reveal that neither could alone.
+
+STYLE RULES (enforce strictly):
+- Prose must be dense, precise, and essayistic — the register of a serious intellectual magazine
+- Never summarize Book A then Book B in sequence within a section
+- Never use bullet points, comparison tables, or "both books agree" formulations
+- Take intellectual positions — do not hedge with "perhaps" or "it might be argued"
+- Each section must identify a LATENT conceptual overlap, tension, or contradiction
+- Total essay length: 2,500–3,500 words
+
+OUTPUT FORMAT — return ONLY valid JSON:
+{
+  "title": "Essay title (evocative, not generic)",
+  "subtitle": "A Synthetic Disquisition on [Book1 Title] and [Book2 Title]",
+  "sections": [
+    { "label": "Introduction", "title": "Subtitle naming the core intellectual problem", "body": "Full text with paragraphs separated by double newline \\n\\n" },
+    { "label": "I", "title": "Section Title: Section Subtitle", "body": "..." },
+    { "label": "II", "title": "...", "body": "..." },
+    { "label": "III", "title": "...", "body": "..." },
+    { "label": "IV", "title": "...", "body": "..." },
+    { "label": "V", "title": "...", "body": "..." },
+    { "label": "Conclusion", "title": "Title naming the emergent framework", "body": "..." }
+  ]
+}`;
+
+  const userPrompt = `Here are the notes and idea cards from the two books:\n\n${book1Text}\n\n---\n\n${book2Text}\n\nWrite the synthesis essay now.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.85,
+    max_tokens: 4000
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return {
+    title:    raw.title    || 'Cross-Book Synthesis',
+    subtitle: raw.subtitle || '',
+    sections: Array.isArray(raw.sections) ? raw.sections : []
+  };
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis };

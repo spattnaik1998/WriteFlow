@@ -3128,6 +3128,141 @@ body::after {
 }
 .connections-empty svg { margin-bottom: 12px; opacity: .4; }
 
+/* ═══════════════════════════════════════
+   CROSS-BOOK SYNTHESIS
+═══════════════════════════════════════ */
+.synthesis-selectors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.synthesis-book-col { display: flex; flex-direction: column; gap: 6px; }
+.synthesis-col-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-4);
+}
+.synthesis-dropdown {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-1);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  padding: 8px 10px;
+  cursor: pointer;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--ease);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236a6050' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+.synthesis-dropdown:focus { border-color: var(--amber-dk); box-shadow: 0 0 0 3px var(--amber-glow); }
+.synthesis-dropdown option { background: var(--bg-card); color: var(--text-1); }
+.synthesis-dropdown:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Essay output */
+.synthesis-essay-wrap {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg-deep);
+  animation: fadeIn .35s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.synthesis-essay-header {
+  padding: 28px 28px 20px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(201,168,76,.05) 0%, transparent 100%);
+}
+.synthesis-essay-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1.3;
+  margin-bottom: 10px;
+}
+.synthesis-essay-subtitle {
+  font-family: 'Lora', serif;
+  font-size: 12.5px;
+  color: var(--text-4);
+  font-style: italic;
+  line-height: 1.65;
+}
+.synthesis-essay-body { padding: 0 28px 28px; }
+
+.synthesis-section { padding-top: 28px; }
+.synthesis-section-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--amber-dk);
+  margin-bottom: 6px;
+}
+.synthesis-section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1.35;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(201,168,76,.18);
+}
+.synthesis-section-body {
+  font-family: 'Lora', serif;
+  font-size: 13.5px;
+  line-height: 1.9;
+  color: var(--text-2);
+}
+.synthesis-section-body p { margin-bottom: 14px; }
+.synthesis-section-body p:last-child { margin-bottom: 0; }
+
+.synthesis-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0 0;
+  opacity: .35;
+}
+.synthesis-divider::before,
+.synthesis-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--amber-dk);
+}
+.synthesis-divider-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--amber-dk);
+  flex-shrink: 0;
+}
+
+.synthesis-no-books {
+  padding: 20px 16px;
+  background: rgba(201,168,76,.06);
+  border: 1px dashed rgba(201,168,76,.2);
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--text-4);
+  line-height: 1.65;
+  text-align: center;
+  margin-top: 8px;
+}
+
 /* Knowledge Map */
 .km-wrap {
   background: var(--bg-deep);
@@ -4422,6 +4557,47 @@ body::after {
           </div>
         </div>
 
+        <!-- Section B2: Cross-Book Synthesis Essay -->
+        <div class="conn-section" id="synthSection">
+          <div class="conn-section-head">
+            <div>
+              <span class="conn-section-label">Cross-Book Synthesis</span>
+              <div class="connections-sub">Synthesize two completed books into a deep essay</div>
+            </div>
+            <button class="btn-amber btn-sm" id="synthBtn" onclick="runCrossSynthesis()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+              Synthesize
+            </button>
+          </div>
+
+          <div id="synthNoBooksMsg" class="synthesis-no-books" style="display:none">
+            Mark at least two books as <strong>Completed</strong> to unlock cross-synthesis. Use the ✓ button on any book in the sidebar.
+          </div>
+
+          <div id="synthSelectors" style="display:none">
+            <div class="synthesis-selectors">
+              <div class="synthesis-book-col">
+                <div class="synthesis-col-label">First Book</div>
+                <select class="synthesis-dropdown" id="synthBook1">
+                  <option value="">Choose…</option>
+                </select>
+              </div>
+              <div class="synthesis-book-col">
+                <div class="synthesis-col-label">Second Book</div>
+                <select class="synthesis-dropdown" id="synthBook2">
+                  <option value="">Choose…</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="synthOutput" style="display:none">
+            <div class="synthesis-essay-wrap" id="synthEssayWrap">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+
         <!-- Section C: Cross-Library Synthesis -->
         <div class="conn-section">
           <div class="conn-section-head">
@@ -4819,9 +4995,9 @@ body::after {
 // DATA
 // ═══════════════════════════════════════
 const BOOKS = [
-  { id: 'tfs', title: 'Thinking, Fast and Slow', author: 'Daniel Kahneman', spine: '#1e3a6e', progress: 62 },
-  { id: 'aow', title: 'The Art of War',          author: 'Sun Tzu',           spine: '#6e1e1e', progress: 100 },
-  { id: 'ah',  title: 'Atomic Habits',           author: 'James Clear',       spine: '#1e4a2e', progress: 35  }
+  { id: 'tfs', title: 'Thinking, Fast and Slow', author: 'Daniel Kahneman', spine: '#1e3a6e', progress: 62,  status: 'completed' },
+  { id: 'aow', title: 'The Art of War',          author: 'Sun Tzu',         spine: '#6e1e1e', progress: 100, status: 'completed' },
+  { id: 'ah',  title: 'Atomic Habits',           author: 'James Clear',     spine: '#1e4a2e', progress: 35,  status: 'reading'   }
 ];
 
 let selectedBook    = 'tfs';
@@ -5359,6 +5535,8 @@ async function markBookComplete(bookId, event) {
     _analyticsLoaded = false;
     loadAnalytics();
   }
+  // Refresh synthesis dropdowns in case user is on connections tab
+  populateSynthesisDropdowns();
 }
 
 async function loadBookContent(bookId) {
@@ -5590,6 +5768,7 @@ function switchTab(tab) {
     }
     loadSavedArticles();
     _updateKmSubtitle();
+    populateSynthesisDropdowns();
   }
   // Write tab is a self-contained focus session — no load needed
   if (tab === 'concepts' && _conceptsLoadedFor !== CURRENT_BOOK_ID) {
@@ -8085,6 +8264,157 @@ function escapeHtml(text) {
 }
 
 async function loadCrossBookIdeas() { /* stub kept for safety */ }
+
+// ═══════════════════════════════════════
+// CROSS-BOOK SYNTHESIS
+// ═══════════════════════════════════════
+function populateSynthesisDropdowns() {
+  const completed = BOOKS.filter(b => b.status === 'completed' || b.status === 'done');
+  const selectors = document.getElementById('synthSelectors');
+  const noBooks   = document.getElementById('synthNoBooksMsg');
+  const btn       = document.getElementById('synthBtn');
+
+  if (completed.length < 2) {
+    if (selectors) selectors.style.display = 'none';
+    if (btn) btn.disabled = true;
+    if (noBooks) noBooks.style.display = '';
+    return;
+  }
+
+  if (noBooks) noBooks.style.display = 'none';
+  if (selectors) selectors.style.display = '';
+  if (btn) btn.disabled = false;
+
+  const s1 = document.getElementById('synthBook1');
+  const s2 = document.getElementById('synthBook2');
+  if (!s1 || !s2) return;
+
+  const buildOptions = (excludeId, currentVal) =>
+    `<option value="">Choose…</option>` +
+    completed
+      .filter(b => b.id !== excludeId)
+      .map(b => `<option value="${b.id}" ${b.id === currentVal ? 'selected' : ''}>${escapeHtml(b.title)}${b.author ? ' — ' + escapeHtml(b.author) : ''}</option>`)
+      .join('');
+
+  const refresh = () => {
+    const v1 = s1.value, v2 = s2.value;
+    // Book 1 shows all completed
+    s1.innerHTML = `<option value="">Choose…</option>` +
+      completed.map(b => `<option value="${b.id}" ${b.id === v1 ? 'selected' : ''}>${escapeHtml(b.title)}${b.author ? ' — ' + escapeHtml(b.author) : ''}</option>`).join('');
+    // Book 2 excludes whatever book 1 selected
+    s2.innerHTML = buildOptions(s1.value, v2);
+  };
+
+  refresh();
+  s1.onchange = refresh;
+}
+
+async function runCrossSynthesis() {
+  const s1 = document.getElementById('synthBook1');
+  const s2 = document.getElementById('synthBook2');
+  const id1 = s1?.value, id2 = s2?.value;
+  if (!id1 || !id2) { showToast('Select two books to synthesize'); return; }
+
+  const btn = document.getElementById('synthBtn');
+  if (btn.classList.contains('loading')) return;
+  btn.classList.add('loading');
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Synthesizing…`;
+
+  const book1 = BOOKS.find(b => b.id === id1) || { title: 'Book 1', author: '' };
+  const book2 = BOOKS.find(b => b.id === id2) || { title: 'Book 2', author: '' };
+
+  let data = await api('POST', '/synthesis', { book_id_1: id1, book_id_2: id2 });
+
+  btn.classList.remove('loading');
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> Synthesize`;
+
+  // Prototype fallback
+  if (!data) {
+    const ideas1 = (PROTO_CONTENT[id1]?.ideas || []).slice(0, 3);
+    const ideas2 = (PROTO_CONTENT[id2]?.ideas || []).slice(0, 3);
+    data = _protoSynthesisEssay(book1, book2, ideas1, ideas2);
+  }
+
+  if (data.error) { showToast(data.error); return; }
+  _renderSynthesisEssay(data);
+  showToast('Synthesis essay generated');
+}
+
+function _protoSynthesisEssay(book1, book2, ideas1, ideas2) {
+  return {
+    title: `The Hidden Architecture: Where ${book1.title} Meets ${book2.title}`,
+    subtitle: `A Synthetic Disquisition on ${book1.title} by ${book1.author || ''} and ${book2.title} by ${book2.author || ''}`,
+    sections: [
+      {
+        label: 'Introduction',
+        title: 'Two Books, One Problem',
+        body: `Every serious reader eventually notices that certain books, despite coming from entirely different domains, are secretly answering the same question. ${book1.title} and ${book2.title} present precisely this phenomenon. On the surface they could not be more different — one emerges from ${book1.author ? book1.author + "'s" : 'its author\'s'} domain, the other from a contrasting tradition. Yet reading them in sequence produces a disorienting sense of convergence.\n\nThis disquisition identifies five foundational ideas at the conceptual intersection of these two works — ideas that neither book explicitly states alone, but which their combination makes visible. This is the prototype essay. Connect the backend and distil your notes to generate a full synthesis powered by GPT-4o.`
+      },
+      {
+        label: 'I',
+        title: `${ideas1[0]?.title || 'The First Principle'}: The Invisible Architecture`,
+        body: `${ideas1[0]?.body || 'The first book establishes a foundational claim.'}\n\nThis connects directly to the framework ${book2.title} establishes. ${ideas2[0]?.body || 'The second book arrives at a structurally identical conclusion from a completely different direction.'} The convergence is not accidental. Both authors have independently arrived at the same underlying mechanism — which is precisely what makes the synthesis productive.`
+      },
+      {
+        label: 'II',
+        title: `${ideas2[0]?.title || 'The Second Principle'}: The Productive Tension`,
+        body: `${ideas2[0]?.body || 'The second book complicates the first.'}\n\nHere ${book1.title} offers a crucial corrective. ${ideas1[1]?.body || 'The framework from the first book reveals the limitation of treating this insight in isolation.'} The tension between these two positions is not a contradiction to be resolved but a productive dialectic — each book's central claim sharpens and qualifies the other.`
+      },
+      {
+        label: 'III',
+        title: 'The Emergent Framework',
+        body: `${ideas1[2]?.body || ''}\n\nTaken together, ${book1.title} and ${book2.title} constitute a more complete intellectual toolkit than either alone. This is what synthesis yields that neither book could offer independently: not a middle path between two positions, but a third position that incorporates and transcends them both.`
+      },
+      {
+        label: 'IV',
+        title: `${ideas2[1]?.title || 'The Fourth Idea'}: Consequences`,
+        body: `${ideas2[1]?.body || 'The second book\'s deeper implication emerges here.'}\n\nThe practical stakes become clear when you hold both books simultaneously. What looked like advice in one and analysis in the other resolves into a single coherent prescription: not for what to do, but for how to see.`
+      },
+      {
+        label: 'Conclusion',
+        title: 'What the Combination Reveals',
+        body: `The reader who has completed both books possesses something rare: a stereo view of a problem that most thinkers have only examined in mono. ${book1.author || 'The first author'} and ${book2.author || 'the second author'} have given us complementary instruments. This essay has tried to show what it sounds like when you play them together.\n\nThe emergent framework — the idea that neither book contains but both imply — is this: the problems that resist individual analysis dissolve when approached from two directions at once.`
+      }
+    ]
+  };
+}
+
+function _renderSynthesisEssay(data) {
+  const wrap = document.getElementById('synthEssayWrap');
+  if (!wrap) return;
+
+  let html = `
+    <div class="synthesis-essay-header">
+      <div class="synthesis-essay-title">${escapeHtml(data.title || '')}</div>
+      ${data.subtitle ? `<div class="synthesis-essay-subtitle">${escapeHtml(data.subtitle)}</div>` : ''}
+    </div>
+    <div class="synthesis-essay-body">`;
+
+  (data.sections || []).forEach((s, i) => {
+    const paras  = (s.body || '').split(/\n\n+/).filter(p => p.trim());
+    const body   = paras.map(p => `<p>${escapeHtml(p.trim())}</p>`).join('');
+    const isLast = i === (data.sections.length - 1);
+
+    html += `<div class="synthesis-section">
+      <div class="synthesis-section-label">${escapeHtml(s.label || '')}</div>
+      <div class="synthesis-section-title">${escapeHtml(s.title || '')}</div>
+      <div class="synthesis-section-body">${body}</div>
+    </div>`;
+
+    if (!isLast) {
+      html += `<div class="synthesis-divider">
+        <div class="synthesis-divider-dot"></div>
+        <div class="synthesis-divider-dot"></div>
+        <div class="synthesis-divider-dot"></div>
+      </div>`;
+    }
+  });
+
+  html += `</div>`;
+  wrap.innerHTML = html;
+  document.getElementById('synthOutput').style.display = '';
+  document.getElementById('synthOutput').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 // ═══════════════════════════════════════
 // KNOWLEDGE MAP

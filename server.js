@@ -20,6 +20,7 @@ const essaysRouter        = require('./routes/essays');
 const sessionsRouter      = require('./routes/sessions');
 const analyticsRouter     = require('./routes/analytics');
 const advocateRouter      = require('./routes/advocate');
+const synthesisRouter     = require('./routes/synthesis');
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/essays',        essaysRouter);
 app.use('/api/sessions',      sessionsRouter);
 app.use('/api/analytics',    analyticsRouter);
 app.use('/api/advocate',     advocateRouter);
+app.use('/api/synthesis',    synthesisRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
