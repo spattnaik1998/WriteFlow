@@ -1109,4 +1109,70 @@ OUTPUT FORMAT — return ONLY valid JSON:
   };
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis };
+/**
+ * Chapter Note Refiner (AGENTS.md — Chapter Note Refiner agent)
+ *
+ * Improves a single chapter's raw notes without changing meaning or
+ * introducing fabricated content. Uses optional surrounding chapter
+ * context to fill implicit gaps and improve logical coherence.
+ *
+ * Returns: { refined_notes: string, changes_summary: string }
+ */
+async function refineChapterNotes({ bookTitle, chapterName, notes, prevContext, nextContext }) {
+  const contextBlock = [
+    prevContext ? `PREVIOUS CHAPTER NOTES (for context only — do not include in output):\n${prevContext}` : '',
+    nextContext ? `NEXT CHAPTER NOTES (for context only — do not include in output):\n${nextContext}` : ''
+  ].filter(Boolean).join('\n\n');
+
+  const systemPrompt = `You are a Chapter Note Refiner. A reader gives you their rough notes for a single book chapter, and you improve them into a polished, self-contained intellectual artifact.
+
+Your mandate (from AGENTS.md — Chapter Note Refiner):
+✅ DO:
+- Clarify incomplete or truncated arguments
+- Connect disjointed ideas into a coherent flow
+- Fill *implicit gaps* using only context already present in the notes — no external fabrication
+- Correct grammar, spelling, and punctuation
+- Improve sentence-level precision and readability
+- Ensure every sentence adds meaning — remove filler and redundancy
+- Preserve the reader's own voice and intellectual angle
+
+❌ DO NOT:
+- Add speculative or fabricated information not grounded in the notes
+- Change the original meaning or interpretation of any idea
+- Introduce external facts, quotes, or concepts the reader didn't mention
+- Turn rough notes into a summary — preserve their note-like character
+- Make the notes significantly longer than the original
+
+OUTPUT FORMAT — return ONLY valid JSON:
+{
+  "refined_notes": "The improved notes as a single clean string",
+  "changes_summary": "1–3 sentence description of the main improvements made (e.g. 'Clarified the anchoring argument, connected the bat-and-ball example to WYSIATI, fixed three run-on sentences.')"
+}`;
+
+  const userPrompt = `Book: "${bookTitle}"
+Chapter: "${chapterName}"
+${contextBlock ? '\n' + contextBlock + '\n' : ''}
+CHAPTER NOTES TO REFINE:
+${notes}
+
+Refine the notes now.`;
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: userPrompt }
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.4,
+    max_tokens: 1500
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return {
+    refined_notes:   raw.refined_notes   || notes,
+    changes_summary: raw.changes_summary || ''
+  };
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes };

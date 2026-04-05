@@ -21,6 +21,7 @@ const sessionsRouter      = require('./routes/sessions');
 const analyticsRouter     = require('./routes/analytics');
 const advocateRouter      = require('./routes/advocate');
 const synthesisRouter     = require('./routes/synthesis');
+const refineRouter        = require('./routes/refine');
 
 const app = express();
 
@@ -47,6 +48,7 @@ app.use('/api/sessions',      sessionsRouter);
 app.use('/api/analytics',    analyticsRouter);
 app.use('/api/advocate',     advocateRouter);
 app.use('/api/synthesis',    synthesisRouter);
+app.use('/api/refine',       refineRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -2787,6 +2787,143 @@ body::after {
   margin: 0 auto 12px;
 }
 
+/* ═══════════════════════════════════════
+   REFINE NOTES MODAL
+═══════════════════════════════════════ */
+.refine-modal { width: 640px !important; max-width: 96vw; }
+.refine-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.refine-modal-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.refine-modal-chapter {
+  font-size: 11px;
+  color: var(--amber-dk);
+  font-weight: 600;
+  letter-spacing: .5px;
+  margin-top: 3px;
+}
+.refine-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 18px 0 0;
+}
+.refine-col-head {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--text-4);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.refine-col-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.refine-col-dot.original { background: var(--text-4); }
+.refine-col-dot.refined  { background: #10b981; }
+.refine-textarea {
+  width: 100%;
+  background: var(--bg-dim);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-2);
+  font-family: 'Lora', serif;
+  font-size: 13px;
+  line-height: 1.75;
+  padding: 14px 15px;
+  resize: none;
+  outline: none;
+  box-sizing: border-box;
+  min-height: 260px;
+  transition: border-color var(--ease);
+}
+.refine-textarea:focus { border-color: var(--amber-dk); }
+.refine-textarea.original-side {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-4);
+  cursor: default;
+  pointer-events: none;
+  font-style: italic;
+}
+.refine-changes {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(16,185,129,.07);
+  border: 1px solid rgba(16,185,129,.18);
+  border-radius: 9px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.refine-changes-icon { color: #10b981; flex-shrink: 0; margin-top: 1px; }
+.refine-changes-text {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text-3);
+}
+.refine-changes-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: #10b981;
+  margin-bottom: 4px;
+}
+.refine-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+  justify-content: flex-end;
+}
+.refine-btn-apply {
+  background: #10b981;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: background var(--ease), transform .15s;
+}
+.refine-btn-apply:hover { background: #0d9e6e; transform: translateY(-1px); }
+.refine-loading-state {
+  padding: 48px 0;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+  display: none;
+}
+.refine-loading-state.visible { display: block; }
+.refine-spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--border-hi);
+  border-top-color: #10b981;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  margin: 0 auto 14px;
+}
+.refine-result-state { display: none; }
+.refine-result-state.visible { display: block; }
+
 /* Thread viewer modal */
 .thread-modal { width: 560px !important; }
 .thread-modal-header {
@@ -4281,6 +4418,10 @@ body::after {
           <button class="btn-sec" onclick="findBlogArticles()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             Find Articles
+          </button>
+          <button class="btn-sec" id="refineBtn" onclick="openRefineModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+            Refine Notes
           </button>
           <button class="btn-sec" id="tweetBtn" onclick="openTweetModal()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 4s-.7 2.1-2 3.4c1.6 10-9.4 17.3-18 11.6 2.2.1 4.4-.6 6-2C3 15.5.5 9.6 3 5c2.2 2.7 5.5 4.3 9 4-.9-4.2 4-6.6 7-3.8 1.1 0 3-1.2 3-1.2z"/></svg>
@@ -6257,6 +6398,94 @@ function findBlogArticles() {
   };
 
   setTimeout(doSearch, 1900);
+}
+
+// ═══════════════════════════════════════
+// REFINE MODAL
+// ═══════════════════════════════════════
+function openRefineModal() {
+  const notes = document.getElementById('mainNotes').value.trim();
+  if (!notes) { showToast('Write some notes first'); return; }
+  if (notes.length < 10) { showToast('Notes are too short to refine'); return; }
+
+  const overlay  = document.getElementById('refineModalOverlay');
+  const loading  = document.getElementById('refineLoading');
+  const result   = document.getElementById('refineResult');
+  const chapEl   = document.getElementById('refineModalChapter');
+  const origEl   = document.getElementById('refineOriginalText');
+
+  const chapterName = document.getElementById('chapterName').value.trim() || 'Untitled Chapter';
+  chapEl.textContent = chapterName;
+  origEl.value = notes;
+
+  loading.classList.add('visible');
+  result.classList.remove('visible');
+  overlay.classList.add('open');
+
+  if (!IS_LIVE_MODE) {
+    setTimeout(() => {
+      const proto = {
+        refined_notes: notes
+          .split('\n')
+          .map(line => line.trim() ? line.trim().replace(/\s+/g, ' ') : '')
+          .join('\n')
+          .trim(),
+        changes_summary: 'Cleaned up whitespace, standardised punctuation, and tightened sentence structure. No meaning was altered.'
+      };
+      _showRefineResult(proto);
+    }, 1800);
+    return;
+  }
+
+  fetch('/api/refine', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      book_id: CURRENT_BOOK_ID,
+      chapter_name: chapterName,
+      notes
+    })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { showToast(data.error); closeRefineModal(); return; }
+      _showRefineResult(data);
+    })
+    .catch(err => { showToast('Refine failed: ' + err.message); closeRefineModal(); });
+}
+
+function _showRefineResult(data) {
+  const loading  = document.getElementById('refineLoading');
+  const result   = document.getElementById('refineResult');
+  const refinedEl = document.getElementById('refineRefinedText');
+  const summaryEl = document.getElementById('refineChangesSummary');
+  const changesBox = document.getElementById('refineChangesBox');
+
+  document.getElementById('refineRefinedText').value = data.refined_notes || '';
+  summaryEl.textContent = data.changes_summary || 'No significant changes were needed.';
+  changesBox.style.display = data.changes_summary ? 'flex' : 'none';
+
+  loading.classList.remove('visible');
+  result.classList.add('visible');
+}
+
+function closeRefineModal() {
+  document.getElementById('refineModalOverlay').classList.remove('open');
+}
+
+function outsideRefineClose(e) {
+  if (e.target === document.getElementById('refineModalOverlay')) closeRefineModal();
+}
+
+function _applyRefinedNotes() {
+  const refined = document.getElementById('refineRefinedText').value.trim();
+  if (!refined) return;
+  const ta = document.getElementById('mainNotes');
+  ta.value = refined;
+  // trigger state sync + debounced backend save
+  onNotesInput();
+  closeRefineModal();
+  showToast('Refined notes applied');
 }
 
 // ═══════════════════════════════════════
@@ -9354,6 +9583,63 @@ init();
         <textarea class="chat-input" id="chatInput" placeholder="Ask about your notes, push an idea further..." rows="1" onkeydown="onChatKey(event)" oninput="autoResize(this)"></textarea>
         <button class="send-btn" onclick="sendMsg()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Refine Modal -->
+<div class="modal-overlay" id="refineModalOverlay" onclick="outsideRefineClose(event)">
+  <div class="modal refine-modal">
+    <div class="refine-modal-header">
+      <div>
+        <div class="refine-modal-title">Refine Chapter Notes</div>
+        <div class="refine-modal-chapter" id="refineModalChapter"></div>
+      </div>
+      <button class="btn-ghost" style="padding:6px 10px" onclick="closeRefineModal()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- Loading state -->
+    <div class="refine-loading-state" id="refineLoading">
+      <div class="refine-spinner"></div>
+      Analysing and refining your notes…
+    </div>
+
+    <!-- Result state -->
+    <div class="refine-result-state" id="refineResult">
+      <div class="refine-cols">
+        <div>
+          <div class="refine-col-head">
+            <span class="refine-col-dot original"></span>
+            Original
+          </div>
+          <textarea class="refine-textarea original-side" id="refineOriginalText" readonly></textarea>
+        </div>
+        <div>
+          <div class="refine-col-head">
+            <span class="refine-col-dot refined"></span>
+            Refined
+          </div>
+          <textarea class="refine-textarea" id="refineRefinedText"></textarea>
+        </div>
+      </div>
+
+      <div class="refine-changes" id="refineChangesBox">
+        <svg class="refine-changes-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <div>
+          <div class="refine-changes-label">Changes Made</div>
+          <div class="refine-changes-text" id="refineChangesSummary"></div>
+        </div>
+      </div>
+
+      <div class="refine-actions">
+        <button class="btn-ghost" onclick="closeRefineModal()">Discard</button>
+        <button class="refine-btn-apply" onclick="_applyRefinedNotes()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          Apply Refined Notes
         </button>
       </div>
     </div>
