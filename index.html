@@ -6423,7 +6423,7 @@ function openRefineModal() {
   const chapEl   = document.getElementById('refineModalChapter');
   const origEl   = document.getElementById('refineOriginalText');
 
-  const chapterName = document.getElementById('chapterName').value.trim() || 'Untitled Chapter';
+  const chapterName = document.getElementById('chapterSelect').value.trim() || 'Untitled Chapter';
   chapEl.textContent = chapterName;
   origEl.value = notes;
 

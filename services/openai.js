@@ -833,12 +833,22 @@ Return valid JSON only:
 
   const raw = JSON.parse(response.choices[0].message.content);
   const qs  = Array.isArray(raw.questions) ? raw.questions : [];
-  return qs.slice(0, 5).map(q => ({
-    question:    q.question    || '',
-    options:     Array.isArray(q.options) ? q.options.slice(0, 4) : [],
-    correct:     typeof q.correct === 'number' ? Math.min(3, Math.max(0, q.correct)) : 0,
-    explanation: q.explanation || ''
-  }));
+  // Shuffle correct answer to a spread of positions (0,1,2,3,0) to avoid GPT bias
+  return qs.slice(0, 5).map((q, i) => {
+    const options = Array.isArray(q.options) ? q.options.slice(0, 4) : [];
+    const srcIdx  = typeof q.correct === 'number' ? Math.min(3, Math.max(0, q.correct)) : 0;
+    const dstIdx  = i % 4;  // spread across A/B/C/D for questions 1-5
+    const correctText  = options[srcIdx];
+    const wrongOptions = options.filter((_, idx) => idx !== srcIdx);
+    const reordered    = [...wrongOptions];
+    reordered.splice(dstIdx, 0, correctText);
+    return {
+      question:    q.question    || '',
+      options:     reordered,
+      correct:     dstIdx,
+      explanation: q.explanation || ''
+    };
+  });
 }
 
 /**
