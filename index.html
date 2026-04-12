@@ -698,25 +698,78 @@ body::after {
 }
 .btn-add-chapter:hover { color: var(--text-2); border-color: var(--border-hi); }
 
+.notes-editor-wrap {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+  transition: border-color var(--ease), box-shadow var(--ease);
+}
+.notes-editor-wrap:focus-within {
+  border-color: var(--amber-dk);
+  box-shadow: 0 0 0 3px var(--amber-glow);
+}
+.fmt-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px 10px 0 0;
+}
+.fmt-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  line-height: 1;
+  user-select: none;
+}
+.fmt-btn:hover { background: var(--bg-hover); color: var(--text-1); border-color: var(--border); }
+.fmt-btn.active { background: var(--amber-glow); color: var(--amber-dk); border-color: var(--amber-dk); }
+.fmt-btn-b { font-weight: 800; }
+.fmt-btn-i { font-style: italic; font-weight: 500; }
+.fmt-btn-u { text-decoration: underline; font-weight: 600; }
+.fmt-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 4px;
+}
 .notes-textarea {
   width: 100%;
   min-height: 190px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 0 0 10px 10px;
   color: var(--text-1);
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   line-height: 1.82;
   padding: 16px 18px;
-  resize: vertical;
   outline: none;
-  transition: border-color var(--ease), box-shadow var(--ease);
+  overflow-y: auto;
+  word-break: break-word;
+  white-space: pre-wrap;
+  cursor: text;
 }
-.notes-textarea::placeholder { color: var(--text-4); font-style: italic; }
-.notes-textarea:focus {
-  border-color: var(--amber-dk);
-  box-shadow: 0 0 0 3px var(--amber-glow);
+.notes-textarea[contenteditable=true]:empty:before {
+  content: attr(data-placeholder);
+  color: var(--text-4);
+  font-style: italic;
+  pointer-events: none;
 }
 
 .saved-label {
@@ -4396,7 +4449,16 @@ body::after {
           </button>
         </div>
 
-        <textarea class="notes-textarea" id="mainNotes" rows="8" oninput="onNotesInput()">Kahneman opens with something brilliant — there are two ways we think. One is fast, automatic, like recognizing a face or reading anger in someone's voice. The other is slow, deliberate, like solving 17×24. The fast one (System 1) runs without us noticing. It's always on. The slow one (System 2) is lazy — it only engages when needed. Key: System 1 is constantly generating impressions and jumping to conclusions. System 2 mostly just endorses these without scrutiny. This is simultaneously terrifying and fascinating. The gorilla experiment. We don't see what we're not looking for.</textarea>
+        <div class="notes-editor-wrap">
+          <div class="fmt-toolbar" id="fmtToolbar">
+            <button class="fmt-btn fmt-btn-b" id="fmtBold" title="Bold (Ctrl+B)" onmousedown="applyFormat(event,'bold')">B</button>
+            <button class="fmt-btn fmt-btn-i" id="fmtItalic" title="Italic (Ctrl+I)" onmousedown="applyFormat(event,'italic')">I</button>
+            <button class="fmt-btn fmt-btn-u" id="fmtUnderline" title="Underline (Ctrl+U)" onmousedown="applyFormat(event,'underline')">U</button>
+            <div class="fmt-divider"></div>
+            <button class="fmt-btn" title="Clear formatting" onmousedown="applyFormat(event,'removeFormat')" style="font-size:11px;width:auto;padding:0 7px;font-weight:500;letter-spacing:0.01em">Aa</button>
+          </div>
+          <div class="notes-textarea" id="mainNotes" contenteditable="true" data-placeholder="Dump your raw notes here — stream of consciousness, rough observations, key quotes. Anything." oninput="onNotesInput()" onkeyup="updateFmtToolbar()" onmouseup="updateFmtToolbar()">Kahneman opens with something brilliant — there are two ways we think. One is fast, automatic, like recognizing a face or reading anger in someone's voice. The other is slow, deliberate, like solving 17×24. The fast one (System 1) runs without us noticing. It's always on. The slow one (System 2) is lazy — it only engages when needed. Key: System 1 is constantly generating impressions and jumping to conclusions. System 2 mostly just endorses these without scrutiny. This is simultaneously terrifying and fascinating. The gorilla experiment. We don't see what we're not looking for.</div>
+        </div>
 
         <!-- Write-gate: shown when a quiz is pending completion -->
         <div class="notes-gate" id="notesGate" style="display:none">
@@ -5266,7 +5328,7 @@ function loadProtoContent(bookId) {
 
   // Activate the default chapter
   currentChapterId = proto.activeChapter;
-  document.getElementById('mainNotes').value = proto.activeNotes;
+  document.getElementById('mainNotes').innerHTML = proto.activeNotes;
   chapterSelect.value = proto.activeChapter;
   renderAccordion();
 
@@ -5283,24 +5345,24 @@ function loadProtoContent(bookId) {
 function saveCurrentChapter() {
   if (!selectedBook || !currentChapterId) return;
   if (!chapterNotes[selectedBook]) chapterNotes[selectedBook] = {};
-  chapterNotes[selectedBook][currentChapterId] = document.getElementById('mainNotes').value;
+  chapterNotes[selectedBook][currentChapterId] = document.getElementById('mainNotes').innerHTML;
 }
 
 function switchChapter(name) {
   saveCurrentChapter();
   currentChapterId = name;
-  const textarea = document.getElementById('mainNotes');
-  textarea.value = chapterNotes[selectedBook]?.[name] ?? '';
+  const editor = document.getElementById('mainNotes');
+  editor.innerHTML = chapterNotes[selectedBook]?.[name] ?? '';
   document.getElementById('chapterSelect').value = name;
   renderAccordion();
   updateChapterDoneBtn();
-  textarea.focus();
+  editor.focus();
 }
 
 function renderAccordion() {
   const chapters = chapterNotes[selectedBook] || {};
   document.querySelector('.accordion').innerHTML = Object.entries(chapters).map(([name, content], i) => {
-    const wc = content ? content.trim().split(/\s+/).filter(Boolean).length : 0;
+    const wc = content ? stripHtml(content).trim().split(/\s+/).filter(Boolean).length : 0;
     const safeName = name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const noteId = chapterIds[selectedBook]?.[name];
     return `
@@ -5445,7 +5507,7 @@ function deleteChapter(chapterName, noteId, event) {
       switchChapter(remaining[0]);
     } else {
       currentChapterId = null;
-      document.getElementById('mainNotes').value = '';
+      document.getElementById('mainNotes').innerHTML = '';
     }
   }
 
@@ -5460,11 +5522,13 @@ function deleteChapter(chapterName, noteId, event) {
 
 function onNotesInput() {
   if (!selectedBook || !currentChapterId) return;
-  const content = document.getElementById('mainNotes').value;
+  const el = document.getElementById('mainNotes');
+  const content = el.innerHTML;
+  const contentText = el.innerText || '';
   if (!chapterNotes[selectedBook]) chapterNotes[selectedBook] = {};
   chapterNotes[selectedBook][currentChapterId] = content;
   // Live-update word count and preview in the accordion
-  const wc = content.trim().split(/\s+/).filter(Boolean).length;
+  const wc = contentText.trim().split(/\s+/).filter(Boolean).length;
   const activeItem = [...document.querySelectorAll('.accordion-item')].find(el =>
     el.querySelector('.acc-title')?.textContent === currentChapterId
   );
@@ -5472,7 +5536,7 @@ function onNotesInput() {
     const meta = activeItem.querySelector('.acc-meta');
     if (meta) meta.textContent = `${wc} words`;
     const preview = activeItem.querySelector('.acc-content');
-    if (preview) preview.textContent = content || '';
+    if (preview) preview.innerHTML = content || '';
   }
   // Debounced save to backend (live mode only).
   // Capture book/chapter NOW so a mid-flight book switch can't redirect the save.
@@ -5568,7 +5632,7 @@ function selectBook(id) {
 
   // ── Wipe all content panes immediately so stale content from the
   //    previous book never bleeds into the new one while the API loads ──
-  document.getElementById('mainNotes').value = '';
+  document.getElementById('mainNotes').innerHTML = '';
   document.getElementById('chapterSelect').innerHTML = '';
   document.querySelector('.accordion').innerHTML = '';
   document.getElementById('ideasGrid').innerHTML =
@@ -5634,7 +5698,7 @@ function deleteBook(bookId, event) {
       currentChapterId = null;
       document.getElementById('barTitle').textContent = 'No books';
       document.getElementById('barAuthor').textContent = '';
-      document.getElementById('mainNotes').value = '';
+      document.getElementById('mainNotes').innerHTML = '';
       document.querySelector('.accordion').innerHTML = '';
       document.getElementById('chapterSelect').innerHTML = '';
     }
@@ -5744,7 +5808,7 @@ async function loadBookContent(bookId) {
     chapterSelect.innerHTML  = '<option value="Chapter 1">Chapter 1</option>';
     chapterSelect.onchange   = () => switchChapter(chapterSelect.value);
     currentChapterId         = 'Chapter 1';
-    mainNotes.value          = '';
+    mainNotes.innerHTML      = '';
     renderAccordion();
   }
 
@@ -5949,7 +6013,7 @@ function distillIdeas() {
   `;
 
   const chapterName = document.getElementById('chapterSelect').value;
-  const rawNotes    = document.getElementById('mainNotes').value;
+  const rawNotes    = document.getElementById('mainNotes').innerText;
 
   // Try real API first
   const doDistil = async () => {
@@ -6413,7 +6477,7 @@ function findBlogArticles() {
 // REFINE MODAL
 // ═══════════════════════════════════════
 function openRefineModal() {
-  const notes = document.getElementById('mainNotes').value.trim();
+  const notes = document.getElementById('mainNotes').innerText.trim();
   if (!notes) { showToast('Write some notes first'); return; }
   if (notes.length < 10) { showToast('Notes are too short to refine'); return; }
 
@@ -6490,7 +6554,7 @@ function _applyRefinedNotes() {
   const refined = document.getElementById('refineRefinedText').value.trim();
   if (!refined) return;
   const ta = document.getElementById('mainNotes');
-  ta.value = refined;
+  ta.innerText = refined;
   // trigger state sync + debounced backend save
   onNotesInput();
   closeRefineModal();
@@ -6501,7 +6565,7 @@ function _applyRefinedNotes() {
 // TWEET MODAL
 // ═══════════════════════════════════════
 function openTweetModal() {
-  const notes = document.getElementById('mainNotes').value.trim();
+  const notes = document.getElementById('mainNotes').innerText.trim();
   if (!notes) { showToast('Write some notes first'); return; }
 
   const overlay = document.getElementById('tweetModalOverlay');
@@ -6799,7 +6863,7 @@ async function copyIdeasAsMarkdown() {
 // THREAD MODAL
 // ═══════════════════════════════════════
 function openThreadModal() {
-  const notes = document.getElementById('mainNotes').value.trim();
+  const notes = document.getElementById('mainNotes').innerText.trim();
   if (!notes) { showToast('Write some notes first'); return; }
 
   const overlay = document.getElementById('threadModalOverlay');
@@ -8501,6 +8565,31 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
+/** Strip HTML tags to get plain text (used before sending notes to AI) */
+function stripHtml(html) {
+  if (!html) return '';
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  return div.innerText || div.textContent || '';
+}
+
+/** Apply a rich-text format command to the notes editor */
+function applyFormat(event, cmd) {
+  event.preventDefault(); // keep focus in editor
+  const el = document.getElementById('mainNotes');
+  el.focus();
+  document.execCommand(cmd, false, null);
+  updateFmtToolbar();
+  onNotesInput();
+}
+
+/** Update toolbar button active states to reflect current selection */
+function updateFmtToolbar() {
+  document.getElementById('fmtBold').classList.toggle('active', document.queryCommandState('bold'));
+  document.getElementById('fmtItalic').classList.toggle('active', document.queryCommandState('italic'));
+  document.getElementById('fmtUnderline').classList.toggle('active', document.queryCommandState('underline'));
+}
+
 async function loadCrossBookIdeas() { /* stub kept for safety */ }
 
 // ═══════════════════════════════════════
@@ -9102,7 +9191,7 @@ fetch('/api/health').then(r => {
     document.getElementById('ideasGrid').innerHTML = '';
     document.getElementById('chapterSelect').innerHTML = '';
     document.querySelector('.accordion').innerHTML = '';
-    document.getElementById('mainNotes').value = '';
+    document.getElementById('mainNotes').innerHTML = '';
     document.getElementById('barTitle').textContent = 'Select a book';
     document.getElementById('barAuthor').textContent = '';
 
@@ -9169,7 +9258,7 @@ let _liPosts = { insight: '', listicle: '', story: '' };
 let _liActiveTab = 'insight';
 
 function openLinkedInModal() {
-  const notes = document.getElementById('mainNotes').value.trim();
+  const notes = document.getElementById('mainNotes').innerText.trim();
   if (!notes) { showToast('Write some notes first'); return; }
 
   const overlay = document.getElementById('linkedinModalOverlay');
