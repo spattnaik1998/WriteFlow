@@ -2650,9 +2650,9 @@ body::after {
   overflow: hidden;
 }
 .wiki-left {
-  width: 190px;
-  min-width: 150px;
-  max-width: 190px;
+  width: 10%;
+  min-width: 10%;
+  max-width: 10%;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   display: flex;
@@ -2705,8 +2705,8 @@ body::after {
 .wiki-tree-item.active { border-left-color: var(--amber); color: var(--amber); background: rgba(201,168,76,.07); }
 .wiki-tree-empty { padding: 20px 14px; color: var(--text-3); font-size: 12px; }
 .wiki-center {
-  flex: 1;
-  min-width: 0;
+  width: 80%;
+  flex: 0 0 80%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -5176,7 +5176,7 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
             </div>
           </div>
 
-          <!-- center: content takes all remaining width -->
+          <!-- center: 80% reading area -->
           <div class="wiki-center">
             <div class="wiki-center-header" id="wikiCenterHeader" style="display:none">
               <div class="wiki-center-header-title" id="wikiPageTitle">—</div>
@@ -5192,6 +5192,9 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
             <!-- graph overlay (hidden by default) -->
             <svg id="wikiGraphSvg" style="display:none;position:absolute;inset:0;width:100%;height:100%;background:var(--bg)"></svg>
           </div>
+
+          <!-- right margin: 10% -->
+          <div style="width:10%;flex-shrink:0;"></div>
         </div>
       </div>
 
