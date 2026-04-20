@@ -2726,10 +2726,10 @@ body::after {
 .wiki-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 40px;
+  padding: 24px 32px;
 }
 .wiki-md {
-  max-width: 720px;
+  width: 100%;
 }
 .wiki-body.edit-mode { display: flex; flex-direction: column; }
 .wiki-body textarea {
@@ -2765,16 +2765,7 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 .wiki-empty-state svg { opacity: 0.25; margin-bottom: 12px; }
 .wiki-empty-state .wiki-empty-title { font-size: 15px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
 .wiki-empty-state .wiki-empty-desc { font-size: 13px; }
-.wiki-right {
-  width: 200px;
-  min-width: 160px;
-  max-width: 200px;
-  flex-shrink: 0;
-  border-left: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+.wiki-right { display: none; }
 .wiki-right-section {
   border-bottom: 1px solid var(--border);
   padding: 12px 14px;
@@ -2797,7 +2788,20 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 .wiki-backlink-item:hover { text-decoration: underline; }
 .wiki-meta-row { font-size: 11px; color: var(--text-3); padding: 2px 0; }
 .wiki-meta-row span { color: var(--text-2); }
-.wiki-log-list { overflow-y: auto; flex: 1; padding: 8px 14px; }
+.wiki-log-list { overflow-y: auto; flex: 1; padding: 4px 14px; }
+.wiki-sidebar-meta {
+  border-top: 1px solid var(--border);
+  padding: 10px 14px 4px;
+  flex-shrink: 0;
+}
+.wiki-sidebar-meta-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
 .wiki-log-entry { font-size: 11px; color: var(--text-3); padding: 4px 0; border-bottom: 1px solid var(--border); }
 .wiki-log-entry span { color: var(--text-2); }
 /* wiki query box */
@@ -5143,19 +5147,31 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
         <!-- lint results modal-style block -->
         <div id="wikiLintResults" style="display:none;padding:12px 16px;background:rgba(201,168,76,.04);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2);max-height:200px;overflow-y:auto;"></div>
 
-        <!-- three-pane -->
+        <!-- two-pane: narrow left sidebar + full-width center -->
         <div class="wiki-layout" style="flex:1;overflow:hidden;">
-          <!-- left: tree -->
+          <!-- left: tree + meta -->
           <div class="wiki-left">
             <div class="wiki-search">
               <input type="text" id="wikiTreeSearch" placeholder="Search pages…" oninput="wikiFilterTree(this.value)">
             </div>
-            <div class="wiki-tree" id="wikiTree">
+            <div class="wiki-tree" id="wikiTree" style="flex:1;overflow-y:auto;">
               <div class="wiki-tree-empty">Loading wiki…</div>
+            </div>
+            <!-- page meta + backlinks folded into bottom of left sidebar -->
+            <div class="wiki-sidebar-meta" id="wikiSidebarMeta" style="display:none">
+              <div class="wiki-sidebar-meta-title">Page Info</div>
+              <div id="wikiPageMeta" style="margin-bottom:8px;"></div>
+              <div class="wiki-sidebar-meta-title">Backlinks</div>
+              <div id="wikiBacklinks"><span style="font-size:12px;color:var(--text-3)">—</span></div>
+            </div>
+            <!-- recent ingests log -->
+            <div class="wiki-sidebar-meta" style="border-top:1px solid var(--border);padding:10px 14px 8px;flex-shrink:0;">
+              <div class="wiki-sidebar-meta-title">Recent Ingests</div>
+              <div class="wiki-log-list" id="wikiLogList" style="max-height:120px;overflow-y:auto;padding:0;"></div>
             </div>
           </div>
 
-          <!-- center: content or graph -->
+          <!-- center: content takes all remaining width -->
           <div class="wiki-center">
             <div class="wiki-center-header" id="wikiCenterHeader" style="display:none">
               <div class="wiki-center-header-title" id="wikiPageTitle">—</div>
@@ -5170,22 +5186,6 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
             </div>
             <!-- graph overlay (hidden by default) -->
             <svg id="wikiGraphSvg" style="display:none;position:absolute;inset:0;width:100%;height:100%;background:var(--bg)"></svg>
-          </div>
-
-          <!-- right: meta + backlinks + log -->
-          <div class="wiki-right">
-            <div class="wiki-right-section">
-              <div class="wiki-right-label">Backlinks</div>
-              <div id="wikiBacklinks"><span style="font-size:12px;color:var(--text-3)">Select a page</span></div>
-            </div>
-            <div class="wiki-right-section">
-              <div class="wiki-right-label">Page Info</div>
-              <div id="wikiPageMeta"></div>
-            </div>
-            <div class="wiki-right-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;border-bottom:none;">
-              <div class="wiki-right-label">Recent Ingests</div>
-              <div class="wiki-log-list" id="wikiLogList"></div>
-            </div>
           </div>
         </div>
       </div>
@@ -9926,6 +9926,10 @@ async function wikiOpenPage(slug) {
     const rawMd = page.markdown_content || '';
     const html  = marked.parse(rawMd);
     body.innerHTML = `<div class="wiki-md">${wikiRenderLinks(html)}</div>`;
+
+    // show sidebar meta panel
+    const sidebarMeta = document.getElementById('wikiSidebarMeta');
+    if (sidebarMeta) sidebarMeta.style.display = 'block';
 
     // backlinks
     const backlinkEl = document.getElementById('wikiBacklinks');
