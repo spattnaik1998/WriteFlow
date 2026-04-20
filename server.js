@@ -22,6 +22,7 @@ const analyticsRouter     = require('./routes/analytics');
 const advocateRouter      = require('./routes/advocate');
 const synthesisRouter     = require('./routes/synthesis');
 const refineRouter        = require('./routes/refine');
+const wikiRouter          = require('./routes/wiki');
 
 const app = express();
 
@@ -49,6 +50,7 @@ app.use('/api/analytics',    analyticsRouter);
 app.use('/api/advocate',     advocateRouter);
 app.use('/api/synthesis',    synthesisRouter);
 app.use('/api/refine',       refineRouter);
+app.use('/api/wiki',         wikiRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

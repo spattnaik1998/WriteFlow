@@ -1185,4 +1185,217 @@ Refine the notes now.`;
   };
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes };
+/**
+ * Ingest a chapter source into the wiki using a two-stage planner → writer flow.
+ * Stage A: decide which pages to touch (create/update/noop).
+ * Stage B: write the markdown for each touched page in parallel.
+ *
+ * Returns { actions: [{op, slug, title, page_type, markdown, summary, reason}], tokens_used }
+ */
+async function ingestSourceToWiki({ source, wikiIndex = [] }) {
+  const { bookTitle, author, chapterName, rawNotes, ideas = [] } = source;
+
+  const ideasText = ideas.map(i => `- **${i.title}**: ${i.body || ''}`).join('\n') || 'None yet.';
+  const indexText = wikiIndex.length > 0
+    ? wikiIndex.map(p => `[${p.type}] ${p.slug} — "${p.title}": ${p.digest}`).join('\n')
+    : 'Wiki is empty.';
+
+  // ── Stage A: Planner ──────────────────────────────────────────────────────
+  const plannerSystem = `You are a wiki librarian maintaining a personal knowledge base for a book reader.
+Given a new chapter's notes and ideas, decide the minimum set of wiki pages to create or update.
+
+Rules:
+- Prefer updating existing pages over creating new ones.
+- Create a new page only when an important entity, concept, or theme has no existing home.
+- Use slugs in kebab-case (e.g. "entity-system-1", "concept-anchoring-bias", "theme-irrationality").
+- page_type must be one of: entity, concept, theme, book, overview.
+- Flag contradictions by marking op="update" with reason starting with "CONTRADICTION:".
+- Keep actions to 2–6 per chapter. Less is more.
+
+Return ONLY valid JSON:
+{
+  "actions": [
+    { "op": "create"|"update"|"noop", "slug": string, "title": string, "page_type": string, "reason": string }
+  ]
+}`;
+
+  const plannerUser = `## New Source
+Book: "${bookTitle}" by ${author}
+Chapter: "${chapterName}"
+
+### Raw Notes
+${rawNotes.slice(0, 3000)}
+
+### Distilled Ideas
+${ideasText}
+
+### Current Wiki Index
+${indexText.slice(0, 4000)}
+
+Decide which wiki pages to create or update.`;
+
+  const planResponse = await openai.chat.completions.create({
+    model:           'gpt-4o',
+    messages:        [{ role: 'system', content: plannerSystem }, { role: 'user', content: plannerUser }],
+    response_format: { type: 'json_object' },
+    temperature:     0.3,
+    max_tokens:      800
+  });
+
+  const planRaw = JSON.parse(planResponse.choices[0].message.content);
+  const actions = (planRaw.actions || []).filter(a => a.op !== 'noop');
+  let tokensUsed = planResponse.usage?.total_tokens || 0;
+
+  if (actions.length === 0) {
+    return { actions: planRaw.actions || [], tokens_used: tokensUsed };
+  }
+
+  // ── Stage B: Writer (parallel, up to 3 at a time) ────────────────────────
+  const writerSystem = `You are writing pages for a personal knowledge wiki about books and ideas.
+Voice: encyclopedia style — neutral, third-person, factual.
+Rules:
+- Cite sources inline as [Book Title, Ch. N].
+- Use [[slug]] for internal wiki links (refer to other wiki pages by slug).
+- Keep pages under 600 words.
+- If the action is "update" and existing content is provided, PRESERVE valid existing content and splice in new material.
+- If metadata.user_edited is true (noted in context), append new material under a "## Updates" section instead of splicing.
+- If reason starts with "CONTRADICTION:", add a blockquote: > **Contradiction with [source]:** description
+
+Return ONLY valid JSON:
+{
+  "markdown": string,
+  "links": [{ "target_slug": string, "context": string }],
+  "summary": string
+}`;
+
+  const writeAction = async (action) => {
+    const existing = wikiIndex.find(p => p.slug === action.slug);
+    const existingContent = existing ? `## Existing page content\n${existing.digest}...` : '';
+
+    const writerUser = `## Task
+Op: ${action.op}
+Slug: ${action.slug}
+Title: ${action.title}
+Page type: ${action.page_type}
+Reason: ${action.reason}
+
+## Source material
+Book: "${bookTitle}" by ${author}, Chapter: "${chapterName}"
+Notes excerpt: ${rawNotes.slice(0, 1500)}
+Ideas: ${ideasText}
+
+${existingContent}
+
+Write the wiki page markdown.`;
+
+    const resp = await openai.chat.completions.create({
+      model:           'gpt-4o',
+      messages:        [{ role: 'system', content: writerSystem }, { role: 'user', content: writerUser }],
+      response_format: { type: 'json_object' },
+      temperature:     0.5,
+      max_tokens:      1500
+    });
+
+    tokensUsed += resp.usage?.total_tokens || 0;
+    const raw = JSON.parse(resp.choices[0].message.content);
+    return { ...action, markdown: raw.markdown || '', summary: raw.summary || '' };
+  };
+
+  // run in chunks of 3
+  const results = [];
+  for (let i = 0; i < actions.length; i += 3) {
+    const chunk  = actions.slice(i, i + 3);
+    const done   = await Promise.all(chunk.map(writeAction));
+    results.push(...done);
+  }
+
+  // add back noops
+  const noops = (planRaw.actions || []).filter(a => a.op === 'noop');
+  return { actions: [...results, ...noops], tokens_used: tokensUsed };
+}
+
+/**
+ * Query the wiki: pick candidate pages (done in route), synthesize answer with citations.
+ * Returns { answer, cited_slugs, confidence, suggest_new_page }
+ */
+async function queryWiki({ question, candidatePages = [] }) {
+  const pagesText = candidatePages
+    .map(p => `### [[${p.slug}]] — ${p.title}\n${(p.markdown_content || '').slice(0, 800)}`)
+    .join('\n\n---\n\n');
+
+  const systemPrompt = `You are a query engine over a personal knowledge wiki built from book notes.
+Answer questions using ONLY the provided wiki pages. If the pages don't contain enough information, say so and set confidence to "low".
+Do not fabricate information not present in the provided pages.
+
+Return ONLY valid JSON:
+{
+  "answer": string,
+  "cited_slugs": [string],
+  "confidence": "high"|"med"|"low",
+  "suggest_new_page": { "slug": string, "title": string, "rationale": string } | null
+}`;
+
+  const userPrompt = `## Question\n${question}\n\n## Wiki Pages\n${pagesText || 'No pages available.'}`;
+
+  const response = await openai.chat.completions.create({
+    model:           'gpt-4o',
+    messages:        [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+    response_format: { type: 'json_object' },
+    temperature:     0.4,
+    max_tokens:      1000
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return {
+    answer:           raw.answer          || '',
+    cited_slugs:      raw.cited_slugs     || [],
+    confidence:       raw.confidence      || 'low',
+    suggest_new_page: raw.suggest_new_page || null
+  };
+}
+
+/**
+ * Health-check the wiki: find contradictions, orphans, stale claims, missing entities.
+ * Input: pageDigests = [{slug, title, type, first_300, claim_count, is_orphan}]
+ */
+async function lintWiki({ pageDigests = [] }) {
+  if (pageDigests.length === 0) {
+    return { contradictions: [], orphans: [], stale_claims: [], missing_entities: [] };
+  }
+
+  const digestText = pageDigests
+    .map(p => `[${p.type}] ${p.slug} — "${p.title}": ${p.first_300}`)
+    .join('\n\n');
+
+  const systemPrompt = `You are auditing a personal knowledge wiki for health issues.
+Given page digests (first 300 chars each), identify:
+- contradictions: pairs of pages making conflicting claims
+- stale_claims: pages with outdated information (mention if a claim is contradicted elsewhere)
+- missing_entities: important concepts/people mentioned but lacking their own page
+(orphans are identified structurally — omit from your response)
+
+Return ONLY valid JSON:
+{
+  "contradictions": [{ "slugs": [string, string], "description": string }],
+  "stale_claims":   [{ "slug": string, "excerpt": string, "reason": string }],
+  "missing_entities": [{ "name": string, "suggested_slug": string, "mentioned_in": [string] }]
+}`;
+
+  const response = await openai.chat.completions.create({
+    model:           'gpt-4o',
+    messages:        [{ role: 'system', content: systemPrompt }, { role: 'user', content: `## Wiki Page Digests\n${digestText.slice(0, 10000)}` }],
+    response_format: { type: 'json_object' },
+    temperature:     0.3,
+    max_tokens:      1500
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return {
+    contradictions:   raw.contradictions   || [],
+    orphans:          [],
+    stale_claims:     raw.stale_claims     || [],
+    missing_entities: raw.missing_entities || []
+  };
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, lintWiki };

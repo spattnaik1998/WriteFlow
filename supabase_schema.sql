@@ -277,3 +277,47 @@ create unique index if not exists contradictions_pair on contradictions (idea_a_
 
 -- Analytics: add reading goal column to user_profile
 alter table user_profile add column if not exists reading_goal_annual integer default 12;
+
+-- ===== LLM WIKI =====
+
+create table if not exists wiki_pages (
+  id               uuid primary key default gen_random_uuid(),
+  slug             text unique not null,
+  title            text not null,
+  page_type        text not null check (page_type in
+                     ('entity','concept','theme','book','overview','index','log','query_answer')),
+  markdown_content text not null default '',
+  -- metadata shape: { source_book_ids:[], source_idea_ids:[], version:N,
+  --                   prev_markdown:"", last_ingest_id:uuid, stale:false, user_edited:false }
+  metadata         jsonb not null default '{}'::jsonb,
+  created_at       timestamptz default now(),
+  updated_at       timestamptz default now()
+);
+create index if not exists wiki_pages_type_idx on wiki_pages (page_type);
+
+create table if not exists wiki_links (
+  id             uuid primary key default gen_random_uuid(),
+  source_page_id uuid references wiki_pages(id) on delete cascade,
+  target_slug    text not null,
+  link_context   text,
+  created_at     timestamptz default now()
+);
+create index if not exists wiki_links_source_idx on wiki_links (source_page_id);
+create index if not exists wiki_links_target_idx on wiki_links (target_slug);
+
+create table if not exists wiki_ingest_log (
+  id             uuid primary key default gen_random_uuid(),
+  op             text check (op in ('ingest_chapter','ingest_book','query','lint','manual_edit','backfill')),
+  source_ref     jsonb,
+  pages_touched  jsonb default '[]'::jsonb,
+  tokens_used    integer,
+  cost_cents     integer,
+  created_at     timestamptz default now()
+);
+
+create trigger wiki_pages_updated_at before update on wiki_pages
+  for each row execute procedure set_updated_at();
+
+alter table wiki_pages      disable row level security;
+alter table wiki_links      disable row level security;
+alter table wiki_ingest_log disable row level security;

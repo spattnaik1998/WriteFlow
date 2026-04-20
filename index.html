@@ -2636,6 +2636,226 @@ body::after {
 .blog-read:hover { border-color: var(--amber-dk); color: var(--amber); }
 
 /* ═══════════════════════════════════════
+   WIKI
+═══════════════════════════════════════ */
+.wiki-layout {
+  display: flex;
+  height: 100%;
+  gap: 0;
+  overflow: hidden;
+}
+.wiki-left {
+  width: 230px;
+  min-width: 180px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.wiki-search {
+  padding: 12px 12px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.wiki-search input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text-1);
+  font-size: 12px;
+  outline: none;
+}
+.wiki-search input:focus { border-color: var(--amber); }
+.wiki-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.wiki-tree-group { margin-bottom: 4px; }
+.wiki-tree-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  padding: 6px 14px 2px;
+}
+.wiki-tree-item {
+  display: block;
+  padding: 5px 14px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: background .15s, color .15s, border-color .15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wiki-tree-item:hover { background: var(--bg-card-hover); color: var(--text-1); }
+.wiki-tree-item.active { border-left-color: var(--amber); color: var(--amber); background: rgba(201,168,76,.07); }
+.wiki-tree-empty { padding: 20px 14px; color: var(--text-3); font-size: 12px; }
+.wiki-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.wiki-center-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.wiki-center-header-title {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wiki-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+.wiki-body.edit-mode { display: flex; flex-direction: column; }
+.wiki-body textarea {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-1);
+  font-family: 'Lora', serif;
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 14px;
+  resize: none;
+  outline: none;
+  min-height: 400px;
+}
+.wiki-body textarea:focus { border-color: var(--amber); }
+/* rendered markdown inside wiki */
+.wiki-md h1 { font-size: 20px; font-weight: 700; color: var(--text-1); margin: 0 0 14px; }
+.wiki-md h2 { font-size: 16px; font-weight: 600; color: var(--text-1); margin: 20px 0 10px; }
+.wiki-md h3 { font-size: 14px; font-weight: 600; color: var(--text-2); margin: 16px 0 8px; }
+.wiki-md p  { font-size: 13px; color: var(--text-2); line-height: 1.75; margin: 0 0 12px; }
+.wiki-md ul, .wiki-md ol { padding-left: 20px; color: var(--text-2); font-size: 13px; line-height: 1.75; margin: 0 0 12px; }
+.wiki-md blockquote { border-left: 3px solid var(--amber); padding: 4px 12px; background: rgba(201,168,76,.06); margin: 12px 0; border-radius: 0 4px 4px 0; }
+.wiki-md blockquote p { margin: 0; color: var(--amber); }
+.wiki-md strong { color: var(--text-1); font-weight: 600; }
+.wiki-md em { color: var(--text-2); }
+.wiki-md hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+.wiki-md code { background: var(--bg-card); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+a.wiki-link { color: var(--amber); text-decoration: underline; text-decoration-style: dotted; cursor: pointer; }
+a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointer; }
+.wiki-empty-state { text-align: center; padding: 60px 24px; color: var(--text-3); }
+.wiki-empty-state svg { opacity: 0.25; margin-bottom: 12px; }
+.wiki-empty-state .wiki-empty-title { font-size: 15px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+.wiki-empty-state .wiki-empty-desc { font-size: 13px; }
+.wiki-right {
+  width: 240px;
+  min-width: 200px;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.wiki-right-section {
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px;
+}
+.wiki-right-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 8px;
+}
+.wiki-backlink-item {
+  font-size: 12px;
+  color: var(--amber);
+  cursor: pointer;
+  padding: 3px 0;
+  display: block;
+}
+.wiki-backlink-item:hover { text-decoration: underline; }
+.wiki-meta-row { font-size: 11px; color: var(--text-3); padding: 2px 0; }
+.wiki-meta-row span { color: var(--text-2); }
+.wiki-log-list { overflow-y: auto; flex: 1; padding: 8px 14px; }
+.wiki-log-entry { font-size: 11px; color: var(--text-3); padding: 4px 0; border-bottom: 1px solid var(--border); }
+.wiki-log-entry span { color: var(--text-2); }
+/* wiki query box */
+.wiki-query-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.wiki-query-bar input {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  color: var(--text-1);
+  font-size: 13px;
+  outline: none;
+}
+.wiki-query-bar input:focus { border-color: var(--amber); }
+.wiki-answer-box {
+  padding: 16px 24px 8px;
+  background: rgba(201,168,76,.04);
+  border-bottom: 1px solid var(--border);
+}
+.wiki-answer-confidence {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+.wiki-answer-confidence.high { background: rgba(80,180,80,.15); color: #4caf50; }
+.wiki-answer-confidence.med  { background: rgba(201,168,76,.2);  color: var(--amber); }
+.wiki-answer-confidence.low  { background: rgba(180,80,80,.15);  color: #f44; }
+.wiki-answer-text { font-size: 13px; color: var(--text-1); line-height: 1.7; margin-bottom: 8px; }
+.wiki-cite-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.wiki-cite-chip {
+  font-size: 11px;
+  background: rgba(201,168,76,.12);
+  border: 1px solid rgba(201,168,76,.3);
+  color: var(--amber);
+  padding: 2px 8px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.wiki-cite-chip:hover { background: rgba(201,168,76,.22); }
+.wiki-save-label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-3); margin-top: 8px; cursor: pointer; }
+/* wiki header action buttons */
+.wiki-actions { display: flex; gap: 6px; }
+/* backfill progress */
+.wiki-progress {
+  font-size: 11px;
+  color: var(--text-3);
+  padding: 4px 0;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+/* ═══════════════════════════════════════
    MODAL
 ═══════════════════════════════════════ */
 .modal-overlay {
@@ -4425,6 +4645,10 @@ body::after {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="19" r="1"/><line x1="12" y1="13" x2="18" y2="5"/><line x1="11" y1="12" x2="5" y2="18"/></svg>
           Concepts
         </button>
+        <button class="tab-btn" id="tabWiki" onclick="switchTab('wiki')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          Wiki
+        </button>
       </nav>
     </div>
 
@@ -4478,6 +4702,10 @@ body::after {
           <button class="btn-amber" id="distillBtn" onclick="distillIdeas()">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
             Distill Ideas
+          </button>
+          <button class="btn-sec" id="wikiIngestBtn" onclick="wikiIngestChapter()" style="display:none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            + Wiki
           </button>
           <button class="btn-sec" onclick="exportAllNotesPdf()">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -4868,6 +5096,92 @@ body::after {
         </div>
       </div>
 
+      <!-- WIKI TAB -->
+      <div class="tab-pane" id="pane-wiki" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">
+
+        <!-- query bar -->
+        <div class="wiki-query-bar">
+          <input type="text" id="wikiQueryInput" placeholder="Ask your wiki anything…" onkeydown="if(event.key==='Enter')wikiQuery()">
+          <button class="btn-amber btn-sm" onclick="wikiQuery()">Ask</button>
+          <div class="wiki-actions">
+            <button class="btn-sec btn-sm" onclick="wikiBackfill()" title="Rebuild wiki from entire library">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+              Rebuild Library
+            </button>
+            <button class="btn-sec btn-sm" onclick="wikiLint()" title="Health-check wiki">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              Lint
+            </button>
+            <button class="btn-sec btn-sm" id="wikiGraphBtn" onclick="wikiToggleGraph()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Graph
+            </button>
+          </div>
+        </div>
+
+        <!-- query answer box (hidden until query runs) -->
+        <div id="wikiAnswerBox" class="wiki-answer-box" style="display:none">
+          <div id="wikiAnswerConfidence" class="wiki-answer-confidence"></div>
+          <div id="wikiAnswerText" class="wiki-answer-text"></div>
+          <div id="wikiCiteChips" class="wiki-cite-chips"></div>
+          <label class="wiki-save-label">
+            <input type="checkbox" id="wikiSavePage"> Save answer as wiki page
+          </label>
+        </div>
+
+        <!-- backfill progress bar -->
+        <div id="wikiBackfillProgress" class="wiki-progress" style="display:none;padding:6px 16px;"></div>
+
+        <!-- lint results modal-style block -->
+        <div id="wikiLintResults" style="display:none;padding:12px 16px;background:rgba(201,168,76,.04);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2);max-height:200px;overflow-y:auto;"></div>
+
+        <!-- three-pane -->
+        <div class="wiki-layout" style="flex:1;overflow:hidden;">
+          <!-- left: tree -->
+          <div class="wiki-left">
+            <div class="wiki-search">
+              <input type="text" id="wikiTreeSearch" placeholder="Search pages…" oninput="wikiFilterTree(this.value)">
+            </div>
+            <div class="wiki-tree" id="wikiTree">
+              <div class="wiki-tree-empty">Loading wiki…</div>
+            </div>
+          </div>
+
+          <!-- center: content or graph -->
+          <div class="wiki-center">
+            <div class="wiki-center-header" id="wikiCenterHeader" style="display:none">
+              <div class="wiki-center-header-title" id="wikiPageTitle">—</div>
+              <button class="btn-sec btn-sm" id="wikiEditBtn" onclick="wikiToggleEdit()">Edit</button>
+            </div>
+            <div class="wiki-body" id="wikiBody">
+              <div class="wiki-empty-state">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                <div class="wiki-empty-title">No wiki yet</div>
+                <div class="wiki-empty-desc">Distill a chapter's notes, then click "+ Wiki" to add it to your knowledge base. Or click "Rebuild Library" to populate from all your books.</div>
+              </div>
+            </div>
+            <!-- graph overlay (hidden by default) -->
+            <svg id="wikiGraphSvg" style="display:none;position:absolute;inset:0;width:100%;height:100%;background:var(--bg)"></svg>
+          </div>
+
+          <!-- right: meta + backlinks + log -->
+          <div class="wiki-right">
+            <div class="wiki-right-section">
+              <div class="wiki-right-label">Backlinks</div>
+              <div id="wikiBacklinks"><span style="font-size:12px;color:var(--text-3)">Select a page</span></div>
+            </div>
+            <div class="wiki-right-section">
+              <div class="wiki-right-label">Page Info</div>
+              <div id="wikiPageMeta"></div>
+            </div>
+            <div class="wiki-right-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;border-bottom:none;">
+              <div class="wiki-right-label">Recent Ingests</div>
+              <div class="wiki-log-list" id="wikiLogList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /tab-content -->
   </main>
 
@@ -5199,6 +5513,7 @@ body::after {
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" crossorigin="anonymous"></script>
 <script>
 // ═══════════════════════════════════════
 // DATA
@@ -5989,6 +6304,10 @@ function switchTab(tab) {
     _conceptsLoadedFor = CURRENT_BOOK_ID;
     loadConceptMapsForBook();
   }
+  if (tab === 'wiki') {
+    wikiLoadPages();
+    wikiLoadLog();
+  }
 }
 
 // ═══════════════════════════════════════
@@ -6021,6 +6340,7 @@ function distillIdeas() {
       const result = await distillIdeasFromAPI(CURRENT_BOOK_ID, chapterName, rawNotes);
       if (result?.ideas?.length) {
         renderIdeasFromAPI(result.ideas);
+        wikiShowIngestBtn();
       }
 
     }
@@ -9489,6 +9809,479 @@ function closeDigestModal() {
 function outsideDigestClose(e) {
   if (e.target === document.getElementById('digestModalOverlay')) closeDigestModal();
 }
+
+// ═══════════════════════════════════════
+// WIKI
+// ═══════════════════════════════════════
+let _wikiPages    = [];   // full page list (slug, title, type, metadata, updated_at)
+let _wikiSlugSet  = new Set();
+let _wikiCurrentSlug = null;
+let _wikiEditMode = false;
+let _wikiGraphMode = false;
+
+function wikiRenderLinks(html) {
+  return html.replace(/\[\[([a-z0-9-]+)\]\]/g, (_, slug) => {
+    const cls = _wikiSlugSet.has(slug) ? 'wiki-link' : 'wiki-link wiki-link--red';
+    return `<a class="${cls}" data-slug="${slug}" onclick="wikiOpenPage('${slug}')">${slug}</a>`;
+  });
+}
+
+async function wikiLoadPages() {
+  const tree = document.getElementById('wikiTree');
+  try {
+    const r = await fetch('/api/wiki/pages?limit=300');
+    if (!r.ok) throw new Error('not ok');
+    const { pages } = await r.json();
+    _wikiPages   = pages || [];
+    _wikiSlugSet = new Set(_wikiPages.map(p => p.slug));
+    wikiRenderTree(_wikiPages);
+    // show "+ Wiki" button on notes tab once pages are loaded
+    if (_wikiPages.length > 0) {
+      const btn = document.getElementById('wikiIngestBtn');
+      if (btn) btn.style.display = '';
+    }
+  } catch(e) {
+    tree.innerHTML = '<div class="wiki-tree-empty">Could not load wiki. Is the server running?</div>';
+  }
+}
+
+function wikiRenderTree(pages) {
+  const tree = document.getElementById('wikiTree');
+  if (!pages || pages.length === 0) {
+    tree.innerHTML = '<div class="wiki-tree-empty">No pages yet. Distill a chapter and click "+ Wiki" to start.</div>';
+    return;
+  }
+
+  const groups = {};
+  pages.forEach(p => {
+    if (!groups[p.page_type]) groups[p.page_type] = [];
+    groups[p.page_type].push(p);
+  });
+
+  const typeOrder = ['overview','book','theme','concept','entity','query_answer','index','log'];
+  const typeLabel = { entity:'Entities', concept:'Concepts', theme:'Themes', book:'Books',
+                      overview:'Overviews', index:'Index', log:'Log', query_answer:'Q&A' };
+
+  let html = '';
+  const sorted = Object.keys(groups).sort((a,b) => {
+    const ai = typeOrder.indexOf(a), bi = typeOrder.indexOf(b);
+    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+  });
+
+  for (const type of sorted) {
+    const items = groups[type];
+    html += `<div class="wiki-tree-group">
+      <div class="wiki-tree-label">${typeLabel[type] || type} <span style="opacity:.5">(${items.length})</span></div>`;
+    items.forEach(p => {
+      const active = p.slug === _wikiCurrentSlug ? ' active' : '';
+      html += `<div class="wiki-tree-item${active}" data-slug="${p.slug}" onclick="wikiOpenPage('${p.slug}')">${p.title}</div>`;
+    });
+    html += '</div>';
+  }
+  tree.innerHTML = html;
+}
+
+function wikiFilterTree(q) {
+  const lq = q.toLowerCase();
+  const filtered = lq ? _wikiPages.filter(p =>
+    p.title.toLowerCase().includes(lq) ||
+    p.slug.includes(lq) ||
+    p.page_type.includes(lq)
+  ) : _wikiPages;
+  wikiRenderTree(filtered);
+}
+
+async function wikiOpenPage(slug) {
+  _wikiCurrentSlug = slug;
+  _wikiEditMode    = false;
+
+  // mark active in tree
+  document.querySelectorAll('.wiki-tree-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.slug === slug);
+  });
+
+  const header = document.getElementById('wikiCenterHeader');
+  const body   = document.getElementById('wikiBody');
+  header.style.display = 'flex';
+  body.className = 'wiki-body';
+  body.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:20px">Loading…</div>';
+
+  try {
+    const r = await fetch(`/api/wiki/pages/${slug}`);
+    if (!r.ok) throw new Error('not found');
+    const page = await r.json();
+
+    document.getElementById('wikiPageTitle').textContent = page.title;
+    document.getElementById('wikiEditBtn').textContent = 'Edit';
+
+    // render markdown
+    const rawMd = page.markdown_content || '';
+    const html  = marked.parse(rawMd);
+    body.innerHTML = `<div class="wiki-md">${wikiRenderLinks(html)}</div>`;
+
+    // backlinks
+    const backlinkEl = document.getElementById('wikiBacklinks');
+    if (page.backlinks && page.backlinks.length > 0) {
+      backlinkEl.innerHTML = page.backlinks.map(b =>
+        `<a class="wiki-backlink-item" data-slug="${b.slug}" onclick="wikiOpenPage('${b.slug}')">${b.title}</a>`
+      ).join('');
+    } else {
+      backlinkEl.innerHTML = '<span style="font-size:12px;color:var(--text-3)">No backlinks</span>';
+    }
+
+    // meta
+    const meta = page.metadata || {};
+    const metaEl = document.getElementById('wikiPageMeta');
+    metaEl.innerHTML = `
+      <div class="wiki-meta-row">Type: <span>${page.page_type}</span></div>
+      <div class="wiki-meta-row">Version: <span>${meta.version || 1}</span></div>
+      <div class="wiki-meta-row">Updated: <span>${page.updated_at ? new Date(page.updated_at).toLocaleDateString() : '—'}</span></div>
+      ${meta.stale ? '<div class="wiki-meta-row" style="color:#f44">⚠ Stale</div>' : ''}
+      ${meta.user_edited ? '<div class="wiki-meta-row">✎ User-edited</div>' : ''}
+    `;
+
+    // store raw for edit mode
+    body.dataset.rawMd = rawMd;
+    body.dataset.slug  = slug;
+    body.dataset.title = page.title;
+  } catch(e) {
+    body.innerHTML = `<div style="color:var(--text-3);font-size:13px;padding:20px">Could not load page: ${e.message}</div>`;
+  }
+}
+
+function wikiToggleEdit() {
+  const body     = document.getElementById('wikiBody');
+  const editBtn  = document.getElementById('wikiEditBtn');
+  _wikiEditMode  = !_wikiEditMode;
+
+  if (_wikiEditMode) {
+    const rawMd = body.dataset.rawMd || '';
+    body.className = 'wiki-body edit-mode';
+    body.innerHTML = `<textarea id="wikiEditArea" spellcheck="false">${rawMd.replace(/</g,'&lt;')}</textarea>
+      <div style="display:flex;gap:8px;padding:8px 0;flex-shrink:0">
+        <button class="btn-amber btn-sm" onclick="wikiSaveEdit()">Save</button>
+        <button class="btn-sec btn-sm" onclick="wikiToggleEdit()">Cancel</button>
+      </div>`;
+    editBtn.textContent = 'Cancel';
+  } else {
+    // restore rendered view
+    if (_wikiCurrentSlug) wikiOpenPage(_wikiCurrentSlug);
+  }
+}
+
+async function wikiSaveEdit() {
+  const area  = document.getElementById('wikiEditArea');
+  const body  = document.getElementById('wikiBody');
+  const slug  = body.dataset.slug || _wikiCurrentSlug;
+  const title = body.dataset.title;
+  if (!slug || !area) return;
+
+  const markdown_content = area.value;
+  try {
+    const r = await fetch(`/api/wiki/pages/${slug}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ markdown_content, title })
+    });
+    if (!r.ok) throw new Error('Save failed');
+    showToast('Page saved');
+    _wikiEditMode = false;
+    await wikiOpenPage(slug);
+    await wikiLoadPages();
+  } catch(e) {
+    showToast('Save failed: ' + e.message, 'error');
+  }
+}
+
+// ── Ingest chapter from Notes tab ───────────────────────────────────────────
+async function wikiIngestChapter() {
+  if (!CURRENT_BOOK_ID) { showToast('Select a book first', 'error'); return; }
+  const chapterName = document.getElementById('chapterSelect').value;
+  if (!chapterName) { showToast('Select a chapter first', 'error'); return; }
+
+  const btn = document.getElementById('wikiIngestBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Ingesting…`;
+
+  try {
+    const r = await fetch('/api/wiki/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ book_id: CURRENT_BOOK_ID, chapter_name: chapterName })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed');
+
+    const created  = (data.touched || []).filter(t => t.action === 'create').length;
+    const updated  = (data.touched || []).filter(t => t.action === 'update').length;
+    showToast(`Wiki updated: ${created} created, ${updated} updated`);
+
+    await wikiLoadPages();
+    await wikiLoadLog();
+    // switch to wiki tab to show result
+    switchTab('wiki');
+    if (data.touched && data.touched.length > 0) {
+      const first = data.touched.find(t => t.action !== 'noop');
+      if (first) setTimeout(() => wikiOpenPage(first.slug), 300);
+    }
+  } catch(e) {
+    showToast('Wiki ingest failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> + Wiki`;
+  }
+}
+
+// ── Show "+ Wiki" button once distill has run ────────────────────────────────
+function wikiShowIngestBtn() {
+  const btn = document.getElementById('wikiIngestBtn');
+  if (btn) btn.style.display = '';
+}
+
+// ── Query ────────────────────────────────────────────────────────────────────
+async function wikiQuery() {
+  const input  = document.getElementById('wikiQueryInput');
+  const q      = input.value.trim();
+  if (!q) return;
+
+  const savePage = document.getElementById('wikiSavePage')?.checked || false;
+
+  const answerBox = document.getElementById('wikiAnswerBox');
+  answerBox.style.display = 'block';
+  document.getElementById('wikiAnswerText').textContent = 'Searching wiki…';
+  document.getElementById('wikiAnswerConfidence').textContent = '';
+  document.getElementById('wikiCiteChips').innerHTML = '';
+
+  try {
+    const r = await fetch('/api/wiki/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: q, persist: savePage })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed');
+
+    const confEl = document.getElementById('wikiAnswerConfidence');
+    confEl.textContent = data.confidence || 'low';
+    confEl.className   = `wiki-answer-confidence ${data.confidence || 'low'}`;
+
+    document.getElementById('wikiAnswerText').textContent = data.answer || '(no answer)';
+
+    const chips = document.getElementById('wikiCiteChips');
+    chips.innerHTML = (data.cited_slugs || []).map(s =>
+      `<span class="wiki-cite-chip" onclick="wikiOpenPage('${s}')">${s}</span>`
+    ).join('');
+
+    if (data.suggest_new_page) {
+      chips.innerHTML += `<span class="wiki-cite-chip" style="border-style:dashed;opacity:.7" title="${data.suggest_new_page.rationale}">+ ${data.suggest_new_page.title}</span>`;
+    }
+
+    if (data.saved_slug) {
+      showToast(`Saved as page: ${data.saved_slug}`);
+      await wikiLoadPages();
+    }
+  } catch(e) {
+    document.getElementById('wikiAnswerText').textContent = 'Error: ' + e.message;
+  }
+}
+
+// ── Backfill ─────────────────────────────────────────────────────────────────
+async function wikiBackfill() {
+  if (!confirm('Rebuild wiki from your entire library? This will process every book and chapter, creating and updating wiki pages for all your notes. It may take a while and use some OpenAI credits.')) return;
+
+  const progress = document.getElementById('wikiBackfillProgress');
+  progress.style.display = 'block';
+  progress.textContent   = 'Starting backfill…';
+
+  try {
+    const r = await fetch('/api/wiki/ingest/backfill', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed');
+
+    progress.textContent = `Backfill started: ${data.books} books queued. Pages will appear as they're processed.`;
+
+    // poll log every 3s to show progress
+    const poll = setInterval(async () => {
+      await wikiLoadLog();
+      await wikiLoadPages();
+      const log = document.getElementById('wikiLogList');
+      const entries = document.querySelectorAll('.wiki-log-entry');
+      if (entries.length > 0) {
+        const latest = entries[0].textContent;
+        progress.textContent = 'Backfill in progress… last: ' + latest;
+      }
+    }, 3000);
+
+    // stop polling after 30 min
+    setTimeout(() => {
+      clearInterval(poll);
+      progress.textContent = 'Backfill complete (or timed out). Reload wiki to see all pages.';
+      wikiLoadPages();
+    }, 30 * 60 * 1000);
+  } catch(e) {
+    progress.textContent = 'Backfill failed: ' + e.message;
+  }
+}
+
+// ── Lint ─────────────────────────────────────────────────────────────────────
+async function wikiLint() {
+  const lintEl = document.getElementById('wikiLintResults');
+  lintEl.style.display = 'block';
+  lintEl.innerHTML = '<em>Running health check…</em>';
+
+  try {
+    const r = await fetch('/api/wiki/lint', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed');
+
+    let html = '';
+    if (data.contradictions?.length) {
+      html += `<div style="margin-bottom:8px"><strong>⚡ Contradictions (${data.contradictions.length})</strong>` +
+        data.contradictions.map(c => `<div style="margin-top:4px;color:var(--text-3)">${c.slugs.map(s=>`<span class="wiki-cite-chip" onclick="wikiOpenPage('${s}')">${s}</span>`).join(' ↔ ')} — ${c.description}</div>`).join('') + '</div>';
+    }
+    if (data.orphans?.length) {
+      html += `<div style="margin-bottom:8px"><strong>🔗 Orphans (${data.orphans.length})</strong>` +
+        data.orphans.map(s => `<span class="wiki-cite-chip" onclick="wikiOpenPage('${s}')">${s}</span>`).join(' ') + '</div>';
+    }
+    if (data.stale_claims?.length) {
+      html += `<div style="margin-bottom:8px"><strong>⚠ Stale Claims (${data.stale_claims.length})</strong>` +
+        data.stale_claims.map(c => `<div style="margin-top:4px;color:var(--text-3)"><span class="wiki-cite-chip" onclick="wikiOpenPage('${c.slug}')">${c.slug}</span> — ${c.reason}</div>`).join('') + '</div>';
+    }
+    if (data.missing_entities?.length) {
+      html += `<div style="margin-bottom:8px"><strong>📋 Missing Pages (${data.missing_entities.length})</strong>` +
+        data.missing_entities.map(e => `<div style="margin-top:4px;color:var(--text-3)">${e.name} (suggested: ${e.suggested_slug})</div>`).join('') + '</div>';
+    }
+    if (!html) html = '<span style="color:var(--text-3)">✓ Wiki looks healthy — no issues found.</span>';
+    lintEl.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong>Wiki Health Report</strong><button class="btn-sec btn-sm" onclick="document.getElementById('wikiLintResults').style.display='none'">✕</button></div>` + html;
+  } catch(e) {
+    lintEl.innerHTML = 'Lint failed: ' + e.message;
+  }
+}
+
+// ── Activity log ─────────────────────────────────────────────────────────────
+async function wikiLoadLog() {
+  try {
+    const r = await fetch('/api/wiki/log?limit=20');
+    if (!r.ok) return;
+    const entries = await r.json();
+    const logEl = document.getElementById('wikiLogList');
+    if (!logEl) return;
+    if (!entries || entries.length === 0) {
+      logEl.innerHTML = '<div class="wiki-log-entry">No activity yet</div>';
+      return;
+    }
+    logEl.innerHTML = entries.map(e => {
+      const touched = (e.pages_touched || []).length;
+      const ref     = e.source_ref?.chapter_name || e.source_ref?.question || '';
+      const ts      = e.created_at ? new Date(e.created_at).toLocaleDateString() : '';
+      return `<div class="wiki-log-entry"><span>${e.op}</span> ${ref} — ${touched} pages · ${ts}</div>`;
+    }).join('');
+  } catch(_) {}
+}
+
+// ── Graph view ───────────────────────────────────────────────────────────────
+let _wikiGraphRendered = false;
+
+async function wikiToggleGraph() {
+  _wikiGraphMode = !_wikiGraphMode;
+  const graphSvg = document.getElementById('wikiGraphSvg');
+  const body     = document.getElementById('wikiBody');
+  const header   = document.getElementById('wikiCenterHeader');
+  const btn      = document.getElementById('wikiGraphBtn');
+
+  if (_wikiGraphMode) {
+    body.style.display    = 'none';
+    header.style.display  = 'none';
+    graphSvg.style.display = '';
+    btn.textContent = 'Pages';
+    if (!_wikiGraphRendered) await wikiRenderGraph();
+  } else {
+    graphSvg.style.display = 'none';
+    body.style.display    = '';
+    if (_wikiCurrentSlug) header.style.display = 'flex';
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Graph`;
+  }
+}
+
+async function wikiRenderGraph() {
+  const svg = document.getElementById('wikiGraphSvg');
+  d3.select(svg).selectAll('*').remove();
+
+  let graph;
+  try {
+    const r = await fetch('/api/wiki/graph');
+    if (!r.ok) return;
+    graph = await r.json();
+  } catch(_) { return; }
+
+  if (!graph.nodes || graph.nodes.length === 0) {
+    d3.select(svg).append('text')
+      .attr('x', '50%').attr('y', '50%').attr('text-anchor', 'middle')
+      .attr('fill', 'var(--text-3)').attr('font-size', 13)
+      .text('No pages yet');
+    return;
+  }
+
+  const typeColors = {
+    entity: '#c9a84c', concept: '#6a9fd8', theme: '#8fc98e',
+    book: '#d88a6a', overview: '#a88ecf', query_answer: '#8ecfcf',
+    index: '#aaa', log: '#aaa'
+  };
+
+  const W = svg.clientWidth  || 600;
+  const H = svg.clientHeight || 400;
+  const g = d3.select(svg).append('g');
+  d3.select(svg).call(d3.zoom().scaleExtent([0.3,4]).on('zoom', ev => g.attr('transform', ev.transform)));
+
+  const nodeById = {};
+  graph.nodes.forEach(n => { nodeById[n.id] = n; });
+  const edges = graph.edges
+    .map(e => ({ source: nodeById[e.source], target: nodeById[e.target] }))
+    .filter(e => e.source && e.target);
+
+  d3.select(svg).append('defs').append('marker')
+    .attr('id','wiki-arrow').attr('viewBox','0 -5 10 10')
+    .attr('refX',20).attr('refY',0)
+    .attr('markerWidth',5).attr('markerHeight',5)
+    .attr('orient','auto')
+    .append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#4a4030');
+
+  const sim = d3.forceSimulation(graph.nodes)
+    .force('link',      d3.forceLink(edges).id(n=>n.id).distance(100).strength(0.5))
+    .force('charge',    d3.forceManyBody().strength(-200))
+    .force('center',    d3.forceCenter(W/2, H/2))
+    .force('collision', d3.forceCollide(22));
+
+  const link = g.append('g').selectAll('line')
+    .data(edges).join('line')
+    .attr('stroke','#4a4030').attr('stroke-opacity',0.5)
+    .attr('stroke-width',1.5).attr('marker-end','url(#wiki-arrow)');
+
+  const node = g.append('g').selectAll('g')
+    .data(graph.nodes).join('g')
+    .attr('cursor','pointer')
+    .on('click', (_, d) => { _wikiGraphMode=false; wikiToggleGraph(); wikiOpenPage(d.id); });
+
+  node.append('circle').attr('r',10)
+    .attr('fill', d => typeColors[d.type] || '#888')
+    .attr('stroke','var(--bg)').attr('stroke-width',2);
+
+  node.append('text')
+    .attr('dy',20).attr('text-anchor','middle')
+    .attr('font-size',9).attr('fill','var(--text-3)')
+    .text(d => d.title.slice(0,20));
+
+  sim.on('tick', () => {
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+        .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('transform', d=>`translate(${d.x},${d.y})`);
+  });
+
+  _wikiGraphRendered = true;
+}
+
+// ── Show "+ Wiki" button after distill succeeds ──────────────────────────────
+// hook called from distillIdeas() success path (see below)
 
 // ═══════════════════════════════════════
 // START
