@@ -2638,6 +2638,11 @@ body::after {
 /* ═══════════════════════════════════════
    WIKI
 ═══════════════════════════════════════ */
+/* Hide flanking panels when wiki tab is active so it fills the full viewport */
+.app.wiki-active .sidebar     { display: none; }
+.app.wiki-active .right-panel { display: none; }
+.app.wiki-active .center-panel { border-right: none; }
+
 .wiki-layout {
   display: flex;
   height: 100%;
@@ -6296,6 +6301,7 @@ function switchTab(tab) {
   document.getElementById(`pane-${tab}`).classList.add('active');
   document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
   activeTab = tab;
+  document.querySelector('.app').classList.toggle('wiki-active', tab === 'wiki');
   if (tab === 'ideas' && CURRENT_BOOK_ID && _ideasLoadedFor !== CURRENT_BOOK_ID) {
     loadBroadIdeas(CURRENT_BOOK_ID);
   }
