@@ -1,10 +1,49 @@
 const express  = require('express');
 const router   = express.Router();
 const supabase = require('../services/supabase');
-const { ingestSourceToWiki, queryWiki, lintWiki } = require('../services/openai');
+const { ingestSourceToWiki, queryWiki, questionAssumptionsAgainstWiki, lintWiki } = require('../services/openai');
 const { parseLinks, diffLinkSet } = require('../services/wikiLinks');
 
 // ─── helpers ───────────────────────────────────────────────────────────────
+
+function parseDateRange(query) {
+  const days = Math.min(Math.max(parseInt(query.days || '30', 10) || 30, 1), 365);
+  const from = query.from
+    ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(query.from) ? `${query.from}T00:00:00.000Z` : query.from)
+    : null;
+  const to = query.to
+    ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(query.to) ? `${query.to}T23:59:59.999Z` : query.to)
+    : new Date();
+  const computedFrom = from || new Date(to.getTime() - days * 86400000);
+
+  if (Number.isNaN(computedFrom.getTime()) || Number.isNaN(to.getTime())) return null;
+
+  return {
+    days,
+    from: computedFrom.toISOString(),
+    to: to.toISOString()
+  };
+}
+
+function scorePage(page, q) {
+  if (!q) return 1;
+  const query = q.toLowerCase();
+  const title = (page.title || '').toLowerCase();
+  const slug = (page.slug || '').toLowerCase();
+  const body = (page.markdown_content || '').toLowerCase();
+  return (title.includes(query) ? 5 : 0) +
+         (slug.includes(query) ? 3 : 0) +
+         (body.includes(query) ? 1 : 0);
+}
+
+function pageSnippet(page, q) {
+  const body = (page.markdown_content || '').replace(/\s+/g, ' ').trim();
+  if (!body) return '';
+  if (!q) return body.slice(0, 180);
+  const idx = body.toLowerCase().indexOf(q.toLowerCase());
+  const start = Math.max(0, idx - 70);
+  return body.slice(start, start + 220);
+}
 
 async function upsertPageAndLinks(page, supabaseClient) {
   const { slug, title, page_type, markdown_content, metadata } = page;
@@ -401,6 +440,172 @@ router.post('/ingest/backfill', async (req, res) => {
     }
     console.log('[wiki backfill] all books processed');
   })();
+});
+
+// ─── GET /api/wiki/search — time-bounded page search ─────────────────────────
+router.get('/search', async (req, res) => {
+  const range = parseDateRange(req.query);
+  if (!range) return res.status(400).json({ error: 'Invalid date range' });
+
+  const q = (req.query.q || '').trim();
+  const type = (req.query.type || '').trim();
+
+  let query = supabase
+    .from('wiki_pages')
+    .select('slug, title, page_type, markdown_content, metadata, updated_at, created_at')
+    .gte('updated_at', range.from)
+    .lte('updated_at', range.to)
+    .order('updated_at', { ascending: false })
+    .limit(300);
+
+  if (type) query = query.eq('page_type', type);
+
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+
+  const results = (data || [])
+    .map(p => ({ ...p, score: scorePage(p, q), snippet: pageSnippet(p, q) }))
+    .filter(p => p.score > 0)
+    .sort((a, b) => b.score - a.score || new Date(b.updated_at) - new Date(a.updated_at))
+    .slice(0, 40)
+    .map(({ markdown_content, ...p }) => p);
+
+  res.json({ ...range, q, results });
+});
+
+// ─── GET /api/wiki/timeline — activity visualization data ────────────────────
+router.get('/timeline', async (req, res) => {
+  const range = parseDateRange(req.query);
+  if (!range) return res.status(400).json({ error: 'Invalid date range' });
+
+  const [{ data: logs, error: logErr }, { data: pages, error: pageErr }] = await Promise.all([
+    supabase
+      .from('wiki_ingest_log')
+      .select('op, pages_touched, created_at')
+      .gte('created_at', range.from)
+      .lte('created_at', range.to)
+      .order('created_at', { ascending: true })
+      .limit(500),
+    supabase
+      .from('wiki_pages')
+      .select('slug, title, page_type, updated_at, created_at')
+      .gte('updated_at', range.from)
+      .lte('updated_at', range.to)
+      .order('updated_at', { ascending: false })
+      .limit(500)
+  ]);
+
+  if (logErr) return res.status(500).json({ error: logErr.message });
+  if (pageErr) return res.status(500).json({ error: pageErr.message });
+
+  const buckets = {};
+  const ensureBucket = (iso) => {
+    const day = iso.slice(0, 10);
+    if (!buckets[day]) buckets[day] = { date: day, events: 0, pages_touched: 0, page_updates: 0 };
+    return buckets[day];
+  };
+
+  (logs || []).forEach(log => {
+    const bucket = ensureBucket(log.created_at);
+    bucket.events += 1;
+    bucket.pages_touched += (log.pages_touched || []).length;
+  });
+
+  (pages || []).forEach(page => {
+    const bucket = ensureBucket(page.updated_at || page.created_at);
+    bucket.page_updates += 1;
+  });
+
+  const type_counts = {};
+  (pages || []).forEach(p => {
+    type_counts[p.page_type] = (type_counts[p.page_type] || 0) + 1;
+  });
+
+  res.json({
+    ...range,
+    activity: Object.values(buckets).sort((a, b) => a.date.localeCompare(b.date)),
+    type_counts,
+    recent_pages: (pages || []).slice(0, 12),
+    events: logs || []
+  });
+});
+
+// ─── POST /api/wiki/assumptions — question recent writing ────────────────────
+router.post('/assumptions', async (req, res) => {
+  const range = parseDateRange(req.body || {});
+  if (!range) return res.status(400).json({ error: 'Invalid date range' });
+
+  const [{ data: notes }, { data: essays }, { data: wikiPages }] = await Promise.all([
+    supabase
+      .from('notes')
+      .select('book_id, chapter_name, content, updated_at')
+      .gte('updated_at', range.from)
+      .lte('updated_at', range.to)
+      .order('updated_at', { ascending: false })
+      .limit(20),
+    supabase
+      .from('essays')
+      .select('book_id, title, content, updated_at')
+      .gte('updated_at', range.from)
+      .lte('updated_at', range.to)
+      .order('updated_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('wiki_pages')
+      .select('slug, title, page_type, markdown_content, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(24)
+  ]);
+
+  const bookIds = [...new Set([...(notes || []), ...(essays || [])].map(x => x.book_id).filter(Boolean))];
+  let bookMap = {};
+  if (bookIds.length > 0) {
+    const { data: books } = await supabase.from('books').select('id, title').in('id', bookIds);
+    (books || []).forEach(b => { bookMap[b.id] = b.title; });
+  }
+
+  const recentWriting = [
+    ...(essays || []).map(e => ({
+      source: 'essay',
+      title: e.title || 'Untitled essay',
+      content: e.content || '',
+      updated_at: e.updated_at
+    })),
+    ...(notes || []).map(n => ({
+      source: 'notes',
+      title: `${bookMap[n.book_id] || 'Book'} — ${n.chapter_name || 'Chapter notes'}`,
+      content: n.content || '',
+      updated_at: n.updated_at
+    }))
+  ].filter(w => w.content && w.content.trim().length > 40).slice(0, 16);
+
+  if (recentWriting.length === 0) {
+    return res.status(400).json({ error: `No substantial writing found in the last ${range.days} days` });
+  }
+  if (!wikiPages || wikiPages.length === 0) {
+    return res.status(400).json({ error: 'No wiki pages available to audit against' });
+  }
+
+  try {
+    const audit = await questionAssumptionsAgainstWiki({
+      recentWriting,
+      wikiPages,
+      days: range.days
+    });
+
+    await supabase.from('wiki_ingest_log').insert([{
+      op: 'query',
+      source_ref: { kind: 'assumption_audit', days: range.days },
+      pages_touched: (audit.assumptions || []).flatMap(a =>
+        (a.cited_slugs || []).map(slug => ({ slug, action: 'audited' }))
+      )
+    }]);
+
+    res.json({ ...range, writing_count: recentWriting.length, ...audit });
+  } catch (err) {
+    console.error('[wiki assumptions] failed:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ─── POST /api/wiki/query ────────────────────────────────────────────────────

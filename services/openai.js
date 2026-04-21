@@ -1355,6 +1355,73 @@ Return ONLY valid JSON:
 }
 
 /**
+ * Question recent writing against the user's wiki.
+ * Returns a structured audit of hidden assumptions, tensions, and missing pages.
+ */
+async function questionAssumptionsAgainstWiki({ recentWriting = [], wikiPages = [], days = 30 }) {
+  const writingText = recentWriting
+    .map((w, i) => `### Writing ${i + 1}: ${w.title || w.source || 'Untitled'}\n${(w.content || '').slice(0, 1200)}`)
+    .join('\n\n---\n\n');
+
+  const wikiText = wikiPages
+    .map(p => `### [[${p.slug}]] — ${p.title} (${p.page_type})\n${(p.markdown_content || '').slice(0, 700)}`)
+    .join('\n\n---\n\n');
+
+  const systemPrompt = `You are an assumption-audit engine for a personal knowledge wiki.
+Your job is to compare the user's recent writing against their own wiki and identify where the writing rests on claims the wiki complicates, contradicts, or fails to support.
+
+Rules:
+- Use only the provided writing and wiki pages.
+- Be rigorous but constructive: each issue should become a better writing question.
+- Prefer specific tensions over generic critique.
+- Cite wiki pages by slug when relevant.
+
+Return ONLY valid JSON:
+{
+  "summary": "2-3 sentence overview of what the recent writing is assuming.",
+  "assumptions": [
+    {
+      "claim": "The assumed claim or premise",
+      "why_it_matters": "Why this assumption affects the argument",
+      "wiki_tension": "What the wiki supports, complicates, or contradicts",
+      "cited_slugs": ["slug-a", "slug-b"],
+      "challenge_question": "A concrete question the writer should answer"
+    }
+  ],
+  "missing_pages": [
+    { "title": "Page title", "slug": "suggested-slug", "rationale": "Why this page would strengthen the wiki" }
+  ],
+  "next_revision": "The most important revision move to make next."
+}`;
+
+  const userPrompt = `Audit window: last ${days} days
+
+## Recent Writing
+${writingText || 'No recent writing was provided.'}
+
+## Wiki Pages
+${wikiText || 'No wiki pages were provided.'}
+
+Question the assumptions in the recent writing against the wiki.`;
+
+  const response = await openai.chat.completions.create({
+    model:           'gpt-4o',
+    messages:        [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+    response_format: { type: 'json_object' },
+    temperature:     0.45,
+    max_tokens:      1800
+  });
+
+  const raw = JSON.parse(response.choices[0].message.content);
+  return {
+    summary:       raw.summary || '',
+    assumptions:   Array.isArray(raw.assumptions) ? raw.assumptions : [],
+    missing_pages: Array.isArray(raw.missing_pages) ? raw.missing_pages : [],
+    next_revision: raw.next_revision || ''
+  };
+}
+
+/**
  * Health-check the wiki: find contradictions, orphans, stale claims, missing entities.
  * Input: pageDigests = [{slug, title, type, first_300, claim_count, is_orphan}]
  */
@@ -1398,4 +1465,4 @@ Return ONLY valid JSON:
   };
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, lintWiki };
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, questionAssumptionsAgainstWiki, lintWiki };

@@ -645,8 +645,10 @@ body::after {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
-  position: relative;
-  inset: auto;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* ═══════════════════════════════════════
@@ -2641,18 +2643,24 @@ body::after {
 /* Hide flanking panels when wiki tab is active so it fills the full viewport */
 .app.wiki-active .sidebar     { display: none; }
 .app.wiki-active .right-panel { display: none; }
-.app.wiki-active .center-panel { border-right: none; }
+.app.wiki-active .center-panel {
+  flex: 1 1 100%;
+  width: 100vw;
+  min-width: 0;
+  border-right: none;
+}
 
 .wiki-layout {
   display: flex;
   height: 100%;
   gap: 0;
+  min-width: 0;
   overflow: hidden;
 }
 .wiki-left {
-  width: 10%;
-  min-width: 10%;
-  max-width: 10%;
+  width: clamp(280px, 22vw, 380px);
+  min-width: 280px;
+  max-width: 380px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   display: flex;
@@ -2691,8 +2699,9 @@ body::after {
 }
 .wiki-tree-item {
   display: block;
-  padding: 5px 14px;
-  font-size: 12px;
+  padding: 7px 16px;
+  font-size: 12.5px;
+  line-height: 1.35;
   color: var(--text-2);
   cursor: pointer;
   border-left: 2px solid transparent;
@@ -2705,11 +2714,12 @@ body::after {
 .wiki-tree-item.active { border-left-color: var(--amber); color: var(--amber); background: rgba(201,168,76,.07); }
 .wiki-tree-empty { padding: 20px 14px; color: var(--text-3); font-size: 12px; }
 .wiki-center {
-  width: 80%;
-  flex: 0 0 80%;
+  flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 .wiki-center-header {
   display: flex;
@@ -2731,10 +2741,12 @@ body::after {
 .wiki-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 32px;
+  padding: 32px 44px;
 }
 .wiki-md {
   width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
 }
 .wiki-body.edit-mode { display: flex; flex-direction: column; }
 .wiki-body textarea {
@@ -2766,7 +2778,7 @@ body::after {
 .wiki-md code { background: var(--bg-card); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
 a.wiki-link { color: var(--amber); text-decoration: underline; text-decoration-style: dotted; cursor: pointer; }
 a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointer; }
-.wiki-empty-state { text-align: center; padding: 60px 24px; color: var(--text-3); }
+.wiki-empty-state { text-align: center; padding: 90px 24px; color: var(--text-3); }
 .wiki-empty-state svg { opacity: 0.25; margin-bottom: 12px; }
 .wiki-empty-state .wiki-empty-title { font-size: 15px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
 .wiki-empty-state .wiki-empty-desc { font-size: 13px; }
@@ -2863,6 +2875,106 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 .wiki-save-label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-3); margin-top: 8px; cursor: pointer; }
 /* wiki header action buttons */
 .wiki-actions { display: flex; gap: 6px; }
+.wiki-gutter { display: none; }
+.wiki-temporal-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+.wiki-temporal-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-right: 2px;
+}
+.wiki-date-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-2);
+  font-size: 12px;
+  padding: 6px 8px;
+  outline: none;
+}
+.wiki-date-input:focus { border-color: var(--amber); color: var(--text-1); }
+.wiki-temporal-panel {
+  display: none;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(201,168,76,.045), rgba(201,168,76,.018));
+  padding: 16px 18px;
+  max-height: 320px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.wiki-temporal-panel.open { display: block; }
+.wiki-temporal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.wiki-temporal-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.wiki-temporal-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+.wiki-timeline {
+  display: flex;
+  align-items: end;
+  gap: 5px;
+  min-height: 76px;
+  padding: 10px 0 4px;
+}
+.wiki-timeline-bar {
+  flex: 1;
+  min-width: 8px;
+  border-radius: 5px 5px 2px 2px;
+  background: linear-gradient(180deg, var(--amber), rgba(201,168,76,.25));
+  border: 1px solid rgba(201,168,76,.25);
+  cursor: pointer;
+}
+.wiki-result-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+.wiki-result-card {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: var(--ease);
+}
+.wiki-result-card:hover { border-color: var(--amber-dk); background: var(--bg-card-hover); }
+.wiki-result-title { font-size: 12.5px; font-weight: 600; color: var(--text-1); margin-bottom: 4px; }
+.wiki-result-meta { font-size: 10.5px; color: var(--text-3); margin-bottom: 6px; }
+.wiki-result-snippet { font-size: 11.5px; line-height: 1.5; color: var(--text-2); }
+.wiki-audit-grid {
+  display: grid;
+  gap: 9px;
+}
+.wiki-audit-card {
+  border: 1px solid rgba(201,168,76,.18);
+  background: rgba(255,255,255,.025);
+  border-radius: 9px;
+  padding: 11px 12px;
+}
+.wiki-audit-claim { font-size: 12.5px; color: var(--text-1); font-weight: 650; margin-bottom: 5px; }
+.wiki-audit-text { font-size: 11.8px; color: var(--text-2); line-height: 1.55; margin-top: 5px; }
 /* backfill progress */
 .wiki-progress {
   font-size: 11px;
@@ -5136,6 +5248,18 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
           </div>
         </div>
 
+        <!-- temporal controls inspired by the /last30days + Claudopedia workflow -->
+        <div class="wiki-temporal-bar">
+          <span class="wiki-temporal-label">Time Lens</span>
+          <button class="btn-sec btn-sm" onclick="wikiSetRange(30)">Last 30 days</button>
+          <button class="btn-sec btn-sm" onclick="wikiSetRange(90)">Last 90 days</button>
+          <input class="wiki-date-input" id="wikiFromDate" type="date" title="From date">
+          <input class="wiki-date-input" id="wikiToDate" type="date" title="To date">
+          <button class="btn-sec btn-sm" onclick="wikiRunTemporalSearch()">Search Window</button>
+          <button class="btn-sec btn-sm" onclick="wikiShowTimeline()">Timeline</button>
+          <button class="btn-sec btn-sm" id="wikiAuditBtn" onclick="wikiRunAssumptionAudit()">Question Assumptions</button>
+        </div>
+
         <!-- query answer box (hidden until query runs) -->
         <div id="wikiAnswerBox" class="wiki-answer-box" style="display:none">
           <div id="wikiAnswerConfidence" class="wiki-answer-confidence"></div>
@@ -5152,7 +5276,10 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
         <!-- lint results modal-style block -->
         <div id="wikiLintResults" style="display:none;padding:12px 16px;background:rgba(201,168,76,.04);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2);max-height:200px;overflow-y:auto;"></div>
 
-        <!-- two-pane: narrow left sidebar + full-width center -->
+        <!-- temporal search, timeline, and assumption audit output -->
+        <div id="wikiTemporalPanel" class="wiki-temporal-panel"></div>
+
+        <!-- two-pane: readable left index + full-width center -->
         <div class="wiki-layout" style="flex:1;overflow:hidden;">
           <!-- left: tree + meta -->
           <div class="wiki-left">
@@ -5176,7 +5303,7 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
             </div>
           </div>
 
-          <!-- center: 80% reading area -->
+          <!-- center: reading area -->
           <div class="wiki-center">
             <div class="wiki-center-header" id="wikiCenterHeader" style="display:none">
               <div class="wiki-center-header-title" id="wikiPageTitle">—</div>
@@ -5193,8 +5320,7 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
             <svg id="wikiGraphSvg" style="display:none;position:absolute;inset:0;width:100%;height:100%;background:var(--bg)"></svg>
           </div>
 
-          <!-- right margin: 10% -->
-          <div style="width:10%;flex-shrink:0;"></div>
+          <div class="wiki-gutter"></div>
         </div>
       </div>
 
@@ -6322,6 +6448,7 @@ function switchTab(tab) {
     loadConceptMapsForBook();
   }
   if (tab === 'wiki') {
+    wikiEnsureRange();
     wikiLoadPages();
     wikiLoadLog();
   }
@@ -10107,6 +10234,172 @@ async function wikiQuery() {
 }
 
 // ── Backfill ─────────────────────────────────────────────────────────────────
+function wikiDateValue(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+function wikiEnsureRange() {
+  const fromEl = document.getElementById('wikiFromDate');
+  const toEl   = document.getElementById('wikiToDate');
+  if (!fromEl || !toEl) return;
+  if (!fromEl.value || !toEl.value) wikiSetRange(30);
+}
+
+function wikiSetRange(days) {
+  const to = new Date();
+  const from = new Date(to.getTime() - days * 86400000);
+  document.getElementById('wikiFromDate').value = wikiDateValue(from);
+  document.getElementById('wikiToDate').value   = wikiDateValue(to);
+}
+
+function wikiRangeParams() {
+  wikiEnsureRange();
+  const from = document.getElementById('wikiFromDate')?.value || '';
+  const to   = document.getElementById('wikiToDate')?.value || '';
+  const days = from && to
+    ? Math.max(1, Math.round((new Date(to) - new Date(from)) / 86400000))
+    : 30;
+  return { from, to, days };
+}
+
+function wikiOpenTemporalPanel(title, sub, bodyHtml) {
+  const panel = document.getElementById('wikiTemporalPanel');
+  panel.classList.add('open');
+  panel.innerHTML = `
+    <div class="wiki-temporal-head">
+      <div>
+        <div class="wiki-temporal-title">${escapeHtml(title)}</div>
+        ${sub ? `<div class="wiki-temporal-sub">${escapeHtml(sub)}</div>` : ''}
+      </div>
+      <button class="btn-sec btn-sm" onclick="document.getElementById('wikiTemporalPanel').classList.remove('open')">Close</button>
+    </div>
+    ${bodyHtml}
+  `;
+}
+
+async function wikiRunTemporalSearch() {
+  const { from, to, days } = wikiRangeParams();
+  const q = document.getElementById('wikiQueryInput')?.value.trim() || '';
+  wikiOpenTemporalPanel('Searching knowledge window', `Last ${days} days${q ? ' · ' + q : ''}`, '<em style="font-size:12px;color:var(--text-3)">Searching dated wiki pages…</em>');
+
+  try {
+    const params = new URLSearchParams({ from, to, q });
+    const r = await fetch(`/api/wiki/search?${params.toString()}`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Search failed');
+
+    const cards = (data.results || []).map(p => `
+      <div class="wiki-result-card" onclick="wikiOpenPage('${p.slug}')">
+        <div class="wiki-result-title">${escapeHtml(p.title || p.slug)}</div>
+        <div class="wiki-result-meta">${escapeHtml(p.page_type || 'page')} · ${p.updated_at ? new Date(p.updated_at).toLocaleDateString() : ''}</div>
+        <div class="wiki-result-snippet">${escapeHtml(p.snippet || '')}</div>
+      </div>
+    `).join('');
+
+    wikiOpenTemporalPanel(
+      'Knowledge Window Search',
+      `${data.results?.length || 0} page(s) updated between ${from} and ${to}`,
+      cards ? `<div class="wiki-result-list">${cards}</div>` : '<div class="wiki-tree-empty">No pages matched this time window.</div>'
+    );
+  } catch(e) {
+    wikiOpenTemporalPanel('Knowledge Window Search', '', `<div class="wiki-tree-empty">Search failed: ${escapeHtml(e.message)}</div>`);
+  }
+}
+
+async function wikiShowTimeline() {
+  const { from, to, days } = wikiRangeParams();
+  wikiOpenTemporalPanel('Loading timeline', `Last ${days} days`, '<em style="font-size:12px;color:var(--text-3)">Building knowledge timeline…</em>');
+
+  try {
+    const params = new URLSearchParams({ from, to });
+    const r = await fetch(`/api/wiki/timeline?${params.toString()}`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Timeline failed');
+
+    const activity = data.activity || [];
+    const max = Math.max(...activity.map(d => d.pages_touched + d.page_updates), 1);
+    const bars = activity.map(d => {
+      const total = d.pages_touched + d.page_updates;
+      const h = Math.max(8, Math.round((total / max) * 72));
+      const label = `${d.date}: ${total} wiki touch(es)`;
+      return `<div class="wiki-timeline-bar" title="${escapeHtml(label)}" style="height:${h}px"></div>`;
+    }).join('');
+
+    const typeChips = Object.entries(data.type_counts || {})
+      .sort((a, b) => b[1] - a[1])
+      .map(([type, n]) => `<span class="wiki-cite-chip">${escapeHtml(type)} · ${n}</span>`)
+      .join('');
+
+    const recent = (data.recent_pages || []).map(p => `
+      <div class="wiki-result-card" onclick="wikiOpenPage('${p.slug}')">
+        <div class="wiki-result-title">${escapeHtml(p.title || p.slug)}</div>
+        <div class="wiki-result-meta">${escapeHtml(p.page_type || '')} · ${p.updated_at ? new Date(p.updated_at).toLocaleDateString() : ''}</div>
+      </div>
+    `).join('');
+
+    wikiOpenTemporalPanel(
+      'Knowledge Timeline',
+      `${activity.length} active day(s) between ${from} and ${to}`,
+      `
+        <div class="wiki-timeline">${bars || '<div class="wiki-tree-empty">No wiki activity in this window.</div>'}</div>
+        <div class="wiki-cite-chips" style="margin:8px 0 12px">${typeChips}</div>
+        <div class="wiki-result-list">${recent}</div>
+      `
+    );
+  } catch(e) {
+    wikiOpenTemporalPanel('Knowledge Timeline', '', `<div class="wiki-tree-empty">Timeline failed: ${escapeHtml(e.message)}</div>`);
+  }
+}
+
+async function wikiRunAssumptionAudit() {
+  const { from, to, days } = wikiRangeParams();
+  const btn = document.getElementById('wikiAuditBtn');
+  btn.disabled = true;
+  btn.textContent = 'Auditing…';
+  wikiOpenTemporalPanel('Questioning assumptions', `Auditing recent writing from the last ${days} days`, '<em style="font-size:12px;color:var(--text-3)">Comparing recent notes and essays against your wiki…</em>');
+
+  try {
+    const r = await fetch('/api/wiki/assumptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to, days })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Audit failed');
+
+    const assumptions = (data.assumptions || []).map(a => `
+      <div class="wiki-audit-card">
+        <div class="wiki-audit-claim">${escapeHtml(a.claim || 'Assumption')}</div>
+        <div class="wiki-audit-text"><strong>Why it matters:</strong> ${escapeHtml(a.why_it_matters || '')}</div>
+        <div class="wiki-audit-text"><strong>Wiki tension:</strong> ${escapeHtml(a.wiki_tension || '')}</div>
+        <div class="wiki-cite-chips">${(a.cited_slugs || []).map(s => `<span class="wiki-cite-chip" onclick="wikiOpenPage('${s}')">${escapeHtml(s)}</span>`).join('')}</div>
+        <div class="wiki-audit-text"><strong>Question:</strong> ${escapeHtml(a.challenge_question || '')}</div>
+      </div>
+    `).join('');
+
+    const missing = (data.missing_pages || []).map(p =>
+      `<span class="wiki-cite-chip" title="${escapeHtml(p.rationale || '')}">+ ${escapeHtml(p.title || p.slug || 'Missing page')}</span>`
+    ).join('');
+
+    wikiOpenTemporalPanel(
+      'Question Your Assumptions',
+      `${data.writing_count || 0} recent writing item(s) audited`,
+      `
+        <div class="wiki-audit-text" style="margin-bottom:12px">${escapeHtml(data.summary || '')}</div>
+        <div class="wiki-audit-grid">${assumptions || '<div class="wiki-tree-empty">No major unsupported assumptions found.</div>'}</div>
+        ${missing ? `<div class="wiki-temporal-sub" style="margin-top:12px">Suggested missing pages</div><div class="wiki-cite-chips">${missing}</div>` : ''}
+        ${data.next_revision ? `<div class="wiki-audit-card" style="margin-top:12px"><div class="wiki-audit-claim">Next revision move</div><div class="wiki-audit-text">${escapeHtml(data.next_revision)}</div></div>` : ''}
+      `
+    );
+    await wikiLoadLog();
+  } catch(e) {
+    wikiOpenTemporalPanel('Question Your Assumptions', '', `<div class="wiki-tree-empty">Audit failed: ${escapeHtml(e.message)}</div>`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Question Assumptions';
+  }
+}
+
 async function wikiBackfill() {
   if (!confirm('Rebuild wiki from your entire library? This will process every book and chapter, creating and updating wiki pages for all your notes. It may take a while and use some OpenAI credits.')) return;
 
