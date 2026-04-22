@@ -27,22 +27,94 @@ function parseDateRange(query) {
 
 function scorePage(page, q) {
   if (!q) return 1;
-  const query = q.toLowerCase();
+  const terms = queryTerms(q);
+  const query = normalizeSearchText(q);
   const title = (page.title || '').toLowerCase();
   const slug = (page.slug || '').toLowerCase();
   const body = (page.markdown_content || '').toLowerCase();
-  return (title.includes(query) ? 5 : 0) +
-         (slug.includes(query) ? 3 : 0) +
-         (body.includes(query) ? 1 : 0);
+  return (title.includes(query) ? 8 : 0) +
+         (slug.includes(query) ? 6 : 0) +
+         terms.reduce((score, term) => score +
+           (title.includes(term) ? 5 : 0) +
+           (slug.includes(term) ? 4 : 0) +
+           (body.includes(term) ? 1 : 0), 0);
 }
 
 function pageSnippet(page, q) {
   const body = (page.markdown_content || '').replace(/\s+/g, ' ').trim();
   if (!body) return '';
-  if (!q) return body.slice(0, 180);
-  const idx = body.toLowerCase().indexOf(q.toLowerCase());
+  const terms = queryTerms(q);
+  if (!q || terms.length === 0) return body.slice(0, 180);
+  const lower = body.toLowerCase();
+  const indexes = terms.map(term => lower.indexOf(term)).filter(idx => idx >= 0);
+  const idx = indexes.length ? Math.min(...indexes) : -1;
   const start = Math.max(0, idx - 70);
   return body.slice(start, start + 220);
+}
+
+function normalizeSearchText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function queryTerms(value) {
+  const stopWords = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'can', 'could', 'do', 'does', 'for', 'from', 'how', 'i', 'in', 'is', 'it', 'me', 'of', 'on', 'or', 'should', 'that', 'the', 'this', 'to', 'was', 'what', 'when', 'where', 'which', 'who', 'why', 'with']);
+  return [...new Set(normalizeSearchText(value)
+    .split(' ')
+    .map(term => term.replace(/^-+|-+$/g, ''))
+    .filter(term => term.length > 2 && !stopWords.has(term)))];
+}
+
+function candidateScore(page, question) {
+  const terms = queryTerms(question);
+  const normalizedQuestion = normalizeSearchText(question);
+  const title = normalizeSearchText(page.title);
+  const slug = normalizeSearchText((page.slug || '').replace(/-/g, ' '));
+  const body = normalizeSearchText(page.markdown_content);
+
+  let score = 0;
+  if (title && normalizedQuestion.includes(title)) score += 16;
+  if (slug && normalizedQuestion.includes(slug)) score += 14;
+
+  terms.forEach(term => {
+    if (title === term || slug === term) score += 14;
+    else {
+      if (title.includes(term)) score += 8;
+      if (slug.includes(term)) score += 7;
+    }
+    if (body.includes(term)) score += 2;
+  });
+
+  return score;
+}
+
+function relevantSnippet(page, question, length = 1200) {
+  const body = (page.markdown_content || '').replace(/\s+/g, ' ').trim();
+  if (!body) return '';
+
+  const terms = queryTerms(question);
+  const lower = body.toLowerCase();
+  const indexes = terms.map(term => lower.indexOf(term)).filter(idx => idx >= 0);
+  if (indexes.length === 0) return body.slice(0, length);
+
+  const start = Math.max(0, Math.min(...indexes) - Math.floor(length / 4));
+  return body.slice(start, start + length);
+}
+
+function clampScore(value) {
+  return Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+}
+
+function normalizeWikiSlug(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/['"]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
 }
 
 async function upsertPageAndLinks(page, supabaseClient) {
@@ -613,27 +685,30 @@ router.post('/query', async (req, res) => {
   const { question, persist = false } = req.body;
   if (!question) return res.status(400).json({ error: 'question required' });
 
-  // pick top 8 candidate pages via substring match on title + body
-  const q = question.toLowerCase();
+  // Pick candidate pages via term-aware lexical retrieval. Whole-question substring
+  // matching misses simple asks like "What is neoliberalism?" against "Neoliberalism".
   const { data: allPages } = await supabase
     .from('wiki_pages')
-    .select('slug, title, page_type, markdown_content')
-    .limit(300);
+    .select('slug, title, page_type, markdown_content, updated_at')
+    .limit(1000);
 
   const candidates = (allPages || [])
     .map(p => ({
       ...p,
-      score: (p.title.toLowerCase().includes(q) ? 3 : 0) +
-             (p.markdown_content.toLowerCase().includes(q) ? 1 : 0)
+      score: candidateScore(p, question),
+      matched_snippet: relevantSnippet(p, question)
     }))
     .filter(p => p.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
+    .sort((a, b) => b.score - a.score || new Date(b.updated_at || 0) - new Date(a.updated_at || 0))
+    .slice(0, 12);
 
   // fall back to most-recently-updated if no keyword match
   const pagesToSearch = candidates.length > 0
     ? candidates
-    : (allPages || []).slice(0, 8);
+    : (allPages || [])
+      .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))
+      .slice(0, 8)
+      .map(p => ({ ...p, score: 0, matched_snippet: relevantSnippet(p, question) }));
 
   let result;
   try {
@@ -645,18 +720,22 @@ router.post('/query', async (req, res) => {
 
   await supabase.from('wiki_ingest_log').insert([{
     op: 'query',
-    source_ref: { question },
+    source_ref: {
+      question,
+      candidate_count: pagesToSearch.length,
+      top_candidates: pagesToSearch.slice(0, 5).map(p => ({ slug: p.slug, score: p.score || 0 }))
+    },
     pages_touched: (result.cited_slugs || []).map(s => ({ slug: s, action: 'read' }))
   }]);
 
-  if (persist && result.confidence === 'high' && result.answer) {
+  if (persist && result.answer) {
     const slug = `query-${Date.now()}`;
     await upsertPageAndLinks({
       slug,
       title:            `Q: ${question.slice(0, 80)}`,
       page_type:        'query_answer',
       markdown_content: `# ${question}\n\n${result.answer}\n\n---\n*Cited pages: ${(result.cited_slugs || []).map(s => `[[${s}]]`).join(', ')}*`,
-      metadata:         { stale: false, user_edited: false }
+      metadata:         { stale: false, user_edited: false, confidence: result.confidence || 'low' }
     }, supabase);
     result.saved_slug = slug;
   }
@@ -668,27 +747,46 @@ router.post('/query', async (req, res) => {
 router.post('/lint', async (req, res) => {
   const { data: allPages } = await supabase
     .from('wiki_pages')
-    .select('id, slug, title, page_type, markdown_content');
+    .select('id, slug, title, page_type, markdown_content, metadata, updated_at');
 
   if (!allPages || allPages.length === 0) {
-    return res.json({ contradictions: [], orphans: [], stale_claims: [], missing_entities: [] });
+    return res.json({
+      health_score:      100,
+      executive_summary: 'The wiki has no pages to audit yet.',
+      contradictions:    [],
+      orphans:           [],
+      stale_claims:      [],
+      missing_entities:  [],
+      maintenance_plan:  [],
+      structural:        { total_pages: 0, total_links: 0, orphan_count: 0, stale_count: 0, missing_count: 0, contradiction_count: 0, health_score: 100 }
+    });
   }
 
-  // find orphans (no inbound links, not special pages)
-  const { data: inboundLinks } = await supabase
+  // Gather link counts so the LLM sees enough topology to avoid noisy maintenance advice.
+  const { data: wikiLinks } = await supabase
     .from('wiki_links')
-    .select('target_slug');
+    .select('source_page_id, target_slug');
 
-  const linked = new Set((inboundLinks || []).map(l => l.target_slug));
-  const specialTypes = new Set(['index', 'log', 'overview']);
+  const linked = new Set((wikiLinks || []).map(l => l.target_slug));
+  const inboundCounts = new Map();
+  const outboundCounts = new Map();
+  const specialTypes = new Set(['index', 'log', 'overview', 'book', 'query_answer']);
+  (wikiLinks || []).forEach(l => {
+    inboundCounts.set(l.target_slug, (inboundCounts.get(l.target_slug) || 0) + 1);
+    outboundCounts.set(l.source_page_id, (outboundCounts.get(l.source_page_id) || 0) + 1);
+  });
 
   const pageDigests = allPages.map(p => ({
     slug:         p.slug,
     title:        p.title,
     type:         p.page_type,
-    first_300:    (p.markdown_content || '').slice(0, 300),
-    claim_count:  (p.markdown_content.match(/\*\*[^*]+\*\*/g) || []).length,
-    is_orphan:    !linked.has(p.slug) && !specialTypes.has(p.page_type)
+    first_300:    (p.markdown_content || '').slice(0, 500),
+    claim_count:  ((p.markdown_content || '').match(/\*\*[^*]+\*\*/g) || []).length,
+    inbound_count: inboundCounts.get(p.slug) || 0,
+    outbound_count: outboundCounts.get(p.id) || 0,
+    last_updated: p.updated_at,
+    is_stale:    !!p.metadata?.stale,
+    is_orphan:   !linked.has(p.slug) && !specialTypes.has(p.page_type)
   }));
 
   let lintResult;
@@ -699,30 +797,76 @@ router.post('/lint', async (req, res) => {
     return res.status(500).json({ error: e.message });
   }
 
-  // mark stale pages in DB
-  const staleSlugs = (lintResult.stale_claims || []).map(s => s.slug);
-  if (staleSlugs.length > 0) {
-    for (const slug of staleSlugs) {
-      const { data: pg } = await supabase.from('wiki_pages').select('metadata').eq('slug', slug).single();
-      if (pg) {
-        await supabase.from('wiki_pages')
-          .update({ metadata: { ...pg.metadata, stale: true } })
-          .eq('slug', slug);
-      }
+  lintResult.missing_entities = (lintResult.missing_entities || []).map(entity => ({
+    ...entity,
+    suggested_slug: normalizeWikiSlug(entity.suggested_slug || entity.name)
+  }));
+
+  // Mark stale pages in DB and clear old stale flags when the audit no longer reports them.
+  const staleSlugs = new Set((lintResult.stale_claims || []).map(s => s.slug).filter(Boolean));
+  for (const page of allPages) {
+    const shouldBeStale = staleSlugs.has(page.slug);
+    const isCurrentlyStale = !!page.metadata?.stale;
+    if (shouldBeStale !== isCurrentlyStale) {
+      await supabase.from('wiki_pages')
+        .update({ metadata: { ...(page.metadata || {}), stale: shouldBeStale } })
+        .eq('slug', page.slug);
     }
   }
 
   // append orphans from structural check
   const structuralOrphans = pageDigests.filter(p => p.is_orphan).map(p => p.slug);
   const allOrphans = [...new Set([...(lintResult.orphans || []), ...structuralOrphans])];
+  const contradictionCount = (lintResult.contradictions || []).length;
+  const missingCount = (lintResult.missing_entities || []).length;
+  const structuralScore = clampScore(100 -
+    allOrphans.length * 4 -
+    staleSlugs.size * 8 -
+    contradictionCount * 10 -
+    missingCount * 3);
+  const llmScore = typeof lintResult.health_score === 'number' ? lintResult.health_score : 100;
+  const healthScore = clampScore((structuralScore + llmScore) / 2);
+  const maintenancePlan = Array.isArray(lintResult.maintenance_plan) ? [...lintResult.maintenance_plan] : [];
+
+  if (structuralOrphans.length > 0) {
+    maintenancePlan.unshift({
+      action:      `Create inbound links or index placement for ${structuralOrphans.length} orphaned page${structuralOrphans.length === 1 ? '' : 's'}.`,
+      target_slug: structuralOrphans[0],
+      rationale:   'Orphaned pages are harder to rediscover during synthesis and question answering.',
+      priority:    structuralOrphans.length > 5 ? 'high' : 'medium'
+    });
+  }
+
+  const structural = {
+    total_pages:         allPages.length,
+    total_links:         (wikiLinks || []).length,
+    orphan_count:        allOrphans.length,
+    stale_count:         staleSlugs.size,
+    missing_count:       missingCount,
+    contradiction_count: contradictionCount,
+    health_score:        healthScore
+  };
 
   await supabase.from('wiki_ingest_log').insert([{
     op: 'lint',
-    source_ref: { pages_checked: allPages.length },
-    pages_touched: staleSlugs.map(s => ({ slug: s, action: 'stale' }))
+    source_ref: {
+      pages_checked: allPages.length,
+      health_score:  healthScore,
+      structural
+    },
+    pages_touched: [
+      ...[...staleSlugs].map(s => ({ slug: s, action: 'stale' })),
+      ...structuralOrphans.map(s => ({ slug: s, action: 'orphan' }))
+    ]
   }]);
 
-  res.json({ ...lintResult, orphans: allOrphans });
+  res.json({
+    ...lintResult,
+    health_score:     healthScore,
+    maintenance_plan: maintenancePlan,
+    orphans:          allOrphans,
+    structural
+  });
 });
 
 // ─── GET /api/wiki/log ───────────────────────────────────────────────────────

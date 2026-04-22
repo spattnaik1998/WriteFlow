@@ -1320,12 +1320,24 @@ Write the wiki page markdown.`;
  */
 async function queryWiki({ question, candidatePages = [] }) {
   const pagesText = candidatePages
-    .map(p => `### [[${p.slug}]] — ${p.title}\n${(p.markdown_content || '').slice(0, 800)}`)
+    .map(p => `### [[${p.slug}]] - ${p.title} (${p.page_type || 'page'})
+Retrieval score: ${p.score ?? 'n/a'}
+Relevant excerpt:
+${p.matched_snippet || (p.markdown_content || '').slice(0, 1200)}
+
+Opening context:
+${(p.markdown_content || '').slice(0, 1800)}`)
     .join('\n\n---\n\n');
 
   const systemPrompt = `You are a query engine over a personal knowledge wiki built from book notes.
 Answer questions using ONLY the provided wiki pages. If the pages don't contain enough information, say so and set confidence to "low".
 Do not fabricate information not present in the provided pages.
+
+Retrieval discipline:
+- If a page title, slug, or excerpt directly matches the user's requested concept, inspect that page carefully before saying information is missing.
+- If you cite a page, your answer must use information from that page. Do not cite pages while also saying the wiki contains no relevant information.
+- If the provided pages contain partial information, answer the partial question and clearly name what is missing.
+- Prefer a concise research-note answer: definition, why it matters, and any nuance present in the pages.
 
 Return ONLY valid JSON:
 {
@@ -1427,25 +1439,44 @@ Question the assumptions in the recent writing against the wiki.`;
  */
 async function lintWiki({ pageDigests = [] }) {
   if (pageDigests.length === 0) {
-    return { contradictions: [], orphans: [], stale_claims: [], missing_entities: [] };
+    return {
+      health_score:      100,
+      executive_summary: 'The wiki has no pages to audit yet.',
+      contradictions:    [],
+      orphans:           [],
+      stale_claims:      [],
+      missing_entities:  [],
+      maintenance_plan:  []
+    };
   }
 
   const digestText = pageDigests
-    .map(p => `[${p.type}] ${p.slug} — "${p.title}": ${p.first_300}`)
+    .map(p => `[${p.type}] ${p.slug} - "${p.title}"
+Updated: ${p.last_updated || 'unknown'}
+Inbound links: ${p.inbound_count || 0}; outbound links: ${p.outbound_count || 0}; orphan: ${p.is_orphan ? 'yes' : 'no'}; previously stale: ${p.is_stale ? 'yes' : 'no'}
+Digest: ${p.first_300}`)
     .join('\n\n');
 
-  const systemPrompt = `You are auditing a personal knowledge wiki for health issues.
-Given page digests (first 300 chars each), identify:
-- contradictions: pairs of pages making conflicting claims
-- stale_claims: pages with outdated information (mention if a claim is contradicted elsewhere)
-- missing_entities: important concepts/people mentioned but lacking their own page
-(orphans are identified structurally — omit from your response)
+  const systemPrompt = `You are auditing a personal research wiki as a knowledge steward.
+Your job is to keep the wiki coherent, explorable, and intellectually honest without over-policing it.
+
+Given page digests, identify:
+- contradictions: pages making genuinely conflicting claims. Distinguish productive tension from true contradiction.
+- stale_claims: dated, superseded, or fragile claims that should be revisited.
+- missing_entities: important concepts, people, books, methods, or institutions mentioned but lacking their own page.
+- maintenance_plan: the most useful next repairs a researcher should make.
+
+Be conservative with accusations and precise with recommendations. Prefer actionable findings with confidence and severity. Do not flag style issues.
+(orphans are identified structurally by the app; you may mention them in maintenance_plan only if they create a real navigation problem.)
 
 Return ONLY valid JSON:
 {
-  "contradictions": [{ "slugs": [string, string], "description": string }],
-  "stale_claims":   [{ "slug": string, "excerpt": string, "reason": string }],
-  "missing_entities": [{ "name": string, "suggested_slug": string, "mentioned_in": [string] }]
+  "health_score": number,
+  "executive_summary": string,
+  "contradictions": [{ "slugs": [string, string], "description": string, "severity": "low|medium|high", "confidence": number, "repair_question": string }],
+  "stale_claims": [{ "slug": string, "excerpt": string, "reason": string, "severity": "low|medium|high", "confidence": number }],
+  "missing_entities": [{ "name": string, "suggested_slug": string, "mentioned_in": [string], "rationale": string, "priority": "low|medium|high" }],
+  "maintenance_plan": [{ "action": string, "target_slug": string, "rationale": string, "priority": "low|medium|high" }]
 }`;
 
   const response = await openai.chat.completions.create({
@@ -1458,10 +1489,13 @@ Return ONLY valid JSON:
 
   const raw = JSON.parse(response.choices[0].message.content);
   return {
-    contradictions:   raw.contradictions   || [],
-    orphans:          [],
-    stale_claims:     raw.stale_claims     || [],
-    missing_entities: raw.missing_entities || []
+    health_score:      typeof raw.health_score === 'number' ? Math.max(0, Math.min(100, raw.health_score)) : 100,
+    executive_summary: raw.executive_summary || 'The wiki is broadly coherent, with no major health issues detected.',
+    contradictions:    Array.isArray(raw.contradictions) ? raw.contradictions : [],
+    orphans:           [],
+    stale_claims:      Array.isArray(raw.stale_claims) ? raw.stale_claims : [],
+    missing_entities:  Array.isArray(raw.missing_entities) ? raw.missing_entities : [],
+    maintenance_plan:  Array.isArray(raw.maintenance_plan) ? raw.maintenance_plan : []
   };
 }
 

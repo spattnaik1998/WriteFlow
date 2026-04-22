@@ -2658,14 +2658,61 @@ body::after {
   overflow: hidden;
 }
 .wiki-left {
-  width: clamp(280px, 22vw, 380px);
-  min-width: 280px;
-  max-width: 380px;
+  width: clamp(360px, 26vw, 520px);
+  min-width: 340px;
+  max-width: 520px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(201,168,76,.11), transparent 28%),
+    linear-gradient(180deg, rgba(255,255,255,.035), transparent 32%);
+}
+.wiki-lab-card {
+  margin: 12px 12px 8px;
+  padding: 14px;
+  border: 1px solid rgba(201,168,76,.22);
+  border-radius: 14px;
+  background:
+    linear-gradient(135deg, rgba(201,168,76,.12), rgba(56,189,248,.06)),
+    var(--bg-card);
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+}
+.wiki-lab-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.wiki-lab-title {
+  margin-top: 5px;
+  font-size: 20px;
+  line-height: 1.05;
+  font-weight: 760;
+  color: var(--text-1);
+}
+.wiki-lab-subtitle {
+  margin-top: 7px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.wiki-lab-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.wiki-stat-pill {
+  border: 1px solid rgba(148,163,184,.24);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-2);
+  background: rgba(255,255,255,.045);
 }
 .wiki-search {
   padding: 12px 12px 8px;
@@ -2699,19 +2746,58 @@ body::after {
 }
 .wiki-tree-item {
   display: block;
-  padding: 7px 16px;
+  padding: 8px 14px;
   font-size: 12.5px;
   line-height: 1.35;
   color: var(--text-2);
   cursor: pointer;
   border-left: 2px solid transparent;
   transition: background .15s, color .15s, border-color .15s;
-  white-space: nowrap;
+}
+.wiki-tree-item:hover {
+  background: linear-gradient(90deg, rgba(201,168,76,.10), transparent);
+  color: var(--text-1);
+}
+.wiki-tree-item.active {
+  border-left-color: var(--amber);
+  color: var(--amber);
+  background: linear-gradient(90deg, rgba(201,168,76,.15), rgba(201,168,76,.03));
+}
+.wiki-tree-row {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.wiki-type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 12px currentColor;
+}
+.wiki-tree-title {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
 }
-.wiki-tree-item:hover { background: var(--bg-card-hover); color: var(--text-1); }
-.wiki-tree-item.active { border-left-color: var(--amber); color: var(--amber); background: rgba(201,168,76,.07); }
+.wiki-tree-meta {
+  margin: 3px 0 0 16px;
+  color: var(--text-3);
+  font-size: 10.5px;
+  letter-spacing: .01em;
+}
+.wiki-tree-badge {
+  border-radius: 999px;
+  padding: 2px 6px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #8a5a00;
+  background: rgba(245,158,11,.15);
+  border: 1px solid rgba(245,158,11,.22);
+}
 .wiki-tree-empty { padding: 20px 14px; color: var(--text-3); font-size: 12px; }
 .wiki-center {
   flex: 1 1 auto;
@@ -2765,13 +2851,13 @@ body::after {
 }
 .wiki-body textarea:focus { border-color: var(--amber); }
 /* rendered markdown inside wiki */
-.wiki-md h1 { font-size: 20px; font-weight: 700; color: var(--text-1); margin: 0 0 14px; }
-.wiki-md h2 { font-size: 16px; font-weight: 600; color: var(--text-1); margin: 20px 0 10px; }
+.wiki-md h1 { font-size: clamp(32px, 4vw, 56px); line-height: .98; letter-spacing: -.04em; font-weight: 780; color: var(--text-1); margin: 0 0 18px; }
+.wiki-md h2 { font-size: 18px; font-weight: 680; color: var(--text-1); margin: 34px 0 10px; padding-top: 10px; border-top: 1px solid rgba(148,163,184,.18); }
 .wiki-md h3 { font-size: 14px; font-weight: 600; color: var(--text-2); margin: 16px 0 8px; }
-.wiki-md p  { font-size: 13px; color: var(--text-2); line-height: 1.75; margin: 0 0 12px; }
-.wiki-md ul, .wiki-md ol { padding-left: 20px; color: var(--text-2); font-size: 13px; line-height: 1.75; margin: 0 0 12px; }
-.wiki-md blockquote { border-left: 3px solid var(--amber); padding: 4px 12px; background: rgba(201,168,76,.06); margin: 12px 0; border-radius: 0 4px 4px 0; }
-.wiki-md blockquote p { margin: 0; color: var(--amber); }
+.wiki-md p  { font-size: 14.5px; color: var(--text-2); line-height: 1.82; margin: 0 0 14px; }
+.wiki-md ul, .wiki-md ol { padding-left: 22px; color: var(--text-2); font-size: 14px; line-height: 1.82; margin: 0 0 14px; }
+.wiki-md blockquote { border-left: 3px solid var(--amber); padding: 14px 18px; background: linear-gradient(90deg, rgba(201,168,76,.12), rgba(201,168,76,.03)); margin: 22px 0; border-radius: 0 12px 12px 0; }
+.wiki-md blockquote p { margin: 0; color: var(--text-2); }
 .wiki-md strong { color: var(--text-1); font-weight: 600; }
 .wiki-md em { color: var(--text-2); }
 .wiki-md hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
@@ -2861,6 +2947,13 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 .wiki-answer-confidence.med  { background: rgba(201,168,76,.2);  color: var(--amber); }
 .wiki-answer-confidence.low  { background: rgba(180,80,80,.15);  color: #f44; }
 .wiki-answer-text { font-size: 13px; color: var(--text-1); line-height: 1.7; margin-bottom: 8px; }
+.wiki-answer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
 .wiki-cite-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .wiki-cite-chip {
   font-size: 11px;
@@ -2873,9 +2966,126 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 }
 .wiki-cite-chip:hover { background: rgba(201,168,76,.22); }
 .wiki-save-label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-3); margin-top: 8px; cursor: pointer; }
+.wiki-save-answer-btn {
+  border: 1px solid rgba(201,168,76,.35);
+  background: linear-gradient(135deg, rgba(201,168,76,.22), rgba(56,189,248,.10));
+  color: var(--text-1);
+  border-radius: 999px;
+  padding: 6px 11px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .15s, border-color .15s, background .15s;
+}
+.wiki-save-answer-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--amber);
+  background: linear-gradient(135deg, rgba(201,168,76,.30), rgba(56,189,248,.16));
+}
+.wiki-save-answer-btn:disabled {
+  opacity: .55;
+  cursor: wait;
+  transform: none;
+}
 /* wiki header action buttons */
 .wiki-actions { display: flex; gap: 6px; }
 .wiki-gutter { display: none; }
+.wiki-graph-stage {
+  display: none;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(201,168,76,.15), transparent 26%),
+    radial-gradient(circle at 78% 70%, rgba(56,189,248,.12), transparent 28%),
+    linear-gradient(135deg, rgba(6,10,18,.98), rgba(18,19,24,.96));
+}
+.wiki-graph-stage.open { display: block; }
+.wiki-graph-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at center, #000 20%, transparent 82%);
+}
+.wiki-graph-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  right: 18px;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: none;
+}
+.wiki-graph-card {
+  pointer-events: auto;
+  border: 1px solid rgba(201,168,76,.24);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(13,16,22,.72);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 48px rgba(0,0,0,.28);
+}
+.wiki-graph-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #f6f0dd;
+  letter-spacing: -.01em;
+}
+.wiki-graph-sub {
+  color: rgba(246,240,221,.62);
+  font-size: 11.5px;
+  margin-top: 3px;
+}
+.wiki-graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  max-width: 520px;
+}
+.wiki-graph-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(246,240,221,.72);
+  font-size: 10.5px;
+}
+.wiki-graph-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.wiki-graph-close {
+  pointer-events: auto;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.08);
+  color: #f6f0dd;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+.wiki-graph-close:hover {
+  border-color: rgba(201,168,76,.45);
+  background: rgba(201,168,76,.16);
+}
+.wiki-graph-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
 .wiki-temporal-bar {
   display: flex;
   align-items: center;
@@ -2975,6 +3185,97 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 }
 .wiki-audit-claim { font-size: 12.5px; color: var(--text-1); font-weight: 650; margin-bottom: 5px; }
 .wiki-audit-text { font-size: 11.8px; color: var(--text-2); line-height: 1.55; margin-top: 5px; }
+.wiki-lint-report {
+  border: 1px solid rgba(201,168,76,.18);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(201,168,76,.16), transparent 26%),
+    rgba(255,255,255,.025);
+  padding: 14px;
+}
+.wiki-lint-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.wiki-health-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.wiki-health-orb {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--text-1);
+  font-weight: 800;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255,255,255,.42), transparent 21%),
+    conic-gradient(var(--amber), rgba(56,189,248,.65), rgba(201,168,76,.25), var(--amber));
+  box-shadow: 0 0 34px rgba(201,168,76,.22);
+}
+.wiki-health-label {
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 4px;
+}
+.wiki-health-summary {
+  color: var(--text-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.wiki-maintenance-grid,
+.wiki-issue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+.wiki-issue-card,
+.wiki-maintenance-step {
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 12px;
+  padding: 11px;
+  background: rgba(0,0,0,.04);
+}
+.wiki-issue-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-1);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.wiki-severity {
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  border: 1px solid rgba(148,163,184,.2);
+  color: var(--text-2);
+}
+.wiki-severity-high { color: #b42318; background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.22); }
+.wiki-severity-medium { color: #8a5a00; background: rgba(245,158,11,.13); border-color: rgba(245,158,11,.24); }
+.wiki-severity-low { color: #176b54; background: rgba(16,185,129,.11); border-color: rgba(16,185,129,.22); }
+.wiki-lint-section {
+  margin-top: 14px;
+}
+.wiki-lint-section-title {
+  color: var(--text-1);
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
 /* backfill progress */
 .wiki-progress {
   font-size: 11px;
@@ -5264,17 +5565,17 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
         <div id="wikiAnswerBox" class="wiki-answer-box" style="display:none">
           <div id="wikiAnswerConfidence" class="wiki-answer-confidence"></div>
           <div id="wikiAnswerText" class="wiki-answer-text"></div>
-          <div id="wikiCiteChips" class="wiki-cite-chips"></div>
-          <label class="wiki-save-label">
-            <input type="checkbox" id="wikiSavePage"> Save answer as wiki page
-          </label>
+          <div class="wiki-answer-actions">
+            <div id="wikiCiteChips" class="wiki-cite-chips"></div>
+            <button class="wiki-save-answer-btn" id="wikiSaveAnswerBtn" onclick="wikiSaveCurrentAnswer()" disabled>Save Answer to Wiki</button>
+          </div>
         </div>
 
         <!-- backfill progress bar -->
         <div id="wikiBackfillProgress" class="wiki-progress" style="display:none;padding:6px 16px;"></div>
 
         <!-- lint results modal-style block -->
-        <div id="wikiLintResults" style="display:none;padding:12px 16px;background:rgba(201,168,76,.04);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2);max-height:200px;overflow-y:auto;"></div>
+        <div id="wikiLintResults" style="display:none;padding:12px 16px;background:rgba(201,168,76,.04);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2);max-height:42vh;overflow-y:auto;"></div>
 
         <!-- temporal search, timeline, and assumption audit output -->
         <div id="wikiTemporalPanel" class="wiki-temporal-panel"></div>
@@ -5283,6 +5584,16 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
         <div class="wiki-layout" style="flex:1;overflow:hidden;">
           <!-- left: tree + meta -->
           <div class="wiki-left">
+            <div class="wiki-lab-card">
+              <div class="wiki-lab-eyebrow">Research Console</div>
+              <div class="wiki-lab-title">LLMWiki</div>
+              <div class="wiki-lab-subtitle">A living map of your concepts, sources, tensions, and emerging synthesis paths.</div>
+              <div class="wiki-lab-stats">
+                <span class="wiki-stat-pill" id="wikiStatPages">0 pages</span>
+                <span class="wiki-stat-pill" id="wikiStatTypes">0 types</span>
+                <span class="wiki-stat-pill" id="wikiStatStale">0 stale</span>
+              </div>
+            </div>
             <div class="wiki-search">
               <input type="text" id="wikiTreeSearch" placeholder="Search pages…" oninput="wikiFilterTree(this.value)">
             </div>
@@ -5317,7 +5628,17 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
               </div>
             </div>
             <!-- graph overlay (hidden by default) -->
-            <svg id="wikiGraphSvg" style="display:none;position:absolute;inset:0;width:100%;height:100%;background:var(--bg)"></svg>
+            <div class="wiki-graph-stage" id="wikiGraphStage">
+              <div class="wiki-graph-toolbar">
+                <div class="wiki-graph-card">
+                  <div class="wiki-graph-title">Knowledge Graph</div>
+                  <div class="wiki-graph-sub" id="wikiGraphStats">Drag nodes, scroll to zoom, click a node to open its page.</div>
+                  <div class="wiki-graph-legend" id="wikiGraphLegend"></div>
+                </div>
+                <button class="wiki-graph-close" onclick="wikiCloseGraph()">Close Graph</button>
+              </div>
+              <svg id="wikiGraphSvg" class="wiki-graph-svg"></svg>
+            </div>
           </div>
 
           <div class="wiki-gutter"></div>
@@ -9962,6 +10283,9 @@ let _wikiSlugSet  = new Set();
 let _wikiCurrentSlug = null;
 let _wikiEditMode = false;
 let _wikiGraphMode = false;
+let _wikiGraphRendered = false;
+let _wikiLastQuestion = '';
+let _wikiLastAnswer = null;
 
 function wikiRenderLinks(html) {
   return html.replace(/\[\[([a-z0-9-]+)\]\]/g, (_, slug) => {
@@ -9978,6 +10302,7 @@ async function wikiLoadPages() {
     const { pages } = await r.json();
     _wikiPages   = pages || [];
     _wikiSlugSet = new Set(_wikiPages.map(p => p.slug));
+    wikiRenderStats();
     wikiRenderTree(_wikiPages);
     // show "+ Wiki" button on notes tab once pages are loaded
     if (_wikiPages.length > 0) {
@@ -9987,6 +10312,19 @@ async function wikiLoadPages() {
   } catch(e) {
     tree.innerHTML = '<div class="wiki-tree-empty">Could not load wiki. Is the server running?</div>';
   }
+}
+
+function wikiRenderStats() {
+  const pagesEl = document.getElementById('wikiStatPages');
+  const typesEl = document.getElementById('wikiStatTypes');
+  const staleEl = document.getElementById('wikiStatStale');
+  if (!pagesEl || !typesEl || !staleEl) return;
+
+  const typeCount = new Set(_wikiPages.map(p => p.page_type).filter(Boolean)).size;
+  const staleCount = _wikiPages.filter(p => p.metadata?.stale).length;
+  pagesEl.textContent = `${_wikiPages.length} page${_wikiPages.length === 1 ? '' : 's'}`;
+  typesEl.textContent = `${typeCount} type${typeCount === 1 ? '' : 's'}`;
+  staleEl.textContent = `${staleCount} stale`;
 }
 
 function wikiRenderTree(pages) {
@@ -10005,6 +10343,16 @@ function wikiRenderTree(pages) {
   const typeOrder = ['overview','book','theme','concept','entity','query_answer','index','log'];
   const typeLabel = { entity:'Entities', concept:'Concepts', theme:'Themes', book:'Books',
                       overview:'Overviews', index:'Index', log:'Log', query_answer:'Q&A' };
+  const typeTone = {
+    overview: '#c9a84c',
+    book: '#38bdf8',
+    theme: '#22c55e',
+    concept: '#f59e0b',
+    entity: '#ef4444',
+    query_answer: '#a78bfa',
+    index: '#94a3b8',
+    log: '#64748b'
+  };
 
   let html = '';
   const sorted = Object.keys(groups).sort((a,b) => {
@@ -10018,7 +10366,17 @@ function wikiRenderTree(pages) {
       <div class="wiki-tree-label">${typeLabel[type] || type} <span style="opacity:.5">(${items.length})</span></div>`;
     items.forEach(p => {
       const active = p.slug === _wikiCurrentSlug ? ' active' : '';
-      html += `<div class="wiki-tree-item${active}" data-slug="${p.slug}" onclick="wikiOpenPage('${p.slug}')">${p.title}</div>`;
+      const safeSlug = String(p.slug || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const updated = p.updated_at ? new Date(p.updated_at).toLocaleDateString() : 'not dated';
+      const stale = p.metadata?.stale ? '<span class="wiki-tree-badge">stale</span>' : '';
+      html += `<div class="wiki-tree-item${active}" data-slug="${escapeHtml(p.slug)}" onclick="wikiOpenPage('${safeSlug}')">
+        <div class="wiki-tree-row">
+          <span class="wiki-type-dot" style="color:${typeTone[type] || '#c9a84c'};background:${typeTone[type] || '#c9a84c'}"></span>
+          <span class="wiki-tree-title">${escapeHtml(p.title || p.slug)}</span>
+          ${stale}
+        </div>
+        <div class="wiki-tree-meta">${escapeHtml(typeLabel[type] || type || 'Page')} / updated ${escapeHtml(updated)}</div>
+      </div>`;
     });
     html += '</div>';
   }
@@ -10028,9 +10386,9 @@ function wikiRenderTree(pages) {
 function wikiFilterTree(q) {
   const lq = q.toLowerCase();
   const filtered = lq ? _wikiPages.filter(p =>
-    p.title.toLowerCase().includes(lq) ||
-    p.slug.includes(lq) ||
-    p.page_type.includes(lq)
+    (p.title || '').toLowerCase().includes(lq) ||
+    (p.slug || '').includes(lq) ||
+    (p.page_type || '').includes(lq)
   ) : _wikiPages;
   wikiRenderTree(filtered);
 }
@@ -10192,19 +10550,22 @@ async function wikiQuery() {
   const q      = input.value.trim();
   if (!q) return;
 
-  const savePage = document.getElementById('wikiSavePage')?.checked || false;
-
   const answerBox = document.getElementById('wikiAnswerBox');
   answerBox.style.display = 'block';
   document.getElementById('wikiAnswerText').textContent = 'Searching wiki…';
   document.getElementById('wikiAnswerConfidence').textContent = '';
   document.getElementById('wikiCiteChips').innerHTML = '';
+  const saveBtn = document.getElementById('wikiSaveAnswerBtn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Save Answer to Wiki';
+  }
 
   try {
     const r = await fetch('/api/wiki/query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question: q, persist: savePage })
+      body: JSON.stringify({ question: q, persist: false })
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Failed');
@@ -10214,22 +10575,59 @@ async function wikiQuery() {
     confEl.className   = `wiki-answer-confidence ${data.confidence || 'low'}`;
 
     document.getElementById('wikiAnswerText').textContent = data.answer || '(no answer)';
+    _wikiLastQuestion = q;
+    _wikiLastAnswer = data;
 
     const chips = document.getElementById('wikiCiteChips');
     chips.innerHTML = (data.cited_slugs || []).map(s =>
-      `<span class="wiki-cite-chip" onclick="wikiOpenPage('${s}')">${s}</span>`
+      `<span class="wiki-cite-chip" onclick="wikiOpenPage('${String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}')">${escapeHtml(s)}</span>`
     ).join('');
 
     if (data.suggest_new_page) {
-      chips.innerHTML += `<span class="wiki-cite-chip" style="border-style:dashed;opacity:.7" title="${data.suggest_new_page.rationale}">+ ${data.suggest_new_page.title}</span>`;
+      chips.innerHTML += `<span class="wiki-cite-chip" style="border-style:dashed;opacity:.7" title="${escapeHtml(data.suggest_new_page.rationale || '')}">+ ${escapeHtml(data.suggest_new_page.title || data.suggest_new_page.slug || 'Suggested page')}</span>`;
     }
 
     if (data.saved_slug) {
       showToast(`Saved as page: ${data.saved_slug}`);
       await wikiLoadPages();
     }
+    if (saveBtn) saveBtn.disabled = !data.answer;
   } catch(e) {
     document.getElementById('wikiAnswerText').textContent = 'Error: ' + e.message;
+  }
+}
+
+async function wikiSaveCurrentAnswer() {
+  if (!_wikiLastQuestion || !_wikiLastAnswer?.answer) return;
+
+  const btn = document.getElementById('wikiSaveAnswerBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+  }
+
+  try {
+    const r = await fetch('/api/wiki/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: _wikiLastQuestion, persist: true })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Failed to save');
+
+    if (data.saved_slug) {
+      showToast(`Saved as page: ${data.saved_slug}`);
+      await wikiLoadPages();
+      if (btn) btn.textContent = 'Saved to Wiki';
+    } else {
+      throw new Error('The answer could not be saved.');
+    }
+  } catch(e) {
+    showToast('Save failed: ' + e.message);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Save Answer to Wiki';
+    }
   }
 }
 
@@ -10448,27 +10846,101 @@ async function wikiLint() {
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Failed');
 
-    let html = '';
+    const severity = value => ['high', 'medium', 'low'].includes(value) ? value : 'low';
+    const chip = slug => {
+      const rawSlug = String(slug || '');
+      const safeSlug = rawSlug.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return `<span class="wiki-cite-chip" onclick="wikiOpenPage('${safeSlug}')">${escapeHtml(rawSlug)}</span>`;
+    };
+    const score = Number.isFinite(Number(data.health_score)) ? Math.round(Number(data.health_score)) : 100;
+    const structural = data.structural || {};
+    let html = `
+      <div class="wiki-lint-report">
+        <div class="wiki-lint-head">
+          <strong>Wiki Health Report</strong>
+          <button class="btn-sec btn-sm" onclick="document.getElementById('wikiLintResults').style.display='none'">Close</button>
+        </div>
+        <div class="wiki-health-card">
+          <div class="wiki-health-orb">${score}</div>
+          <div>
+            <div class="wiki-health-label">Knowledge steward score</div>
+            <div class="wiki-health-summary">${escapeHtml(data.executive_summary || 'No major wiki health issues detected.')}</div>
+            <div class="wiki-cite-chips" style="margin-top:8px">
+              <span class="wiki-cite-chip">${structural.total_pages || 0} pages</span>
+              <span class="wiki-cite-chip">${structural.total_links || 0} links</span>
+              <span class="wiki-cite-chip">${structural.orphan_count || 0} orphans</span>
+              <span class="wiki-cite-chip">${structural.stale_count || 0} stale</span>
+            </div>
+          </div>
+        </div>`;
+
+    if (data.maintenance_plan?.length) {
+      html += `<div class="wiki-lint-section">
+        <div class="wiki-lint-section-title">Next Maintenance Moves</div>
+        <div class="wiki-maintenance-grid">` +
+        data.maintenance_plan.slice(0, 6).map(m => `
+          <div class="wiki-maintenance-step">
+            <div class="wiki-issue-title">
+              <span>${escapeHtml(m.action || 'Maintenance action')}</span>
+              <span class="wiki-severity wiki-severity-${severity(m.priority)}">${escapeHtml(m.priority || 'low')}</span>
+            </div>
+            ${m.target_slug ? `<div class="wiki-cite-chips" style="margin-top:7px">${chip(m.target_slug)}</div>` : ''}
+            <div class="wiki-audit-text">${escapeHtml(m.rationale || '')}</div>
+          </div>
+        `).join('') + '</div></div>';
+    }
+
     if (data.contradictions?.length) {
-      html += `<div style="margin-bottom:8px"><strong>⚡ Contradictions (${data.contradictions.length})</strong>` +
-        data.contradictions.map(c => `<div style="margin-top:4px;color:var(--text-3)">${c.slugs.map(s=>`<span class="wiki-cite-chip" onclick="wikiOpenPage('${s}')">${s}</span>`).join(' ↔ ')} — ${c.description}</div>`).join('') + '</div>';
+      html += `<div class="wiki-lint-section"><div class="wiki-lint-section-title">Contradictions (${data.contradictions.length})</div><div class="wiki-issue-grid">` +
+        data.contradictions.map(c => `
+          <div class="wiki-issue-card">
+            <div class="wiki-issue-title">
+              <span>Tension to resolve</span>
+              <span class="wiki-severity wiki-severity-${severity(c.severity)}">${escapeHtml(c.severity || 'low')}</span>
+            </div>
+            <div class="wiki-cite-chips" style="margin-top:7px">${(c.slugs || []).map(chip).join('')}</div>
+            <div class="wiki-audit-text">${escapeHtml(c.description || '')}</div>
+            ${c.repair_question ? `<div class="wiki-audit-text"><strong>Repair question:</strong> ${escapeHtml(c.repair_question)}</div>` : ''}
+          </div>
+        `).join('') + '</div></div>';
     }
     if (data.orphans?.length) {
-      html += `<div style="margin-bottom:8px"><strong>🔗 Orphans (${data.orphans.length})</strong>` +
-        data.orphans.map(s => `<span class="wiki-cite-chip" onclick="wikiOpenPage('${s}')">${s}</span>`).join(' ') + '</div>';
+      html += `<div class="wiki-lint-section"><div class="wiki-lint-section-title">Orphaned Pages (${data.orphans.length})</div><div class="wiki-cite-chips">${data.orphans.map(chip).join('')}</div></div>`;
     }
     if (data.stale_claims?.length) {
-      html += `<div style="margin-bottom:8px"><strong>⚠ Stale Claims (${data.stale_claims.length})</strong>` +
-        data.stale_claims.map(c => `<div style="margin-top:4px;color:var(--text-3)"><span class="wiki-cite-chip" onclick="wikiOpenPage('${c.slug}')">${c.slug}</span> — ${c.reason}</div>`).join('') + '</div>';
+      html += `<div class="wiki-lint-section"><div class="wiki-lint-section-title">Stale Claims (${data.stale_claims.length})</div><div class="wiki-issue-grid">` +
+        data.stale_claims.map(c => `
+          <div class="wiki-issue-card">
+            <div class="wiki-issue-title">
+              <span>${escapeHtml(c.excerpt || c.slug || 'Claim')}</span>
+              <span class="wiki-severity wiki-severity-${severity(c.severity)}">${escapeHtml(c.severity || 'low')}</span>
+            </div>
+            <div class="wiki-cite-chips" style="margin-top:7px">${chip(c.slug)}</div>
+            <div class="wiki-audit-text">${escapeHtml(c.reason || '')}</div>
+          </div>
+        `).join('') + '</div></div>';
     }
     if (data.missing_entities?.length) {
-      html += `<div style="margin-bottom:8px"><strong>📋 Missing Pages (${data.missing_entities.length})</strong>` +
-        data.missing_entities.map(e => `<div style="margin-top:4px;color:var(--text-3)">${e.name} (suggested: ${e.suggested_slug})</div>`).join('') + '</div>';
+      html += `<div class="wiki-lint-section"><div class="wiki-lint-section-title">Suggested Pages (${data.missing_entities.length})</div><div class="wiki-issue-grid">` +
+        data.missing_entities.map(e => `
+          <div class="wiki-issue-card">
+            <div class="wiki-issue-title">
+              <span>${escapeHtml(e.name || 'Missing page')}</span>
+              <span class="wiki-severity wiki-severity-${severity(e.priority)}">${escapeHtml(e.priority || 'low')}</span>
+            </div>
+            <div class="wiki-audit-text">Suggested slug: <strong>${escapeHtml(e.suggested_slug || '')}</strong></div>
+            <div class="wiki-audit-text">${escapeHtml(e.rationale || '')}</div>
+          </div>
+        `).join('') + '</div></div>';
     }
-    if (!html) html = '<span style="color:var(--text-3)">✓ Wiki looks healthy — no issues found.</span>';
-    lintEl.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong>Wiki Health Report</strong><button class="btn-sec btn-sm" onclick="document.getElementById('wikiLintResults').style.display='none'">✕</button></div>` + html;
+    if (!data.contradictions?.length && !data.orphans?.length && !data.stale_claims?.length && !data.missing_entities?.length && !data.maintenance_plan?.length) {
+      html += '<div class="wiki-tree-empty">Wiki looks healthy. No issues found.</div>';
+    }
+    html += '</div>';
+    lintEl.innerHTML = html;
+    await wikiLoadPages();
   } catch(e) {
-    lintEl.innerHTML = 'Lint failed: ' + e.message;
+    lintEl.innerHTML = 'Lint failed: ' + escapeHtml(e.message);
   }
 }
 
@@ -10494,27 +10966,41 @@ async function wikiLoadLog() {
 }
 
 // ── Graph view ───────────────────────────────────────────────────────────────
-let _wikiGraphRendered = false;
-
 async function wikiToggleGraph() {
-  _wikiGraphMode = !_wikiGraphMode;
+  if (_wikiGraphMode) {
+    wikiCloseGraph();
+  } else {
+    await wikiOpenGraph();
+  }
+}
+
+async function wikiOpenGraph() {
+  _wikiGraphMode = true;
+  const graphStage = document.getElementById('wikiGraphStage');
   const graphSvg = document.getElementById('wikiGraphSvg');
   const body     = document.getElementById('wikiBody');
   const header   = document.getElementById('wikiCenterHeader');
   const btn      = document.getElementById('wikiGraphBtn');
 
-  if (_wikiGraphMode) {
-    body.style.display    = 'none';
-    header.style.display  = 'none';
-    graphSvg.style.display = '';
-    btn.textContent = 'Pages';
-    if (!_wikiGraphRendered) await wikiRenderGraph();
-  } else {
-    graphSvg.style.display = 'none';
-    body.style.display    = '';
-    if (_wikiCurrentSlug) header.style.display = 'flex';
-    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Graph`;
-  }
+  body.style.display = 'none';
+  header.style.display = 'none';
+  graphStage.classList.add('open');
+  graphSvg.style.display = '';
+  btn.textContent = 'Pages';
+  await wikiRenderGraph();
+}
+
+function wikiCloseGraph() {
+  _wikiGraphMode = false;
+  const graphStage = document.getElementById('wikiGraphStage');
+  const body     = document.getElementById('wikiBody');
+  const header   = document.getElementById('wikiCenterHeader');
+  const btn      = document.getElementById('wikiGraphBtn');
+
+  graphStage.classList.remove('open');
+  body.style.display = '';
+  if (_wikiCurrentSlug) header.style.display = 'flex';
+  btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Graph`;
 }
 
 async function wikiRenderGraph() {
@@ -10531,59 +11017,136 @@ async function wikiRenderGraph() {
   if (!graph.nodes || graph.nodes.length === 0) {
     d3.select(svg).append('text')
       .attr('x', '50%').attr('y', '50%').attr('text-anchor', 'middle')
-      .attr('fill', 'var(--text-3)').attr('font-size', 13)
+      .attr('fill', 'rgba(246,240,221,.65)').attr('font-size', 13)
       .text('No pages yet');
     return;
   }
 
   const typeColors = {
-    entity: '#c9a84c', concept: '#6a9fd8', theme: '#8fc98e',
-    book: '#d88a6a', overview: '#a88ecf', query_answer: '#8ecfcf',
-    index: '#aaa', log: '#aaa'
+    overview: '#f4c95d',
+    book: '#38bdf8',
+    theme: '#34d399',
+    concept: '#f59e0b',
+    entity: '#fb7185',
+    query_answer: '#a78bfa',
+    index: '#cbd5e1',
+    log: '#94a3b8'
   };
 
   const W = svg.clientWidth  || 600;
   const H = svg.clientHeight || 400;
-  const g = d3.select(svg).append('g');
-  d3.select(svg).call(d3.zoom().scaleExtent([0.3,4]).on('zoom', ev => g.attr('transform', ev.transform)));
-
   const nodeById = {};
   graph.nodes.forEach(n => { nodeById[n.id] = n; });
   const edges = graph.edges
     .map(e => ({ source: nodeById[e.source], target: nodeById[e.target] }))
     .filter(e => e.source && e.target);
 
-  d3.select(svg).append('defs').append('marker')
-    .attr('id','wiki-arrow').attr('viewBox','0 -5 10 10')
-    .attr('refX',20).attr('refY',0)
-    .attr('markerWidth',5).attr('markerHeight',5)
-    .attr('orient','auto')
-    .append('path').attr('d','M0,-5L10,0L0,5').attr('fill','#4a4030');
+  const degree = {};
+  edges.forEach(e => {
+    degree[e.source.id] = (degree[e.source.id] || 0) + 1;
+    degree[e.target.id] = (degree[e.target.id] || 0) + 1;
+  });
+  graph.nodes.forEach(n => { n.degree = degree[n.id] || 0; });
+
+  document.getElementById('wikiGraphStats').textContent =
+    `${graph.nodes.length} pages, ${edges.length} links. Drag nodes, scroll to zoom, click a node to open it.`;
+  document.getElementById('wikiGraphLegend').innerHTML = Object.entries(typeColors)
+    .filter(([type]) => graph.nodes.some(n => n.type === type))
+    .map(([type, color]) => `<span><i style="background:${color};box-shadow:0 0 10px ${color}"></i>${escapeHtml(type.replace('_', ' '))}</span>`)
+    .join('');
+
+  const root = d3.select(svg)
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('preserveAspectRatio', 'xMidYMid slice');
+
+  const defs = root.append('defs');
+  const glow = defs.append('filter').attr('id', 'wiki-node-glow').attr('x', '-80%').attr('y', '-80%').attr('width', '260%').attr('height', '260%');
+  glow.append('feGaussianBlur').attr('stdDeviation', '4').attr('result', 'coloredBlur');
+  const merge = glow.append('feMerge');
+  merge.append('feMergeNode').attr('in', 'coloredBlur');
+  merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  const g = root.append('g');
+  root.call(d3.zoom().scaleExtent([0.25, 4.5]).on('zoom', ev => g.attr('transform', ev.transform)));
+
+  g.append('g')
+    .selectAll('circle')
+    .data([90, 180, 270, 360])
+    .join('circle')
+    .attr('cx', W / 2)
+    .attr('cy', H / 2)
+    .attr('r', d => d)
+    .attr('fill', 'none')
+    .attr('stroke', 'rgba(246,240,221,.045)')
+    .attr('stroke-width', 1);
 
   const sim = d3.forceSimulation(graph.nodes)
-    .force('link',      d3.forceLink(edges).id(n=>n.id).distance(100).strength(0.5))
-    .force('charge',    d3.forceManyBody().strength(-200))
-    .force('center',    d3.forceCenter(W/2, H/2))
-    .force('collision', d3.forceCollide(22));
+    .force('link', d3.forceLink(edges).id(n => n.id).distance(d => 95 + Math.min(90, (d.source.degree + d.target.degree) * 8)).strength(0.28))
+    .force('charge', d3.forceManyBody().strength(d => -170 - (d.degree || 0) * 28))
+    .force('center', d3.forceCenter(W / 2, H / 2))
+    .force('radial', d3.forceRadial(d => d.type === 'overview' ? 70 : d.type === 'book' ? 170 : 250, W / 2, H / 2).strength(0.045))
+    .force('collision', d3.forceCollide(d => 18 + Math.min(16, d.degree * 2)));
 
-  const link = g.append('g').selectAll('line')
-    .data(edges).join('line')
-    .attr('stroke','#4a4030').attr('stroke-opacity',0.5)
-    .attr('stroke-width',1.5).attr('marker-end','url(#wiki-arrow)');
+  const link = g.append('g')
+    .attr('stroke-linecap', 'round')
+    .selectAll('line')
+    .data(edges)
+    .join('line')
+    .attr('stroke', 'rgba(246,240,221,.18)')
+    .attr('stroke-width', d => 0.7 + Math.min(2.2, ((d.source.degree || 0) + (d.target.degree || 0)) / 8));
 
-  const node = g.append('g').selectAll('g')
-    .data(graph.nodes).join('g')
-    .attr('cursor','pointer')
-    .on('click', (_, d) => { _wikiGraphMode=false; wikiToggleGraph(); wikiOpenPage(d.id); });
+  const node = g.append('g')
+    .selectAll('g')
+    .data(graph.nodes)
+    .join('g')
+    .attr('cursor', 'pointer')
+    .call(d3.drag()
+      .on('start', (event, d) => {
+        if (!event.active) sim.alphaTarget(0.25).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      })
+      .on('drag', (event, d) => {
+        d.fx = event.x;
+        d.fy = event.y;
+      })
+      .on('end', (event, d) => {
+        if (!event.active) sim.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      }))
+    .on('mouseenter', function(_, d) {
+      link.attr('stroke-opacity', e => e.source.id === d.id || e.target.id === d.id ? 0.78 : 0.08);
+      node.attr('opacity', n => n.id === d.id || edges.some(e => (e.source.id === d.id && e.target.id === n.id) || (e.target.id === d.id && e.source.id === n.id)) ? 1 : 0.28);
+    })
+    .on('mouseleave', () => {
+      link.attr('stroke-opacity', 1);
+      node.attr('opacity', 1);
+    })
+    .on('click', (_, d) => { wikiCloseGraph(); wikiOpenPage(d.id); });
 
-  node.append('circle').attr('r',10)
+  node.append('circle')
+    .attr('r', d => 8 + Math.min(12, d.degree * 1.8))
+    .attr('fill', d => typeColors[d.type] || '#94a3b8')
+    .attr('opacity', 0.18)
+    .attr('filter', 'url(#wiki-node-glow)');
+
+  node.append('circle')
+    .attr('r', d => 5 + Math.min(8, d.degree * 1.2))
     .attr('fill', d => typeColors[d.type] || '#888')
-    .attr('stroke','var(--bg)').attr('stroke-width',2);
+    .attr('stroke', 'rgba(246,240,221,.76)')
+    .attr('stroke-width', 1.2);
 
   node.append('text')
-    .attr('dy',20).attr('text-anchor','middle')
-    .attr('font-size',9).attr('fill','var(--text-3)')
-    .text(d => d.title.slice(0,20));
+    .attr('dy', d => 20 + Math.min(10, d.degree))
+    .attr('text-anchor', 'middle')
+    .attr('font-size', d => d.degree > 2 ? 11 : 9)
+    .attr('font-weight', d => d.degree > 2 ? 700 : 500)
+    .attr('fill', 'rgba(246,240,221,.72)')
+    .attr('paint-order', 'stroke')
+    .attr('stroke', 'rgba(8,10,14,.82)')
+    .attr('stroke-width', 3)
+    .text(d => (d.title || d.id).slice(0, 26));
 
   sim.on('tick', () => {
     link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
