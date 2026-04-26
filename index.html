@@ -552,6 +552,7 @@ body::after {
 ═══════════════════════════════════════ */
 .center-panel {
   flex: 1;
+  min-width: 0;
   background: var(--bg-center);
   display: flex;
   flex-direction: column;
@@ -628,9 +629,12 @@ body::after {
   display: flex;
   position: relative;
   min-height: 0;
+  min-width: 0;
 }
 .tab-pane {
   flex: 1;
+  width: 100%;
+  min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 22px 24px 28px;
@@ -647,6 +651,7 @@ body::after {
   pointer-events: auto;
   position: relative;
   inset: auto;
+  width: 100%;
 }
 
 /* ═══════════════════════════════════════
@@ -1393,6 +1398,441 @@ body::after {
 .concepts-container {
   display: flex;
   flex-direction: column;
+}
+
+/* ═══════════════════════════════════════
+   ESSAY AGENT TAB
+═══════════════════════════════════════ */
+.essay-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 100%;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  align-self: stretch;
+}
+.essay-shell.session-live {
+  min-height: calc(100vh - 120px);
+}
+.essay-setup-card,
+.essay-workspace {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(201,168,76,.10), transparent 24%),
+    var(--bg-card);
+  box-shadow: 0 18px 48px rgba(0,0,0,.08);
+}
+.essay-setup-card {
+  padding: 22px;
+}
+.essay-shell.session-live .essay-setup-card {
+  display: none;
+}
+.essay-headline {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+.essay-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.essay-title {
+  font-size: 28px;
+  line-height: 1.02;
+  letter-spacing: -.04em;
+  font-weight: 780;
+  color: var(--text-1);
+  margin-top: 4px;
+}
+.essay-subtitle {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-2);
+  max-width: 760px;
+  margin-top: 8px;
+}
+.essay-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, .92fr);
+  gap: 18px;
+}
+.essay-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.essay-field label,
+.essay-panel-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 7px;
+}
+.essay-input,
+.essay-textarea,
+.essay-select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255,255,255,.03);
+  color: var(--text-1);
+  padding: 11px 12px;
+  font-size: 13px;
+  outline: none;
+}
+.essay-input:focus,
+.essay-textarea:focus,
+.essay-select:focus {
+  border-color: var(--amber);
+}
+.essay-textarea {
+  min-height: 110px;
+  resize: vertical;
+  line-height: 1.6;
+}
+.essay-book-picker,
+.essay-doc-list {
+  border: 1px solid rgba(201,168,76,.14);
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(255,255,255,.02);
+  max-height: 250px;
+  overflow-y: auto;
+}
+.essay-book-option,
+.essay-doc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 8px;
+  border-radius: 10px;
+}
+.essay-book-option:hover,
+.essay-doc-item:hover {
+  background: rgba(201,168,76,.07);
+}
+.essay-book-meta,
+.essay-doc-meta {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+.essay-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.essay-upload-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.essay-note {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.55;
+}
+.essay-workspace {
+  display: none;
+  min-height: 720px;
+  overflow: hidden;
+}
+.essay-workspace.open {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-areas:
+    "sidebar draft"
+    "sidebar conversation";
+  grid-template-rows: minmax(0, 1fr) minmax(220px, 300px);
+  min-height: calc(100vh - 150px);
+}
+.essay-sidebar,
+.essay-conversation,
+.essay-draft-pane {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.essay-sidebar { grid-area: sidebar; }
+.essay-conversation { grid-area: conversation; }
+.essay-draft-pane { grid-area: draft; }
+.essay-sidebar {
+  border-right: 1px solid var(--border);
+  padding: 16px;
+  gap: 16px;
+}
+.essay-conversation {
+  border-top: 1px solid var(--border);
+}
+.essay-draft-pane {
+  background: rgba(255,255,255,.015);
+}
+.essay-panel-head {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.essay-panel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.essay-panel-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+}
+.essay-memory-card,
+.essay-source-card {
+  border: 1px solid rgba(201,168,76,.16);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255,255,255,.02);
+}
+.essay-phase-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.essay-phase-badge,
+.essay-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  border: 1px solid rgba(37,99,235,.16);
+  background: rgba(37,99,235,.08);
+  color: var(--amber-dk);
+}
+.essay-chip {
+  text-transform: none;
+  letter-spacing: .02em;
+  font-size: 11px;
+  font-weight: 600;
+}
+.essay-thesis-box {
+  padding: 11px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(37,99,235,.12);
+  background: rgba(37,99,235,.05);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.essay-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.essay-memory-list,
+.essay-source-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.essay-memory-list li,
+.essay-source-list li {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.essay-trace-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.essay-trace-item {
+  border: 1px solid rgba(148,163,184,.18);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(248,250,252,.7);
+}
+.essay-trace-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.essay-trace-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.essay-trace-reason,
+.essay-trace-meta {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-3);
+  margin-top: 5px;
+}
+.essay-trace-meta code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+.essay-proposal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+.essay-proposal-card {
+  border: 1px solid rgba(37,99,235,.18);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(37,99,235,.04);
+}
+.essay-proposal-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.essay-proposal-copy {
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+  margin-top: 6px;
+}
+.essay-proposal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.essay-proposal-preview {
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-3);
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.7);
+  border: 1px dashed rgba(148,163,184,.24);
+}
+.essay-chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.essay-msg {
+  border-radius: 14px;
+  padding: 12px 14px;
+  max-width: 90%;
+  font-size: 13px;
+  line-height: 1.65;
+}
+.essay-msg.user {
+  margin-left: auto;
+  background: rgba(201,168,76,.16);
+  color: var(--text-1);
+}
+.essay-msg.agent {
+  background: rgba(255,255,255,.04);
+  color: var(--text-2);
+  border: 1px solid rgba(255,255,255,.06);
+}
+.essay-msg.tool {
+  background: rgba(56,189,248,.08);
+  border: 1px dashed rgba(56,189,248,.22);
+  color: var(--text-3);
+  font-size: 11.5px;
+}
+.essay-chat-actions {
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.essay-composer {
+  padding: 0 18px 18px;
+  display: flex;
+  gap: 10px;
+}
+.essay-composer .essay-input {
+  flex: 1;
+}
+.essay-draft-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 20px 22px;
+}
+.essay-draft-markdown {
+  max-width: 960px;
+  margin: 0 auto;
+}
+.essay-empty {
+  color: var(--text-3);
+  font-size: 12px;
+  line-height: 1.7;
+  padding: 14px;
+  border: 1px dashed rgba(201,168,76,.18);
+  border-radius: 14px;
+}
+@media (max-width: 1500px) {
+  .essay-workspace.open {
+    grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
+    grid-template-areas:
+      "sidebar draft"
+      "sidebar conversation";
+  }
+}
+@media (max-width: 1200px) {
+  .essay-grid,
+  .essay-workspace.open {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "sidebar"
+      "draft"
+      "conversation";
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .essay-sidebar,
+  .essay-conversation,
+  .essay-draft-pane {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .essay-conversation {
+    border-top: none;
+  }
+}
+@media (max-width: 760px) {
+  .essay-setup-card,
+  .essay-workspace.open {
+    border-radius: 14px;
+  }
+  .essay-grid,
+  .essay-mini-grid {
+    grid-template-columns: 1fr;
+  }
+  .essay-workspace.open {
+    min-height: auto;
+  }
 }
 
 .concepts-header {
@@ -2638,10 +3078,39 @@ body::after {
 /* ═══════════════════════════════════════
    WIKI
 ═══════════════════════════════════════ */
-/* Hide flanking panels when wiki tab is active so it fills the full viewport */
-.app.wiki-active .sidebar     { display: none; }
-.app.wiki-active .right-panel { display: none; }
-.app.wiki-active .center-panel { border-right: none; }
+/* Hide flanking panels when wiki or essay is active so the workspace fills the viewport */
+.app.wiki-active .sidebar,
+.app.essay-active .sidebar     { display: none; }
+.app.wiki-active .right-panel,
+.app.essay-active .right-panel { display: none; }
+.app.wiki-active .center-panel,
+.app.essay-active .center-panel { border-right: none; }
+.app.essay-active .center-header {
+  padding: 18px 28px 0;
+  background:
+    radial-gradient(circle at top left, rgba(37,99,235,.08), transparent 28%),
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.98));
+}
+.app.essay-active .book-bar {
+  display: none;
+}
+.app.essay-active .center-panel,
+.app.essay-active .tab-content,
+.app.essay-active #pane-essay,
+.app.essay-active #pane-essay.tab-pane.active,
+.app.essay-active #pane-essay .essay-shell {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+}
+.app.essay-active .tab-content {
+  background:
+    linear-gradient(180deg, rgba(248,250,252,.94), rgba(241,245,249,.92));
+}
+.app.essay-active #pane-essay.tab-pane {
+  padding: 18px 28px 28px;
+  display: block;
+}
 
 .wiki-layout {
   display: flex;
@@ -4321,7 +4790,7 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 /* ══════════════════════════════════════════
    NOTES WRITE-GATE OVERLAY
 ══════════════════════════════════════════ */
-#pane-notes { position: relative; }
+#pane-notes.active { position: relative; }
 .notes-gate {
   position: absolute;
   inset: 0;
@@ -4654,6 +5123,10 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           Write
         </button>
+        <button class="tab-btn" id="tabEssay" onclick="switchTab('essay')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H18v16H6.5A2.5 2.5 0 0 0 4 20V4a2 2 0 0 1 2-2Z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h4"/></svg>
+          Essay
+        </button>
         <button class="tab-btn" id="tabConnections" onclick="switchTab('connections')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           Connections
@@ -4926,6 +5399,152 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
           <div id="advocateContent"></div>
         </div>
 
+      </div>
+
+      <!-- ESSAY AGENT TAB -->
+      <div class="tab-pane" id="pane-essay">
+        <div class="essay-shell">
+          <div class="essay-setup-card">
+            <div class="essay-headline">
+              <div>
+                <div class="essay-kicker">Essay Harness</div>
+                <div class="essay-title">Build a blog with a context-aware writing agent</div>
+                <div class="essay-subtitle">Select multiple books, attach supporting documents, and let a tool-using writing harness inspect notes, ideas, articles, wiki pages, and documents before it drafts.</div>
+              </div>
+              <button class="btn-sec btn-sm" onclick="essayResetComposer()">Reset</button>
+            </div>
+
+            <div class="essay-grid">
+              <div class="essay-stack">
+                <div class="essay-field">
+                  <label for="essayTopicInput">Topic</label>
+                  <input class="essay-input" id="essayTopicInput" type="text" maxlength="180" placeholder="What blog are we trying to write?">
+                </div>
+                <div class="essay-mini-grid">
+                  <div class="essay-field">
+                    <label for="essayAudienceInput">Audience</label>
+                    <select class="essay-select" id="essayAudienceInput"></select>
+                  </div>
+                  <div class="essay-field">
+                    <label for="essayToneInput">Tone</label>
+                    <select class="essay-select" id="essayToneInput"></select>
+                  </div>
+                </div>
+                <div class="essay-mini-grid">
+                  <div class="essay-field">
+                    <label for="essayBackendSelect">Model Backend</label>
+                    <select class="essay-select" id="essayBackendSelect" onchange="essaySyncModelOptions()"></select>
+                  </div>
+                  <div class="essay-field">
+                    <label for="essayModelSelect">Model Name</label>
+                    <select class="essay-select" id="essayModelSelect"></select>
+                  </div>
+                </div>
+                <div class="essay-note" id="essayBackendNote">Loading backend options…</div>
+                <div class="essay-field">
+                  <label for="essayPasteDoc">Add supporting document text</label>
+                  <textarea class="essay-textarea" id="essayPasteDoc" placeholder="Paste a memo, article excerpt, transcript, or working notes here."></textarea>
+                </div>
+                <div class="essay-upload-row">
+                  <input id="essayDocTitle" class="essay-input" style="max-width:260px" type="text" placeholder="Document title">
+                  <button class="btn-sec btn-sm" onclick="essayAddPastedDoc()">Add Pasted Doc</button>
+                  <input id="essayDocFiles" type="file" accept=".pdf,.docx,.txt,.md,.markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" multiple onchange="essayHandleDocFiles(this.files)">
+                </div>
+                <div class="essay-note">PDF and DOCX files are parsed into working text before the agent sees them, so uploaded documents become part of the same memory and retrieval loop as books and wiki pages.</div>
+              </div>
+
+              <div class="essay-stack">
+                <div>
+                  <div class="essay-panel-label">Select book context</div>
+                  <div class="essay-book-picker" id="essayBookPicker"></div>
+                </div>
+                <div>
+                  <div class="essay-panel-label">Attached documents</div>
+                  <div class="essay-doc-list" id="essayDocList">
+                    <div class="essay-empty">No supporting documents attached yet.</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                  <button class="btn-amber" id="essayStartBtn" onclick="essayStartSession()">Start Essay Session</button>
+                  <span class="essay-note" id="essaySessionStatus">The harness will create a local session with transcript, memory, and draft state.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="essay-workspace" id="essayWorkspace">
+            <div class="essay-sidebar">
+              <div class="essay-memory-card">
+                <div class="essay-phase-row">
+                  <div class="essay-panel-title">Working Memory</div>
+                  <div class="essay-phase-badge" id="essayPhaseBadge">Planning</div>
+                </div>
+                <div class="essay-panel-sub" id="essayMemoryGoal">No session yet.</div>
+                <div class="essay-panel-label" style="margin-top:14px">Working Thesis</div>
+                <div class="essay-thesis-box" id="essayThesisText">Start a session to generate a thesis.</div>
+                <div class="essay-panel-label" style="margin-top:14px">Narrative Arc</div>
+                <div class="essay-thesis-box" id="essayNarrativeArc">No arc defined yet.</div>
+                <div class="essay-panel-label" style="margin-top:14px">Outline</div>
+                <ul class="essay-memory-list" id="essayOutlineList"><li>Start a session to populate working memory.</li></ul>
+                <div class="essay-panel-label" style="margin-top:14px">Argument Map</div>
+                <ul class="essay-memory-list" id="essayArgumentList"><li>No argument spine yet.</li></ul>
+                <div class="essay-panel-label" style="margin-top:14px">Intersections</div>
+                <div class="essay-pill-row" id="essayIntersectionPills"><span class="essay-chip">No intersections yet</span></div>
+                <div class="essay-panel-label" style="margin-top:14px">Tensions</div>
+                <ul class="essay-memory-list" id="essayTensionList"><li>No tensions mapped yet.</li></ul>
+                <div class="essay-panel-label" style="margin-top:14px">Open Questions</div>
+                <ul class="essay-memory-list" id="essayQuestionList"><li>None yet.</li></ul>
+              </div>
+              <div class="essay-source-card">
+                <div class="essay-panel-title">Sources in Play</div>
+                <div class="essay-panel-sub">Selected books and attached docs available to the harness.</div>
+                <ul class="essay-source-list" id="essaySourceList"></ul>
+                <div class="essay-panel-label" style="margin-top:14px">Evidence Trace</div>
+                <div class="essay-trace-list" id="essayToolTraceList">
+                  <div class="essay-empty">Tool calls will appear here after the first turn.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="essay-conversation">
+              <div class="essay-panel-head">
+                <div class="essay-panel-title">Agent Conversation</div>
+                <div class="essay-panel-sub" id="essayPlanSummary">Use quick prompts or give direct writing instructions.</div>
+              </div>
+              <div class="essay-chat-body" id="essayChatBody"></div>
+              <div class="essay-chat-actions">
+                <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Build a high-level outline for this blog before drafting.')">Build Outline</button>
+                <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Draft a strong opening and thesis for this blog.')">Draft Opening</button>
+                <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Pressure-test the current argument and identify weak spots.')">Stress Test</button>
+                <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Synthesize the strongest intersections across the selected books before drafting.')">Synthesize Books</button>
+                <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Revise the current draft for tighter reasoning and stronger evidence.')">Revise Draft</button>
+              </div>
+              <div class="essay-composer">
+                <input class="essay-input" id="essayMessageInput" type="text" placeholder="Ask the agent to outline, draft, revise, or inspect a source…" onkeydown="if(event.key==='Enter')essaySendMessage()">
+                <button class="btn-amber" id="essaySendBtn" onclick="essaySendMessage()">Send</button>
+              </div>
+            </div>
+
+            <div class="essay-draft-pane">
+              <div class="essay-panel-head">
+                <div class="essay-panel-title">Draft Workspace</div>
+                <div class="essay-panel-sub" id="essayDraftMeta">The agent’s current markdown draft appears here.</div>
+              </div>
+              <div class="essay-source-card" style="margin:18px 18px 0">
+                <div class="essay-panel-title">Pending Changes</div>
+                <div class="essay-panel-sub">Once a draft exists, the harness proposes edits and waits for your yes or no.</div>
+                <div class="essay-proposal-list" id="essayProposalList">
+                  <div class="essay-empty">No pending draft changes.</div>
+                </div>
+              </div>
+              <div class="essay-draft-scroll">
+                <div class="essay-draft-markdown wiki-md" id="essayDraftPreview">
+                  <div class="essay-empty">No draft yet. Start a session and ask for an outline or opening.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- CONNECTIONS TAB -->
@@ -6304,7 +6923,9 @@ function switchTab(tab) {
   document.getElementById(`pane-${tab}`).classList.add('active');
   document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
   activeTab = tab;
-  document.querySelector('.app').classList.toggle('wiki-active', tab === 'wiki');
+  const appEl = document.querySelector('.app');
+  appEl.classList.toggle('wiki-active', tab === 'wiki');
+  appEl.classList.toggle('essay-active', tab === 'essay');
   if (tab === 'ideas' && CURRENT_BOOK_ID && _ideasLoadedFor !== CURRENT_BOOK_ID) {
     loadBroadIdeas(CURRENT_BOOK_ID);
   }
@@ -6315,6 +6936,12 @@ function switchTab(tab) {
     loadSavedArticles();
     _updateKmSubtitle();
     populateSynthesisDropdowns();
+  }
+  if (tab === 'essay') {
+    if (!_essayOptions) essayLoadOptions();
+    essayRenderBookPicker();
+    essayRenderDocList();
+    essayRenderSourceList();
   }
   // Write tab is a self-contained focus session — no load needed
   if (tab === 'concepts' && _conceptsLoadedFor !== CURRENT_BOOK_ID) {
@@ -9825,6 +10452,532 @@ function closeDigestModal() {
 
 function outsideDigestClose(e) {
   if (e.target === document.getElementById('digestModalOverlay')) closeDigestModal();
+}
+
+// ═══════════════════════════════════════
+// ESSAY AGENT
+// ═══════════════════════════════════════
+let _essaySelectedBookIds = new Set();
+let _essayDocs = [];
+let _essaySessionId = null;
+let _essayTranscript = [];
+let _essayDraft = '';
+let _essayMemory = null;
+let _essayToolTrace = [];
+let _essayLastPlan = null;
+let _essayEvidencePacket = null;
+let _essayPendingUpdates = [];
+let _essayOptions = null;
+
+function essayFillSelect(elId, values, preferred = '') {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const items = Array.isArray(values) ? values.filter(Boolean) : [];
+  el.innerHTML = items.map(value => {
+    const selected = preferred ? value === preferred : value === items[0];
+    return `<option value="${escapeHtml(value)}" ${selected ? 'selected' : ''}>${escapeHtml(value)}</option>`;
+  }).join('');
+}
+
+function essaySyncModelOptions() {
+  const backendEl = document.getElementById('essayBackendSelect');
+  const modelEl = document.getElementById('essayModelSelect');
+  const noteEl = document.getElementById('essayBackendNote');
+  if (!backendEl || !modelEl || !_essayOptions?.backends) return;
+
+  const backendKey = backendEl.value;
+  const backend = _essayOptions.backends[backendKey];
+  const models = backend?.models?.length ? backend.models : ['No models available'];
+  essayFillSelect('essayModelSelect', models);
+
+  if (noteEl) {
+    if (!backend) {
+      noteEl.textContent = 'Backend details unavailable.';
+    } else if (backend.available) {
+      noteEl.textContent = `${backend.label} is available. Pick one of the discovered models below.`;
+    } else {
+      noteEl.textContent = `${backend.label} is currently unavailable. ${backend.error || 'The app will need another backend before drafting can work reliably.'}`;
+    }
+  }
+}
+
+async function essayLoadOptions() {
+  const data = await api('GET', '/essay-agent/options');
+  if (!data) return;
+
+  _essayOptions = data;
+  essayFillSelect('essayAudienceInput', data.audiences || [], 'LinkedIn audience');
+  essayFillSelect('essayToneInput', data.tones || [], 'Professional');
+
+  const backendEntries = Object.values(data.backends || {});
+  const backendEl = document.getElementById('essayBackendSelect');
+  if (backendEl) {
+    backendEl.innerHTML = backendEntries.map(entry => {
+      const suffix = entry.available ? '' : ' (unavailable)';
+      const selected = entry.available && !backendEntries.find(item => item.available && item.key !== entry.key) ? 'selected' : '';
+      return `<option value="${escapeHtml(entry.key)}" ${selected}>${escapeHtml(entry.label + suffix)}</option>`;
+    }).join('');
+
+    const firstAvailable = backendEntries.find(entry => entry.available);
+    backendEl.value = firstAvailable?.key || backendEntries[0]?.key || 'ollama';
+  }
+
+  essaySyncModelOptions();
+}
+
+function essayRenderBookPicker() {
+  const el = document.getElementById('essayBookPicker');
+  if (!el) return;
+
+  if (!_essaySelectedBookIds.size && CURRENT_BOOK_ID) {
+    _essaySelectedBookIds.add(CURRENT_BOOK_ID);
+  }
+
+  if (!BOOKS || BOOKS.length === 0) {
+    el.innerHTML = '<div class="essay-empty">Add books to your library first.</div>';
+    return;
+  }
+
+  el.innerHTML = BOOKS.map(book => `
+    <label class="essay-book-option">
+      <input type="checkbox" ${_essaySelectedBookIds.has(book.id) ? 'checked' : ''} onchange="essayToggleBook('${book.id}', this.checked)">
+      <div>
+        <div>${escapeHtml(book.title || 'Untitled')}</div>
+        <div class="essay-book-meta">${escapeHtml(book.author || 'Unknown author')} / ${escapeHtml(book.status || 'reading')}</div>
+      </div>
+    </label>
+  `).join('');
+}
+
+function essayToggleBook(bookId, checked) {
+  if (checked) _essaySelectedBookIds.add(bookId);
+  else _essaySelectedBookIds.delete(bookId);
+  essayRenderSourceList();
+}
+
+function essayRenderDocList() {
+  const el = document.getElementById('essayDocList');
+  if (!el) return;
+  if (_essayDocs.length === 0) {
+    el.innerHTML = '<div class="essay-empty">No supporting documents attached yet.</div>';
+    return;
+  }
+
+  el.innerHTML = _essayDocs.map(doc => `
+    <div class="essay-doc-item">
+      <div style="flex:1">
+        <div>${escapeHtml(doc.title || 'Untitled document')}</div>
+        <div class="essay-doc-meta">${escapeHtml(doc.source || 'upload')} / ${Math.round((doc.content || '').length / 100) / 10}k chars</div>
+      </div>
+      <button class="btn-sec btn-sm" onclick="essayRemoveDoc('${doc.id}')">Remove</button>
+    </div>
+  `).join('');
+}
+
+function essayRemoveDoc(docId) {
+  _essayDocs = _essayDocs.filter(doc => doc.id !== docId);
+  essayRenderDocList();
+  essayRenderSourceList();
+}
+
+async function essayHandleDocFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+
+  const payload = [];
+  for (const file of files) {
+    try {
+      const base64 = await essayFileToBase64(file);
+      payload.push({
+        id: `doc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        name: file.name,
+        mime_type: file.type || '',
+        base64
+      });
+    } catch (err) {
+      showToast(`Could not read ${file.name}: ${err.message}`);
+    }
+  }
+
+  if (payload.length) {
+    showToast('Parsing uploaded documents…');
+    const data = await api('POST', '/essay-agent/ingest-docs', { files: payload });
+    if (!data?.documents) {
+      showToast('Document ingest failed');
+    } else {
+      _essayDocs.push(...data.documents.map(doc => ({
+        id: doc.id || `doc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        title: doc.title,
+        source: doc.source || 'file upload',
+        mime_type: doc.mime_type || 'text/plain',
+        content: doc.content || ''
+      })));
+    }
+  }
+  essayRenderDocList();
+  essayRenderSourceList();
+  const input = document.getElementById('essayDocFiles');
+  if (input) input.value = '';
+}
+
+function essayFileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const comma = result.indexOf(',');
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error('Could not read file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function essayAddPastedDoc() {
+  const titleEl = document.getElementById('essayDocTitle');
+  const bodyEl = document.getElementById('essayPasteDoc');
+  const content = bodyEl?.value.trim();
+  if (!content) {
+    showToast('Paste some document text first');
+    return;
+  }
+
+  _essayDocs.push({
+    id: `doc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    title: titleEl?.value.trim() || `Pasted document ${_essayDocs.length + 1}`,
+    source: 'pasted text',
+    mime_type: 'text/plain',
+    content: content.slice(0, 30000)
+  });
+  if (titleEl) titleEl.value = '';
+  if (bodyEl) bodyEl.value = '';
+  essayRenderDocList();
+  essayRenderSourceList();
+}
+
+function essayRenderSourceList(selectedBooks = null) {
+  const el = document.getElementById('essaySourceList');
+  if (!el) return;
+
+  const books = selectedBooks || BOOKS.filter(book => _essaySelectedBookIds.has(book.id));
+  const items = [
+    ...books.map(book => `${book.title} / ${book.author || 'Unknown author'}`),
+    ..._essayDocs.map(doc => `${doc.title} / ${doc.source}`)
+  ];
+  el.innerHTML = items.length
+    ? items.map(item => `<li>${escapeHtml(item)}</li>`).join('')
+    : '<li>No sources selected yet.</li>';
+}
+
+function essayRenderTranscript() {
+  const el = document.getElementById('essayChatBody');
+  if (!el) return;
+  if (!_essayTranscript.length) {
+    el.innerHTML = '<div class="essay-empty">Start a session, then ask for an outline, a thesis, or a first draft.</div>';
+    return;
+  }
+
+  el.innerHTML = _essayTranscript.map(entry => {
+    const role = entry.role === 'assistant' ? 'agent' : (entry.role === 'tool' ? 'tool' : 'user');
+    let content = entry.content || '';
+    if (entry.role === 'tool') {
+      const prefix = entry.name ? `[${entry.name}] ` : '';
+      content = `${prefix}${clipText(content, 420)}`;
+    }
+    return `<div class="essay-msg ${role}">${escapeHtml(content)}</div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function clipText(text, limit = 400) {
+  const raw = String(text || '').replace(/\s+/g, ' ').trim();
+  return raw.length > limit ? `${raw.slice(0, limit)}...` : raw;
+}
+
+function essayRenderList(elId, items, emptyText) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = (Array.isArray(items) && items.length)
+    ? items.map(item => `<li>${escapeHtml(item)}</li>`).join('')
+    : `<li>${escapeHtml(emptyText)}</li>`;
+}
+
+function essayRenderPillRow(elId, items, emptyText) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.innerHTML = (Array.isArray(items) && items.length)
+    ? items.map(item => `<span class="essay-chip">${escapeHtml(item)}</span>`).join('')
+    : `<span class="essay-chip">${escapeHtml(emptyText)}</span>`;
+}
+
+function essayRenderPlan(plan, evidencePacket) {
+  _essayLastPlan = plan || null;
+  _essayEvidencePacket = evidencePacket || null;
+
+  const phaseBadge = document.getElementById('essayPhaseBadge');
+  if (phaseBadge) {
+    phaseBadge.textContent = String(plan?.phase || _essayMemory?.phase || 'Planning').replace(/_/g, ' ');
+  }
+
+  const summary = document.getElementById('essayPlanSummary');
+  if (summary) {
+    if (plan) {
+      const phase = String(plan.phase || 'draft').replace(/_/g, ' ');
+      const mode = String(plan.reasoning_mode || 'essay_reasoning').replace(/_/g, ' ');
+      summary.textContent = `${phase} mode / ${mode} / ${plan.draft_goal || 'advancing the draft'}`;
+    } else {
+      summary.textContent = 'Use quick prompts or give direct writing instructions.';
+    }
+  }
+
+  if (evidencePacket?.working_thesis) {
+    const draftMeta = document.getElementById('essayDraftMeta');
+    if (draftMeta) draftMeta.textContent = `Current thesis: ${evidencePacket.working_thesis}`;
+  }
+}
+
+function essayRenderToolTrace(toolTrace) {
+  _essayToolTrace = Array.isArray(toolTrace) ? toolTrace : [];
+  const el = document.getElementById('essayToolTraceList');
+  if (!el) return;
+
+  if (!_essayToolTrace.length) {
+    el.innerHTML = '<div class="essay-empty">Tool calls will appear here after the first turn.</div>';
+    return;
+  }
+
+  el.innerHTML = _essayToolTrace.map(item => {
+    const args = item.args && Object.keys(item.args).length ? JSON.stringify(item.args) : '{}';
+    const status = item.error ? 'Issue' : 'Used';
+    const meta = item.error
+      ? `Problem: ${item.error}`
+      : clipText(JSON.stringify(item.result || {}), 220);
+    return `
+      <div class="essay-trace-item">
+        <div class="essay-trace-head">
+          <div class="essay-trace-title">${escapeHtml(item.tool || 'tool')}</div>
+          <span class="essay-chip">${escapeHtml(status)}</span>
+        </div>
+        <div class="essay-trace-reason">${escapeHtml(item.reason || 'No reason recorded.')}</div>
+        <div class="essay-trace-meta"><code>${escapeHtml(args)}</code></div>
+        <div class="essay-trace-meta">${escapeHtml(meta)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function essayRenderPendingUpdates(pendingUpdates) {
+  _essayPendingUpdates = Array.isArray(pendingUpdates) ? pendingUpdates : [];
+  const el = document.getElementById('essayProposalList');
+  if (!el) return;
+
+  if (!_essayPendingUpdates.length) {
+    el.innerHTML = '<div class="essay-empty">No pending draft changes.</div>';
+    return;
+  }
+
+  el.innerHTML = _essayPendingUpdates.map(item => `
+    <div class="essay-proposal-card">
+      <div class="essay-proposal-title">${escapeHtml(item.title || 'Suggested change')}</div>
+      <div class="essay-proposal-copy">${escapeHtml(item.rationale || 'No rationale recorded.')}</div>
+      <div class="essay-proposal-preview"><strong>Change:</strong> ${escapeHtml(item.change_summary || 'No summary recorded.')}</div>
+      <div class="essay-proposal-preview"><strong>Focus:</strong> ${escapeHtml(item.focus_section || 'Draft-wide suggestion')}</div>
+      <div class="essay-proposal-preview"><strong>Mode:</strong> ${escapeHtml(item.patch_mode === 'full_replace' ? 'Full draft replacement' : 'Scoped section patch')}</div>
+      <div class="essay-proposal-preview"><strong>Before:</strong> ${escapeHtml(item.before_excerpt || 'No excerpt available.')}</div>
+      <div class="essay-proposal-preview"><strong>Preview:</strong> ${escapeHtml(item.after_excerpt || 'Preview unavailable.')}</div>
+      <div class="essay-proposal-actions">
+        <button class="btn-amber btn-sm" onclick="essayResolveProposal('${item.id}', 'accept')">Yes, apply</button>
+        <button class="btn-sec btn-sm" onclick="essayResolveProposal('${item.id}', 'reject')">No, dismiss</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function essayRenderMemory(memory) {
+  _essayMemory = memory || null;
+  document.getElementById('essayMemoryGoal').textContent = memory?.current_goal || 'No session yet.';
+  document.getElementById('essayThesisText').textContent = memory?.working_thesis || 'Start a session to generate a thesis.';
+  document.getElementById('essayNarrativeArc').textContent = memory?.narrative_arc || 'No arc defined yet.';
+  document.getElementById('essayPhaseBadge').textContent = String(memory?.phase || 'Planning').replace(/_/g, ' ');
+  essayRenderList('essayOutlineList', memory?.outline, 'No outline yet.');
+  essayRenderList('essayArgumentList', memory?.argument_map, 'No argument spine yet.');
+  essayRenderPillRow('essayIntersectionPills', memory?.intersections, 'No intersections yet');
+  essayRenderList('essayTensionList', memory?.tensions, 'No tensions mapped yet.');
+  essayRenderList('essayQuestionList', memory?.open_questions, 'No open questions yet.');
+}
+
+function essayRenderDraft(markdown) {
+  const el = document.getElementById('essayDraftPreview');
+  _essayDraft = markdown || '';
+  if (!_essayDraft.trim()) {
+    el.innerHTML = '<div class="essay-empty">No draft yet. Start a session and ask for an outline or opening.</div>';
+    return;
+  }
+  el.innerHTML = marked.parse(_essayDraft);
+}
+
+function essayHydrateSession(data) {
+  _essaySessionId = data.id;
+  _essayTranscript = data.transcript || [];
+  _essayDraft = data.draft_markdown || '';
+  _essayMemory = data.memory || null;
+  _essayToolTrace = data.last_tool_trace || [];
+  _essayLastPlan = data.last_plan || null;
+  _essayEvidencePacket = data.last_evidence_packet || null;
+  _essayPendingUpdates = data.pending_draft_updates || [];
+
+  const workspace = document.getElementById('essayWorkspace');
+  document.querySelector('#pane-essay .essay-shell')?.classList.add('session-live');
+  workspace.classList.add('open');
+  document.getElementById('essaySessionStatus').textContent = `Session ${data.id} is live. Backend: ${data.backend || document.getElementById('essayBackendSelect')?.value || 'ollama'}`;
+
+  essayRenderTranscript();
+  essayRenderDraft(_essayDraft);
+  essayRenderMemory(_essayMemory);
+  essayRenderPlan(_essayLastPlan, _essayEvidencePacket);
+  essayRenderToolTrace(_essayToolTrace);
+  essayRenderPendingUpdates(_essayPendingUpdates);
+  essayRenderSourceList(data.selected_books || BOOKS.filter(book => _essaySelectedBookIds.has(book.id)));
+}
+
+async function essayStartSession() {
+  const topic = document.getElementById('essayTopicInput')?.value.trim();
+  if (!topic) {
+    showToast('Add a topic first');
+    return;
+  }
+  if (_essaySelectedBookIds.size === 0 && !_essayDocs.length) {
+    showToast('Select at least one book or attach a document');
+    return;
+  }
+
+  const backendKey = document.getElementById('essayBackendSelect')?.value || 'ollama';
+  const selectedBackend = _essayOptions?.backends?.[backendKey];
+  if (selectedBackend && !selectedBackend.available) {
+    showToast(`${selectedBackend.label} is unavailable right now. Pick another backend before starting.`, 'error');
+    return;
+  }
+
+  const btn = document.getElementById('essayStartBtn');
+  btn.disabled = true;
+  btn.textContent = 'Starting…';
+
+  const data = await api('POST', '/essay-agent/session', {
+    topic,
+    audience: document.getElementById('essayAudienceInput')?.value.trim() || '',
+    tone: document.getElementById('essayToneInput')?.value.trim() || '',
+    backend: document.getElementById('essayBackendSelect')?.value || 'ollama',
+    model: document.getElementById('essayModelSelect')?.value || '',
+    book_ids: [..._essaySelectedBookIds],
+    uploaded_docs: _essayDocs
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Start Essay Session';
+
+  if (!data) {
+    showToast('Could not start essay session');
+    return;
+  }
+
+  essayHydrateSession(data);
+  essayPushAgentHint('I am ready. Ask me to build an outline, inspect the sources, or draft the first section.');
+}
+
+function essayPushAgentHint(text) {
+  _essayTranscript.push({ role: 'assistant', content: text });
+  essayRenderTranscript();
+}
+
+async function essaySendMessage(messageOverride = '') {
+  if (!_essaySessionId) {
+    showToast('Start an essay session first');
+    return;
+  }
+
+  const input = document.getElementById('essayMessageInput');
+  const message = (messageOverride || input?.value || '').trim();
+  if (!message) return;
+  if (input) input.value = '';
+
+  const btn = document.getElementById('essaySendBtn');
+  btn.disabled = true;
+  btn.textContent = 'Thinking…';
+
+  const data = await api('POST', `/essay-agent/session/${_essaySessionId}/message`, { message });
+
+  btn.disabled = false;
+  btn.textContent = 'Send';
+
+  if (!data) {
+    showToast('Essay agent request failed');
+    return;
+  }
+
+  _essayTranscript = data.transcript || _essayTranscript;
+  _essayToolTrace = data.tool_trace || [];
+  _essayLastPlan = data.plan || null;
+  _essayEvidencePacket = data.evidence_packet || null;
+  _essayPendingUpdates = data.pending_draft_updates || [];
+  essayRenderTranscript();
+  essayRenderDraft(data.draft_markdown || '');
+  essayRenderMemory(data.memory || null);
+  essayRenderPlan(_essayLastPlan, _essayEvidencePacket);
+  essayRenderToolTrace(_essayToolTrace);
+  essayRenderPendingUpdates(_essayPendingUpdates);
+
+  const draftMeta = document.getElementById('essayDraftMeta');
+  draftMeta.textContent = data.fallback_reason
+    ? `Backend: ${data.backend} (${data.model}) / fallback used because ${data.fallback_reason}`
+    : `Backend: ${data.backend} (${data.model})`;
+}
+
+function essayQuickPrompt(message) {
+  essaySendMessage(message);
+}
+
+async function essayResolveProposal(proposalId, action) {
+  if (!_essaySessionId || !proposalId) return;
+
+  const data = await api('POST', `/essay-agent/session/${_essaySessionId}/proposals/${proposalId}`, { action });
+  if (!data) {
+    showToast('Could not resolve the proposed change');
+    return;
+  }
+
+  _essayTranscript = data.transcript || _essayTranscript;
+  _essayPendingUpdates = data.pending_draft_updates || [];
+  essayRenderTranscript();
+  essayRenderDraft(data.draft_markdown || _essayDraft);
+  essayRenderMemory(data.memory || _essayMemory);
+  essayRenderPendingUpdates(_essayPendingUpdates);
+  showToast(action === 'accept' ? 'Applied the proposed change' : 'Dismissed the proposed change');
+}
+
+function essayResetComposer() {
+  _essaySessionId = null;
+  _essayTranscript = [];
+  _essayDraft = '';
+  _essayMemory = null;
+  _essayToolTrace = [];
+  _essayLastPlan = null;
+  _essayEvidencePacket = null;
+  _essayPendingUpdates = [];
+  _essayDocs = [];
+  _essaySelectedBookIds = new Set(CURRENT_BOOK_ID ? [CURRENT_BOOK_ID] : []);
+  document.querySelector('#pane-essay .essay-shell')?.classList.remove('session-live');
+  document.getElementById('essayWorkspace')?.classList.remove('open');
+  document.getElementById('essaySessionStatus').textContent = 'The harness will create a local session with transcript, memory, and draft state.';
+  document.getElementById('essayDraftMeta').textContent = 'The agent’s current markdown draft appears here.';
+  essayRenderBookPicker();
+  essayRenderDocList();
+  essayRenderSourceList();
+  essayRenderTranscript();
+  essayRenderDraft('');
+  essayRenderMemory(null);
+  essayRenderPlan(null, null);
+  essayRenderToolTrace([]);
+  essayRenderPendingUpdates([]);
 }
 
 // ═══════════════════════════════════════

@@ -1,0 +1,1150 @@
+const fs = require('fs/promises');
+const path = require('path');
+const supabase = require('./supabase');
+const { generateJson } = require('./llmClient');
+
+const SESSION_DIR = path.join(process.cwd(), '.essay-agent', 'sessions');
+const MAX_TRANSCRIPT_ITEMS = 22;
+const MAX_TOOL_STEPS = 5;
+const MAX_TOOL_CALLS_PER_PLAN = 3;
+const MAX_PENDING_PROPOSALS = 4;
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function randomId() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeSearchText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function queryTerms(value) {
+  const stopWords = new Set([
+    'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'how',
+    'i', 'in', 'into', 'is', 'it', 'of', 'on', 'or', 'that', 'the', 'their',
+    'this', 'to', 'what', 'when', 'where', 'which', 'who', 'why', 'with'
+  ]);
+  return [
+    ...new Set(
+      normalizeSearchText(value)
+        .split(' ')
+        .filter(term => term.length > 2 && !stopWords.has(term))
+    )
+  ];
+}
+
+function clip(text, limit = 1200) {
+  const raw = String(text || '').replace(/\s+/g, ' ').trim();
+  return raw.length > limit ? `${raw.slice(0, limit)}...` : raw;
+}
+
+function clipList(list, limit = 6, itemLimit = 220) {
+  return (Array.isArray(list) ? list : [])
+    .filter(Boolean)
+    .map(item => clip(item, itemLimit))
+    .slice(0, limit);
+}
+
+function dedupeList(list, limit = 8) {
+  return [...new Set((Array.isArray(list) ? list : []).filter(Boolean))].slice(0, limit);
+}
+
+function sessionFile(id) {
+  return path.join(SESSION_DIR, `${id}.json`);
+}
+
+async function ensureSessionDir() {
+  await fs.mkdir(SESSION_DIR, { recursive: true });
+}
+
+async function saveSession(session) {
+  await ensureSessionDir();
+  session.updated_at = nowIso();
+  await fs.writeFile(sessionFile(session.id), JSON.stringify(session, null, 2), 'utf8');
+  return session;
+}
+
+async function loadSession(id) {
+  const raw = await fs.readFile(sessionFile(id), 'utf8');
+  return JSON.parse(raw);
+}
+
+function getReasoningMode(selectedBooks = []) {
+  return selectedBooks.length >= 2 ? 'cross_book_synthesis' : 'single_source_argument';
+}
+
+function createInitialMemory({ topic, audience, tone, selectedBooks, uploadedDocs }) {
+  const bookTitles = selectedBooks.map(book => book.title);
+  const crossBook = getReasoningMode(selectedBooks) === 'cross_book_synthesis';
+
+  return {
+    phase: 'planning',
+    reasoning_mode: getReasoningMode(selectedBooks),
+    topic,
+    audience: audience || '',
+    tone: tone || '',
+    current_goal: crossBook
+      ? 'Build a synthesis essay that discovers intersections, tensions, and new claims across the selected books.'
+      : 'Build a grounded essay from the selected sources with explicit evidence and a strong argument spine.',
+    source_focus: bookTitles,
+    working_thesis: '',
+    narrative_arc: '',
+    outline: [],
+    argument_map: [],
+    intersections: [],
+    tensions: [],
+    evidence_gaps: [],
+    open_questions: [],
+    style_directives: crossBook
+      ? [
+          'Do not summarize each book separately.',
+          'Synthesize the books into a new framework.',
+          'Surface tensions and complementarity explicitly.'
+        ]
+      : [
+          'Ground every major claim in the source material.',
+          'Use a research-forward but readable tone.'
+        ],
+    source_ledger: dedupeList([
+      ...bookTitles.map(title => `Book: ${title}`),
+      ...uploadedDocs.map(doc => `Document: ${doc.title || 'Untitled document'}`)
+    ], 12),
+    revision_policy: 'Conservative: once a draft exists, suggest changes and wait for explicit approval before applying them.',
+    next_actions: crossBook
+      ? ['Map intersections', 'Gather evidence from each book', 'Draft synthesis frame']
+      : ['Inspect the strongest sources', 'Build outline', 'Draft opening'],
+    recent_findings: uploadedDocs.length ? [`${uploadedDocs.length} supporting document(s) attached.`] : []
+  };
+}
+
+async function createEssaySession({ topic, audience, tone, backend, model, bookIds = [], uploadedDocs = [] }) {
+  const selectedBooks = await fetchBookSummaries(bookIds);
+  const session = {
+    id: randomId(),
+    created_at: nowIso(),
+    updated_at: nowIso(),
+    topic,
+    audience: audience || '',
+    tone: tone || '',
+    backend: backend || process.env.WRITING_AGENT_BACKEND || 'ollama',
+    model: model || process.env.OLLAMA_MODEL || process.env.OPENAI_MODEL || '',
+    selected_book_ids: bookIds,
+    selected_books: selectedBooks,
+    uploaded_docs: uploadedDocs.map(doc => ({
+      id: doc.id || randomId(),
+      title: doc.title || 'Untitled document',
+      source: doc.source || 'upload',
+      mime_type: doc.mime_type || 'text/plain',
+      content: String(doc.content || '').slice(0, 30000)
+    })),
+    transcript: [],
+    draft_markdown: '',
+    memory: createInitialMemory({ topic, audience, tone, selectedBooks, uploadedDocs }),
+    last_tool_trace: [],
+    last_plan: null,
+    last_evidence_packet: null,
+    pending_draft_updates: []
+  };
+
+  await saveSession(session);
+  return session;
+}
+
+async function fetchBookSummaries(bookIds = []) {
+  if (!bookIds.length) return [];
+  const { data: books } = await supabase
+    .from('books')
+    .select('id, title, author, category, why_reading, status')
+    .in('id', bookIds);
+
+  return (books || []).map(book => ({
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    category: book.category || '',
+    why_reading: book.why_reading || '',
+    status: book.status || ''
+  }));
+}
+
+async function fetchSessionContext(session) {
+  const bookIds = session.selected_book_ids || [];
+  const context = {
+    books: [],
+    wiki_pages: []
+  };
+
+  if (bookIds.length > 0) {
+    const [
+      { data: books },
+      { data: notes },
+      { data: ideas },
+      { data: articles }
+    ] = await Promise.all([
+      supabase.from('books').select('id, title, author, category, why_reading, status').in('id', bookIds),
+      supabase.from('notes').select('book_id, chapter_name, content, updated_at').in('book_id', bookIds).order('updated_at', { ascending: false }),
+      supabase.from('ideas').select('book_id, chapter_name, title, body, tags, number').in('book_id', bookIds).order('number', { ascending: true }),
+      supabase.from('articles').select('book_id, title, domain, snippet, url, stance').in('book_id', bookIds).order('created_at', { ascending: false })
+    ]);
+
+    const notesByBook = {};
+    const ideasByBook = {};
+    const articlesByBook = {};
+    (notes || []).forEach(note => {
+      if (!notesByBook[note.book_id]) notesByBook[note.book_id] = [];
+      notesByBook[note.book_id].push(note);
+    });
+    (ideas || []).forEach(idea => {
+      if (!ideasByBook[idea.book_id]) ideasByBook[idea.book_id] = [];
+      ideasByBook[idea.book_id].push(idea);
+    });
+    (articles || []).forEach(article => {
+      if (!articlesByBook[article.book_id]) articlesByBook[article.book_id] = [];
+      articlesByBook[article.book_id].push(article);
+    });
+
+    context.books = (books || []).map(book => ({
+      id: book.id,
+      title: book.title,
+      author: book.author || '',
+      category: book.category || '',
+      why_reading: book.why_reading || '',
+      status: book.status || '',
+      notes: notesByBook[book.id] || [],
+      ideas: ideasByBook[book.id] || [],
+      articles: articlesByBook[book.id] || []
+    }));
+  }
+
+  const wikiTerms = queryTerms(session.topic).slice(0, 6);
+  if (wikiTerms.length > 0) {
+    const { data: wikiPages } = await supabase
+      .from('wiki_pages')
+      .select('slug, title, page_type, markdown_content, updated_at')
+      .limit(240);
+
+    context.wiki_pages = (wikiPages || [])
+      .map(page => ({
+        ...page,
+        score: searchScore({
+          title: page.title,
+          slug: page.slug,
+          body: page.markdown_content
+        }, session.topic)
+      }))
+      .filter(page => page.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 12);
+  }
+
+  return context;
+}
+
+function searchScore(source, query) {
+  const terms = queryTerms(query);
+  const title = normalizeSearchText(source.title);
+  const slug = normalizeSearchText(source.slug);
+  const body = normalizeSearchText(source.body);
+  let score = 0;
+  const normalizedQuery = normalizeSearchText(query);
+  if (title && normalizedQuery.includes(title)) score += 10;
+  if (slug && normalizedQuery.includes(slug)) score += 8;
+  terms.forEach(term => {
+    if (title.includes(term)) score += 5;
+    if (slug.includes(term)) score += 4;
+    if (body.includes(term)) score += 1;
+  });
+  return score;
+}
+
+function relevantExcerpt(text, query, limit = 900) {
+  const raw = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!raw) return '';
+  const terms = queryTerms(query);
+  const lower = raw.toLowerCase();
+  const positions = terms.map(term => lower.indexOf(term)).filter(pos => pos >= 0);
+  if (!positions.length) return clip(raw, limit);
+  const start = Math.max(0, Math.min(...positions) - Math.floor(limit / 4));
+  return raw.slice(start, start + limit);
+}
+
+function searchLibrary(context, session, query) {
+  const hits = [];
+
+  context.books.forEach(book => {
+    hits.push({
+      type: 'book',
+      source_id: book.id,
+      label: `${book.title} by ${book.author}`,
+      score: searchScore({ title: book.title, slug: book.title, body: `${book.category} ${book.why_reading}` }, query),
+      snippet: clip(book.why_reading || book.category || '')
+    });
+
+    (book.ideas || []).forEach(idea => {
+      hits.push({
+        type: 'idea',
+        source_id: `${book.id}:${idea.title}`,
+        label: `${book.title} / ${idea.title}`,
+        score: searchScore({ title: idea.title, slug: idea.title, body: idea.body }, query),
+        snippet: relevantExcerpt(idea.body, query, 360)
+      });
+    });
+
+    (book.notes || []).forEach(note => {
+      hits.push({
+        type: 'note',
+        source_id: `${book.id}:${note.chapter_name}`,
+        label: `${book.title} / ${note.chapter_name}`,
+        score: searchScore({ title: note.chapter_name, slug: note.chapter_name, body: note.content }, query),
+        snippet: relevantExcerpt(note.content, query, 420)
+      });
+    });
+
+    (book.articles || []).forEach(article => {
+      hits.push({
+        type: 'article',
+        source_id: article.url,
+        label: `${book.title} / ${article.title}`,
+        score: searchScore({ title: article.title, slug: article.domain, body: article.snippet }, query),
+        snippet: clip(article.snippet, 260)
+      });
+    });
+  });
+
+  (session.uploaded_docs || []).forEach(doc => {
+    hits.push({
+      type: 'document',
+      source_id: doc.id,
+      label: doc.title,
+      score: searchScore({ title: doc.title, slug: doc.title, body: doc.content }, query),
+      snippet: relevantExcerpt(doc.content, query, 420)
+    });
+  });
+
+  (context.wiki_pages || []).forEach(page => {
+    hits.push({
+      type: 'wiki',
+      source_id: page.slug,
+      label: `Wiki / ${page.title}`,
+      score: searchScore({ title: page.title, slug: page.slug, body: page.markdown_content }, query),
+      snippet: relevantExcerpt(page.markdown_content, query, 420)
+    });
+  });
+
+  return hits
+    .filter(hit => hit.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+}
+
+function readBookFocus(context, bookId, focus) {
+  const book = context.books.find(item => item.id === bookId);
+  if (!book) throw new Error('Book not found in session context');
+
+  const notes = (book.notes || [])
+    .map(note => ({
+      chapter_name: note.chapter_name,
+      score: searchScore({ title: note.chapter_name, slug: note.chapter_name, body: note.content }, focus),
+      excerpt: relevantExcerpt(note.content, focus, 700)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+
+  const ideas = (book.ideas || [])
+    .map(idea => ({
+      title: idea.title,
+      tags: idea.tags || [],
+      score: searchScore({ title: idea.title, slug: idea.title, body: idea.body }, focus),
+      excerpt: relevantExcerpt(idea.body, focus, 360)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6);
+
+  const articles = (book.articles || [])
+    .map(article => ({
+      title: article.title,
+      domain: article.domain,
+      stance: article.stance,
+      score: searchScore({ title: article.title, slug: article.domain, body: article.snippet }, focus),
+      snippet: clip(article.snippet, 240)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+
+  return {
+    book: {
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      category: book.category,
+      why_reading: clip(book.why_reading, 240)
+    },
+    notes,
+    ideas,
+    articles
+  };
+}
+
+function readDocumentFocus(session, docId, focus) {
+  const doc = (session.uploaded_docs || []).find(item => item.id === docId);
+  if (!doc) throw new Error('Document not found');
+  return {
+    document: {
+      id: doc.id,
+      title: doc.title,
+      source: doc.source,
+      mime_type: doc.mime_type
+    },
+    excerpt: relevantExcerpt(doc.content, focus, 1200)
+  };
+}
+
+function inspectWiki(context, focus) {
+  return (context.wiki_pages || [])
+    .map(page => ({
+      slug: page.slug,
+      title: page.title,
+      type: page.page_type,
+      score: searchScore({ title: page.title, slug: page.slug, body: page.markdown_content }, focus),
+      excerpt: relevantExcerpt(page.markdown_content, focus, 500)
+    }))
+    .filter(page => page.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8);
+}
+
+function inferBookTerms(book, focus) {
+  const pool = [
+    book.title,
+    book.category,
+    book.why_reading,
+    ...(book.notes || []).slice(0, 8).map(note => `${note.chapter_name} ${relevantExcerpt(note.content, focus, 220)}`),
+    ...(book.ideas || []).slice(0, 8).map(idea => `${idea.title} ${relevantExcerpt(idea.body, focus, 180)}`)
+  ].join(' ');
+
+  const counts = new Map();
+  queryTerms(pool).forEach(term => {
+    counts.set(term, (counts.get(term) || 0) + 1);
+  });
+
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 16)
+    .map(([term]) => term);
+}
+
+function compareBooks(context, session, focus) {
+  const books = context.books.filter(book => session.selected_book_ids.includes(book.id));
+  if (!books.length) return { books: [], intersections: [], tensions: [], synthesis_opportunities: [] };
+
+  const perBook = books.map(book => ({
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    strongest_notes: (book.notes || [])
+      .map(note => ({
+        chapter_name: note.chapter_name,
+        score: searchScore({ title: note.chapter_name, slug: note.chapter_name, body: note.content }, focus),
+        excerpt: relevantExcerpt(note.content, focus, 240)
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3),
+    strongest_ideas: (book.ideas || [])
+      .map(idea => ({
+        title: idea.title,
+        score: searchScore({ title: idea.title, slug: idea.title, body: idea.body }, focus),
+        excerpt: relevantExcerpt(idea.body, focus, 220)
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3),
+    terms: inferBookTerms(book, focus)
+  }));
+
+  const termOwners = new Map();
+  perBook.forEach(book => {
+    book.terms.forEach(term => {
+      const current = termOwners.get(term) || [];
+      current.push(book.title);
+      termOwners.set(term, current);
+    });
+  });
+
+  const sharedTerms = [...termOwners.entries()]
+    .filter(([, owners]) => owners.length >= 2)
+    .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))
+    .slice(0, 8)
+    .map(([term, owners]) => ({
+      term,
+      books: owners
+    }));
+
+  const intersections = sharedTerms.map(item =>
+    `${item.term}: appears across ${item.books.join(', ')} and may be a bridge concept for the essay.`
+  );
+
+  const tensions = [];
+  if (perBook.length >= 2) {
+    for (let index = 0; index < perBook.length - 1; index += 1) {
+      const left = perBook[index];
+      const right = perBook[index + 1];
+      const leftIdea = left.strongest_ideas[0]?.title || left.strongest_notes[0]?.chapter_name || left.title;
+      const rightIdea = right.strongest_ideas[0]?.title || right.strongest_notes[0]?.chapter_name || right.title;
+      tensions.push(`How does "${leftIdea}" from ${left.title} complicate or sharpen "${rightIdea}" from ${right.title}?`);
+    }
+  }
+
+  return {
+    books: perBook.map(book => ({
+      id: book.id,
+      title: book.title,
+      author: book.author,
+      strongest_notes: book.strongest_notes,
+      strongest_ideas: book.strongest_ideas
+    })),
+    shared_terms: sharedTerms,
+    intersections,
+    tensions,
+    synthesis_opportunities: dedupeList([
+      ...intersections,
+      ...tensions
+    ], 8)
+  };
+}
+
+function summarizeContextForPrompt(context, session) {
+  const books = context.books.map(book => ({
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    note_count: book.notes.length,
+    idea_count: book.ideas.length,
+    article_count: book.articles.length
+  }));
+
+  return {
+    topic: session.topic,
+    audience: session.audience,
+    tone: session.tone,
+    selected_books: books,
+    uploaded_docs: (session.uploaded_docs || []).map(doc => ({
+      id: doc.id,
+      title: doc.title,
+      chars: doc.content.length
+    })),
+    wiki_pages: (context.wiki_pages || []).map(page => ({
+      slug: page.slug,
+      title: page.title,
+      type: page.page_type
+    }))
+  };
+}
+
+function mergeMemory(memory, patch = {}) {
+  const merged = { ...(memory || {}) };
+  Object.entries(patch).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+
+    if (Array.isArray(value)) {
+      if (Array.isArray(merged[key])) {
+        merged[key] = dedupeList([...merged[key], ...value], 10);
+      } else {
+        merged[key] = dedupeList(value, 10);
+      }
+      return;
+    }
+
+    if (typeof value === 'object') {
+      merged[key] = { ...(merged[key] || {}), ...value };
+      return;
+    }
+
+    merged[key] = value;
+  });
+  return merged;
+}
+
+function compactTranscript(transcript = []) {
+  return transcript.slice(-MAX_TRANSCRIPT_ITEMS).map(entry => ({
+    role: entry.role,
+    content: clip(entry.content, entry.role === 'tool' ? 1000 : 650),
+    name: entry.name || undefined
+  }));
+}
+
+function compactToolTrace(toolTrace = []) {
+  return toolTrace.map(item => ({
+    tool: item.tool,
+    reason: item.reason,
+    result: clip(JSON.stringify(item.result), 1200)
+  }));
+}
+
+function hasExistingDraft(session) {
+  return Boolean(String(session.draft_markdown || '').trim());
+}
+
+function userAllowsDirectRewrite(userMessage) {
+  const lower = String(userMessage || '').toLowerCase();
+  return /\b(replace the draft|overwrite the draft|rewrite everything|start over|fresh draft|full rewrite)\b/.test(lower);
+}
+
+function shouldUseProposalMode(session, plan, userMessage) {
+  if (!hasExistingDraft(session)) return false;
+  if (plan.response_mode === 'outline') return false;
+  if (userAllowsDirectRewrite(userMessage)) return false;
+  return true;
+}
+
+function buildPendingProposal(rawProposal, session, evidencePacket) {
+  const afterMarkdown = typeof rawProposal?.after_markdown === 'string'
+    ? rawProposal.after_markdown.trim()
+    : '';
+  if (!afterMarkdown || afterMarkdown === String(session.draft_markdown || '').trim()) {
+    return null;
+  }
+
+  return {
+    id: randomId(),
+    title: clip(rawProposal.title || 'Suggested draft update', 120),
+    rationale: clip(rawProposal.rationale || 'The harness found a conservative improvement grounded in the evidence packet.', 280),
+    change_summary: clip(rawProposal.change_summary || rawProposal.focus_section || 'Tightens the argument while preserving the existing draft structure.', 240),
+    focus_section: clip(rawProposal.focus_section || 'Draft-wide suggestion', 120),
+    patch_mode: rawProposal.patch_mode === 'full_replace' ? 'full_replace' : 'section_patch',
+    before_excerpt: clip(rawProposal.before_excerpt || session.draft_markdown || '', 1200),
+    after_excerpt: clip(rawProposal.after_excerpt || afterMarkdown, 1200),
+    after_markdown: afterMarkdown,
+    working_thesis: clip(rawProposal.working_thesis || evidencePacket?.working_thesis || '', 220),
+    created_at: nowIso()
+  };
+}
+
+function applyProposalPatch(currentDraft, proposal) {
+  const draft = String(currentDraft || '');
+  const beforeExcerpt = String(proposal.before_excerpt || '').trim();
+  const afterExcerpt = String(proposal.after_excerpt || '').trim();
+
+  if (proposal.patch_mode !== 'full_replace' && beforeExcerpt && afterExcerpt && draft.includes(beforeExcerpt)) {
+    return {
+      draft: draft.replace(beforeExcerpt, afterExcerpt),
+      applied_as: 'section_patch'
+    };
+  }
+
+  return {
+    draft: proposal.after_markdown || draft,
+    applied_as: 'full_replace'
+  };
+}
+
+async function executeTool({ tool, args }, context, session) {
+  if (tool === 'search_library') {
+    return searchLibrary(context, session, args.query || session.topic);
+  }
+  if (tool === 'read_book') {
+    return readBookFocus(context, args.book_id, args.focus || session.topic);
+  }
+  if (tool === 'read_document') {
+    return readDocumentFocus(session, args.doc_id, args.focus || session.topic);
+  }
+  if (tool === 'inspect_wiki') {
+    return inspectWiki(context, args.query || session.topic);
+  }
+  if (tool === 'compare_books') {
+    return compareBooks(context, session, args.focus || session.topic);
+  }
+  throw new Error(`Unknown tool: ${tool}`);
+}
+
+function buildDefaultPlan(session, userMessage) {
+  const lower = String(userMessage || '').toLowerCase();
+  const isOutline = /\boutline|structure|framework\b/.test(lower);
+  const isCritique = /\bstress|critique|weak|assumption|pressure\b/.test(lower);
+  const isRevision = /\brevise|rewrite|tighten|improve\b/.test(lower);
+  const multiBook = (session.selected_books || []).length >= 2;
+
+  return {
+    phase: isCritique ? 'critique' : (isRevision ? 'revise' : (isOutline ? 'outline' : 'draft')),
+    reasoning_mode: multiBook ? 'cross_book_synthesis' : 'single_source_argument',
+    response_mode: isOutline ? 'outline' : (isCritique ? 'critique' : 'draft'),
+    draft_goal: isOutline ? 'Produce a high-quality outline before full drafting.' : 'Advance the essay with evidence-backed prose.',
+    source_questions: multiBook
+      ? ['What ideas intersect across the selected books?', 'Where do the sources disagree or complicate each other?']
+      : ['What source material most directly supports the current claim?'],
+    style_directives: multiBook
+      ? ['Avoid book-by-book summary.', 'Produce synthesis, not comparison grids.']
+      : ['Stay grounded in direct source material.'],
+    tool_calls: [
+      { tool: 'search_library', args: { query: userMessage || session.topic }, reason: 'Find the most relevant source fragments first.' },
+      ...(multiBook ? [{ tool: 'compare_books', args: { focus: userMessage || session.topic }, reason: 'Map the cross-book intersections and tensions.' }] : [])
+    ],
+    memory_patch: {
+      phase: isOutline ? 'outlining' : (isCritique ? 'critiquing' : 'drafting'),
+      next_actions: isOutline ? ['Turn the outline into a draft opening.'] : ['Tighten the thesis with evidence.']
+    }
+  };
+}
+
+async function planEssayTurn(session, context, userMessage) {
+  const systemPrompt = `You are the planning engine for WriteFlow's essay harness.
+
+Your job is to decide how the essay agent should think next.
+
+If multiple books are selected, follow this rule set:
+- Do not summarize Book A and then Book B.
+- Find conceptual overlaps, tensions, contradictions, and complementarities.
+- Build a new framework that none of the sources fully states alone.
+- Emulate an essayistic, synthetic mode similar to "The Dragon and Its Contradictions."
+
+Return ONLY valid JSON:
+{
+  "phase": "outline" | "evidence" | "draft" | "revise" | "critique",
+  "reasoning_mode": "cross_book_synthesis" | "single_source_argument" | "chapter_refinement",
+  "response_mode": "outline" | "draft" | "critique" | "analysis",
+  "draft_goal": "string",
+  "source_questions": ["string"],
+  "style_directives": ["string"],
+  "tool_calls": [
+    {
+      "tool": "search_library" | "read_book" | "read_document" | "inspect_wiki" | "compare_books",
+      "args": {},
+      "reason": "why this tool is needed"
+    }
+  ],
+  "memory_patch": {
+    "phase": "string",
+    "current_goal": "string",
+    "open_questions": ["string"],
+    "evidence_gaps": ["string"],
+    "next_actions": ["string"]
+  }
+}
+
+Rules:
+- Use at most 3 tool calls.
+- Prefer search_library first when the user asks a new question.
+- Use compare_books when two or more books are selected and synthesis matters.
+- Only call read_document if a supporting document is likely useful.
+- If the user asks for critique or stress testing, plan for critique rather than more drafting.`;
+
+  const userPrompt = JSON.stringify({
+    session_context: summarizeContextForPrompt(context, session),
+    memory: session.memory,
+    user_message: userMessage,
+    current_draft: clip(session.draft_markdown, 5000),
+    transcript: compactTranscript(session.transcript)
+  }, null, 2);
+
+  try {
+    const llm = await generateJson({
+      backend: session.backend,
+      model: session.model || undefined,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.2,
+      maxTokens: 1400
+    });
+
+    const plan = llm.data || {};
+    const normalizedPlan = {
+      phase: plan.phase || 'draft',
+      reasoning_mode: plan.reasoning_mode || session.memory?.reasoning_mode || getReasoningMode(session.selected_books),
+      response_mode: plan.response_mode || 'draft',
+      draft_goal: clip(plan.draft_goal || 'Advance the essay deliberately.', 260),
+      source_questions: clipList(plan.source_questions, 6, 220),
+      style_directives: clipList(plan.style_directives, 6, 180),
+      tool_calls: (Array.isArray(plan.tool_calls) ? plan.tool_calls : [])
+        .filter(call => call && call.tool)
+        .slice(0, MAX_TOOL_CALLS_PER_PLAN),
+      memory_patch: plan.memory_patch || {},
+      backend: llm.backend,
+      model: llm.model,
+      fallback_reason: llm.fallback_reason || ''
+    };
+
+    if (!normalizedPlan.tool_calls.length) {
+      normalizedPlan.tool_calls = buildDefaultPlan(session, userMessage).tool_calls;
+    }
+
+    return normalizedPlan;
+  } catch (error) {
+    return {
+      ...buildDefaultPlan(session, userMessage),
+      backend: session.backend,
+      model: session.model,
+      fallback_reason: error.message
+    };
+  }
+}
+
+async function buildEvidencePacket(session, context, plan, toolTrace, userMessage) {
+  const systemPrompt = `You are the evidence synthesizer inside WriteFlow's essay harness.
+
+You are not drafting the final essay yet. You are distilling the inspected evidence into a compact thinking packet for the drafter.
+
+If multiple books are present:
+- focus on shared structures, tensions, contradictions, and synthesis opportunities
+- do not produce book-by-book summaries
+- identify a novel through-line where possible
+
+Return ONLY valid JSON:
+{
+  "working_thesis": "string",
+  "narrative_arc": "string",
+  "outline": ["string"],
+  "argument_map": ["string"],
+  "intersections": ["string"],
+  "tensions": ["string"],
+  "evidence_ledgers": ["string"],
+  "evidence_gaps": ["string"],
+  "open_questions": ["string"],
+  "recommended_sections": ["string"]
+}
+
+Rules:
+- Every statement must be grounded in the provided tool results.
+- Keep each item concise and actionable.
+- Prefer 4-6 outline lines and 3-6 argument map lines.`;
+
+  const userPrompt = JSON.stringify({
+    topic: session.topic,
+    audience: session.audience,
+    tone: session.tone,
+    plan,
+    memory: session.memory,
+    user_message: userMessage,
+    context_summary: summarizeContextForPrompt(context, session),
+    tool_trace: compactToolTrace(toolTrace)
+  }, null, 2);
+
+  try {
+    const llm = await generateJson({
+      backend: session.backend,
+      model: session.model || undefined,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.2,
+      maxTokens: 1800
+    });
+
+    return {
+      working_thesis: clip(llm.data?.working_thesis || session.memory?.working_thesis || '', 360),
+      narrative_arc: clip(llm.data?.narrative_arc || session.memory?.narrative_arc || '', 260),
+      outline: clipList(llm.data?.outline, 8, 220),
+      argument_map: clipList(llm.data?.argument_map, 8, 260),
+      intersections: clipList(llm.data?.intersections, 8, 220),
+      tensions: clipList(llm.data?.tensions, 8, 220),
+      evidence_ledgers: clipList(llm.data?.evidence_ledgers, 10, 220),
+      evidence_gaps: clipList(llm.data?.evidence_gaps, 8, 220),
+      open_questions: clipList(llm.data?.open_questions, 8, 220),
+      recommended_sections: clipList(llm.data?.recommended_sections, 8, 220),
+      backend: llm.backend,
+      model: llm.model,
+      fallback_reason: llm.fallback_reason || ''
+    };
+  } catch (error) {
+    return {
+      working_thesis: session.memory?.working_thesis || '',
+      narrative_arc: session.memory?.narrative_arc || '',
+      outline: clipList(session.memory?.outline, 8, 220),
+      argument_map: clipList(session.memory?.argument_map, 8, 260),
+      intersections: [],
+      tensions: [],
+      evidence_ledgers: toolTrace.map(item => `${item.tool}: ${clip(item.reason || '', 120)}${item.result ? ` / ${clip(JSON.stringify(item.result), 140)}` : ''}`).slice(0, 8),
+      evidence_gaps: ['The evidence packet fell back to heuristic mode. Tighten the next prompt if needed.'],
+      open_questions: clipList(plan.source_questions, 6, 220),
+      recommended_sections: [],
+      backend: session.backend,
+      model: session.model,
+      fallback_reason: error.message
+    };
+  }
+}
+
+async function draftEssayResponse(session, context, plan, evidencePacket, toolTrace, userMessage) {
+  const proposalMode = shouldUseProposalMode(session, plan, userMessage);
+  const systemPrompt = `You are WriteFlow's essay drafting engine.
+
+Write like a sharp research essayist. The user is building a serious blog post, not a fluffy summary.
+
+When multiple books are selected:
+- produce synthesis rather than serial summary
+- surface tensions, contradictions, and complementarities
+- articulate a coherent intellectual framework
+- create claims that emerge from the combination of sources, not just each source in isolation
+
+Return ONLY valid JSON:
+{
+  "mode": "direct_update" | "proposal_only",
+  "assistant_message": "brief explanation of what changed and what to do next",
+  "draft_markdown": "full markdown draft or outline",
+  "proposals": [
+    {
+      "title": "string",
+      "rationale": "string",
+      "change_summary": "string",
+      "focus_section": "string",
+      "patch_mode": "section_patch" | "full_replace",
+      "before_excerpt": "string",
+      "after_excerpt": "string",
+      "after_markdown": "full markdown draft if this proposal is applied",
+      "working_thesis": "string"
+    }
+  ],
+  "memory_patch": {
+    "phase": "string",
+    "working_thesis": "string",
+    "narrative_arc": "string",
+    "outline": ["string"],
+    "argument_map": ["string"],
+    "intersections": ["string"],
+    "tensions": ["string"],
+    "source_ledger": ["string"],
+    "evidence_gaps": ["string"],
+    "open_questions": ["string"],
+    "next_actions": ["string"],
+    "recent_findings": ["string"],
+    "style_directives": ["string"]
+  }
+}
+
+Rules:
+- Ground claims in the evidence packet and tool outputs.
+- If response_mode is "outline", return a refined outline rather than a full essay.
+- If response_mode is "critique", revise or annotate the draft by identifying weak assumptions and unsupported jumps.
+- Preserve any strong material already in the draft unless the user asked to rewrite it.
+- If proposal_mode is true, do not silently overwrite the draft. Instead return 1-3 conservative proposals and keep "draft_markdown" equal to the current draft.
+- Prefer "section_patch" proposals that update one section or passage at a time.
+- Only use "full_replace" if the improvement truly requires restructuring the whole draft.
+- When proposing a section patch, "before_excerpt" must match text from the current draft and "after_excerpt" should be the minimally changed replacement.
+- Use markdown headings where helpful.
+- Do not fabricate quotations.`;
+
+  const userPrompt = JSON.stringify({
+    topic: session.topic,
+    audience: session.audience,
+    tone: session.tone,
+    user_message: userMessage,
+    plan,
+    working_memory: session.memory,
+    evidence_packet: evidencePacket,
+    recent_tool_trace: compactToolTrace(toolTrace),
+    current_draft: clip(session.draft_markdown, 9000),
+    context_summary: summarizeContextForPrompt(context, session),
+    proposal_mode: proposalMode
+  }, null, 2);
+
+  try {
+    const llm = await generateJson({
+      backend: session.backend,
+      model: session.model || undefined,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.35,
+      maxTokens: 2600
+    });
+
+    return {
+      mode: llm.data?.mode || (proposalMode ? 'proposal_only' : 'direct_update'),
+      assistant_message: llm.data?.assistant_message || 'I advanced the essay with a tighter synthesis pass.',
+      draft_markdown: typeof llm.data?.draft_markdown === 'string'
+        ? llm.data.draft_markdown
+        : session.draft_markdown,
+      proposals: Array.isArray(llm.data?.proposals) ? llm.data.proposals : [],
+      memory_patch: llm.data?.memory_patch || {},
+      backend: llm.backend,
+      model: llm.model,
+      fallback_reason: llm.fallback_reason || ''
+    };
+  } catch (error) {
+    const fallbackDraft = session.draft_markdown || [
+      `# ${session.topic}`,
+      '',
+      '## Working Thesis',
+      evidencePacket.working_thesis || 'A thesis is still forming.',
+      '',
+      '## Outline',
+      ...(evidencePacket.outline.length ? evidencePacket.outline.map(item => `- ${item}`) : ['- Gather stronger evidence before drafting.']),
+      '',
+      '## Open Questions',
+      ...(evidencePacket.open_questions.length ? evidencePacket.open_questions.map(item => `- ${item}`) : ['- Tighten the thesis with another pass.'])
+    ].join('\n');
+
+    return {
+      mode: proposalMode ? 'proposal_only' : 'direct_update',
+      assistant_message: 'I mapped the evidence and preserved the current workspace, but the drafting step fell back to a structured scaffold.',
+      draft_markdown: fallbackDraft,
+      proposals: [],
+      memory_patch: {
+        phase: plan.phase === 'critique' ? 'critique-ready' : 'draft-scaffolded',
+        next_actions: ['Run another drafting pass when the model is healthy.', 'Use the current thesis and outline as the revision spine.']
+      },
+      backend: session.backend,
+      model: session.model,
+      fallback_reason: error.message
+    };
+  }
+}
+
+async function runEssayAgentTurn(session, userMessage) {
+  const context = await fetchSessionContext(session);
+  session.transcript.push({ role: 'user', content: userMessage, created_at: nowIso() });
+
+  const plan = await planEssayTurn(session, context, userMessage);
+  const toolTrace = [];
+  const usedTools = new Set();
+
+  for (const toolCall of plan.tool_calls.slice(0, MAX_TOOL_STEPS)) {
+    const toolKey = `${toolCall.tool}:${JSON.stringify(toolCall.args || {})}`;
+    if (usedTools.has(toolKey)) continue;
+    usedTools.add(toolKey);
+
+    try {
+      const result = await executeTool(toolCall, context, session);
+      const toolEntry = {
+        role: 'tool',
+        name: toolCall.tool,
+        created_at: nowIso(),
+        content: JSON.stringify(result)
+      };
+      session.transcript.push(toolEntry);
+      toolTrace.push({
+        tool: toolCall.tool,
+        args: toolCall.args || {},
+        reason: toolCall.reason || '',
+        result
+      });
+    } catch (error) {
+      toolTrace.push({
+        tool: toolCall.tool,
+        args: toolCall.args || {},
+        reason: toolCall.reason || '',
+        error: error.message
+      });
+    }
+  }
+
+  const evidencePacket = await buildEvidencePacket(session, context, plan, toolTrace, userMessage);
+
+  const finalPayload = await draftEssayResponse(
+    session,
+    context,
+    plan,
+    evidencePacket,
+    toolTrace,
+    userMessage
+  );
+
+  const pendingProposals = (finalPayload.proposals || [])
+    .map(proposal => buildPendingProposal(proposal, session, evidencePacket))
+    .filter(Boolean)
+    .slice(0, MAX_PENDING_PROPOSALS);
+
+  session.memory = mergeMemory(session.memory, {
+    ...plan.memory_patch,
+    phase: plan.phase,
+    reasoning_mode: plan.reasoning_mode,
+    current_goal: plan.draft_goal || session.memory?.current_goal,
+    style_directives: plan.style_directives,
+    working_thesis: evidencePacket.working_thesis,
+    narrative_arc: evidencePacket.narrative_arc,
+    outline: evidencePacket.outline,
+    argument_map: evidencePacket.argument_map,
+    intersections: evidencePacket.intersections,
+    tensions: evidencePacket.tensions,
+    source_ledger: evidencePacket.evidence_ledgers,
+    evidence_gaps: evidencePacket.evidence_gaps,
+    open_questions: evidencePacket.open_questions,
+    next_actions: evidencePacket.recommended_sections,
+    recent_findings: [
+      ...clipList(finalPayload.memory_patch?.recent_findings, 6, 220),
+      ...toolTrace.map(item => {
+        if (item.error) return `${item.tool} failed: ${item.error}`;
+        return `${item.tool}: ${clip(item.reason, 140)}`;
+      }).slice(0, 4)
+    ],
+    next_actions: finalPayload.mode === 'proposal_only'
+      ? ['Review the pending draft updates.', 'Accept or dismiss each proposed change.']
+      : evidencePacket.recommended_sections
+  });
+
+  session.memory = mergeMemory(session.memory, finalPayload.memory_patch);
+  if (finalPayload.mode === 'proposal_only') {
+    session.pending_draft_updates = pendingProposals;
+  } else {
+    session.draft_markdown = finalPayload.draft_markdown || session.draft_markdown;
+    session.pending_draft_updates = [];
+  }
+  session.last_tool_trace = toolTrace;
+  session.last_plan = plan;
+  session.last_evidence_packet = evidencePacket;
+  session.transcript.push({
+    role: 'assistant',
+    content: finalPayload.assistant_message,
+    created_at: nowIso()
+  });
+  await saveSession(session);
+
+  return {
+    session,
+    assistant_message: finalPayload.assistant_message,
+    draft_markdown: session.draft_markdown,
+    memory: session.memory,
+    pending_draft_updates: session.pending_draft_updates || [],
+    tool_trace: toolTrace,
+    plan,
+    evidence_packet: evidencePacket,
+    backend: finalPayload.backend,
+    model: finalPayload.model,
+    fallback_reason: [plan.fallback_reason, evidencePacket.fallback_reason, finalPayload.fallback_reason].filter(Boolean).join(' | ')
+  };
+}
+
+async function resolveDraftProposal(session, proposalId, action) {
+  const proposals = Array.isArray(session.pending_draft_updates) ? session.pending_draft_updates : [];
+  const proposal = proposals.find(item => item.id === proposalId);
+  if (!proposal) {
+    throw new Error('Proposal not found');
+  }
+
+  if (action === 'accept') {
+    const applied = applyProposalPatch(session.draft_markdown, proposal);
+    session.draft_markdown = applied.draft;
+    session.pending_draft_updates = [];
+    session.memory = mergeMemory(session.memory, {
+      recent_findings: [`Accepted draft update: ${proposal.title} (${applied.applied_as})`],
+      next_actions: ['Review the newly applied draft carefully before requesting another revision.']
+    });
+    session.transcript.push({
+      role: 'assistant',
+      content: `Applied proposed update: ${proposal.title} using ${applied.applied_as}.`,
+      created_at: nowIso()
+    });
+  } else if (action === 'reject') {
+    session.pending_draft_updates = proposals.filter(item => item.id !== proposalId);
+    session.transcript.push({
+      role: 'assistant',
+      content: `Dismissed proposed update: ${proposal.title}`,
+      created_at: nowIso()
+    });
+  } else {
+    throw new Error('Unsupported action');
+  }
+
+  await saveSession(session);
+  return session;
+}
+
+module.exports = {
+  createEssaySession,
+  loadSession,
+  saveSession,
+  runEssayAgentTurn,
+  resolveDraftProposal
+};

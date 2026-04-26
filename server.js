@@ -23,11 +23,12 @@ const advocateRouter      = require('./routes/advocate');
 const synthesisRouter     = require('./routes/synthesis');
 const refineRouter        = require('./routes/refine');
 const wikiRouter          = require('./routes/wiki');
+const essayAgentRouter    = require('./routes/essayAgent');
 
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '15mb' }));
 app.use(express.static(path.join(__dirname)));
 
 // API routes
@@ -51,6 +52,7 @@ app.use('/api/advocate',     advocateRouter);
 app.use('/api/synthesis',    synthesisRouter);
 app.use('/api/refine',       refineRouter);
 app.use('/api/wiki',         wikiRouter);
+app.use('/api/essay-agent',  essayAgentRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
