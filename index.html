@@ -1736,6 +1736,44 @@ body::after {
   background: rgba(255,255,255,.7);
   border: 1px dashed rgba(148,163,184,.24);
 }
+.essay-diff-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+.essay-diff-block {
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid transparent;
+}
+.essay-diff-block.green {
+  background: rgba(34,197,94,.10);
+  border-color: rgba(34,197,94,.26);
+}
+.essay-diff-block.red {
+  background: rgba(239,68,68,.10);
+  border-color: rgba(239,68,68,.24);
+}
+.essay-diff-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.essay-diff-block.green .essay-diff-label {
+  color: #166534;
+}
+.essay-diff-block.red .essay-diff-label {
+  color: #991b1b;
+}
+.essay-diff-text {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-1);
+  white-space: pre-wrap;
+}
 .essay-proposal-inline {
   margin: 0 auto 18px;
   max-width: 960px;
@@ -1773,6 +1811,31 @@ body::after {
   font-size: 14px;
   line-height: 1.8;
   white-space: pre-wrap;
+}
+.essay-proposal-inline-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.essay-proposal-inline-panel {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px dashed transparent;
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: 14px;
+}
+.essay-proposal-inline-panel.green {
+  background: rgba(34,197,94,.08);
+  border-color: rgba(34,197,94,.28);
+}
+.essay-proposal-inline-panel.red {
+  background: rgba(239,68,68,.08);
+  border-color: rgba(239,68,68,.24);
+}
+.essay-proposal-inline-panel .essay-diff-label {
+  margin-bottom: 10px;
 }
 .essay-proposal-inline-actions {
   display: flex;
@@ -1884,6 +1947,10 @@ body::after {
   }
   .essay-grid,
   .essay-mini-grid {
+    grid-template-columns: 1fr;
+  }
+  .essay-diff-grid,
+  .essay-proposal-inline-compare {
     grid-template-columns: 1fr;
   }
   .essay-workspace.open {
@@ -10864,8 +10931,16 @@ function essayRenderPendingUpdates(pendingUpdates) {
       <div class="essay-proposal-preview"><strong>Change:</strong> ${escapeHtml(item.change_summary || 'No summary recorded.')}</div>
       <div class="essay-proposal-preview"><strong>Focus:</strong> ${escapeHtml(item.focus_section || 'Draft-wide suggestion')}</div>
       <div class="essay-proposal-preview"><strong>Mode:</strong> ${escapeHtml(item.patch_mode === 'full_replace' ? 'Full draft replacement' : (item.patch_mode === 'append_paragraph' ? 'Append one approved paragraph' : 'Scoped section patch'))}</div>
-      <div class="essay-proposal-preview"><strong>Before:</strong> ${escapeHtml(item.before_excerpt || 'No excerpt available.')}</div>
-      <div class="essay-proposal-preview"><strong>Preview:</strong> ${escapeHtml(item.after_excerpt || 'Preview unavailable.')}</div>
+      <div class="essay-diff-grid">
+        <div class="essay-diff-block green">
+          <div class="essay-diff-label">Existing content</div>
+          <div class="essay-diff-text">${escapeHtml(item.before_excerpt || 'This proposal appends new text after the current draft.')}</div>
+        </div>
+        <div class="essay-diff-block red">
+          <div class="essay-diff-label">Proposed change</div>
+          <div class="essay-diff-text">${escapeHtml(item.after_excerpt || item.after_markdown || 'Preview unavailable.')}</div>
+        </div>
+      </div>
       <div class="essay-proposal-actions">
         <button class="btn-amber btn-sm" onclick="essayResolveProposal('${item.id}', 'accept')">Yes, apply</button>
         <button class="btn-sec btn-sm" onclick="essayResolveProposal('${item.id}', 'reject')">No, dismiss</button>
@@ -10888,7 +10963,16 @@ function essayProposalInlineMarkup(item) {
       </div>
       <div class="essay-proposal-inline-copy">
         <div class="essay-proposal-copy">${escapeHtml(item.rationale || 'Review this proposed change before it enters the draft.')}</div>
-        <div class="essay-proposal-inline-text">${escapeHtml(item.after_excerpt || item.after_markdown || 'Preview unavailable.')}</div>
+        <div class="essay-proposal-inline-compare">
+          <div class="essay-proposal-inline-panel green">
+            <div class="essay-diff-label">Existing content</div>
+            ${escapeHtml(item.before_excerpt || 'This proposal appends new text after the current draft.')}
+          </div>
+          <div class="essay-proposal-inline-panel red">
+            <div class="essay-diff-label">Proposed change</div>
+            ${escapeHtml(item.after_excerpt || item.after_markdown || 'Preview unavailable.')}
+          </div>
+        </div>
         <div class="essay-proposal-inline-actions">
           <button class="btn-amber btn-sm" onclick="essayResolveProposal('${item.id}', 'accept')">Yes, keep this</button>
           <button class="btn-sec btn-sm" onclick="essayResolveProposal('${item.id}', 'reject')">No, discard it</button>

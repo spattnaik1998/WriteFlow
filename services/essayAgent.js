@@ -679,8 +679,8 @@ function buildPendingProposal(rawProposal, session, evidencePacket) {
     change_summary: clip(rawProposal.change_summary || rawProposal.focus_section || 'Tightens the argument while preserving the existing draft structure.', 240),
     focus_section: clip(rawProposal.focus_section || 'Draft-wide suggestion', 120),
     patch_mode: hasDraft ? requestedPatchMode : 'append_paragraph',
-    before_excerpt: clip(rawProposal.before_excerpt || session.draft_markdown || '', 1200),
-    after_excerpt: clip(rawProposal.after_excerpt || afterMarkdown, 1200),
+    before_excerpt: String(rawProposal.before_excerpt || session.draft_markdown || '').trim(),
+    after_excerpt: String(rawProposal.after_excerpt || afterMarkdown || '').trim(),
     after_markdown: afterMarkdown,
     working_thesis: clip(rawProposal.working_thesis || evidencePacket?.working_thesis || '', 220),
     created_at: nowIso()
