@@ -52,6 +52,10 @@ function clipList(list, limit = 6, itemLimit = 220) {
     .slice(0, limit);
 }
 
+function matchesSlashCommand(input, command) {
+  return new RegExp(`^\\/${command}(?:\\s|$)`, 'i').test(String(input || '').trim());
+}
+
 function dedupeList(list, limit = 8) {
   return [...new Set((Array.isArray(list) ? list : []).filter(Boolean))].slice(0, limit);
 }
@@ -126,6 +130,12 @@ function createInitialMemory({ topic, audience, tone, selectedBooks, uploadedDoc
 
 async function createEssaySession({ topic, audience, tone, backend, model, bookIds = [], uploadedDocs = [] }) {
   const selectedBooks = await fetchBookSummaries(bookIds);
+  const resolvedBackend = backend || process.env.WRITING_AGENT_BACKEND || 'ollama';
+  const resolvedModel = model || (
+    resolvedBackend === 'openai'
+      ? (process.env.OPENAI_MODEL || 'gpt-4o')
+      : (process.env.OLLAMA_MODEL || 'qwen3:8b')
+  );
   const session = {
     id: randomId(),
     created_at: nowIso(),
@@ -133,8 +143,8 @@ async function createEssaySession({ topic, audience, tone, backend, model, bookI
     topic,
     audience: audience || '',
     tone: tone || '',
-    backend: backend || process.env.WRITING_AGENT_BACKEND || 'ollama',
-    model: model || process.env.OLLAMA_MODEL || process.env.OPENAI_MODEL || '',
+    backend: resolvedBackend,
+    model: resolvedModel,
     selected_book_ids: bookIds,
     selected_books: selectedBooks,
     uploaded_docs: uploadedDocs.map(doc => ({
@@ -254,12 +264,20 @@ function searchScore(source, query) {
   const body = normalizeSearchText(source.body);
   let score = 0;
   const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return 0;
+  if (title && normalizedQuery === title) score += 18;
+  if (slug && normalizedQuery === slug) score += 16;
   if (title && normalizedQuery.includes(title)) score += 10;
   if (slug && normalizedQuery.includes(slug)) score += 8;
+  if (title && title.includes(normalizedQuery)) score += 8;
+  if (slug && slug.includes(normalizedQuery)) score += 6;
   terms.forEach(term => {
     if (title.includes(term)) score += 5;
     if (slug.includes(term)) score += 4;
-    if (body.includes(term)) score += 1;
+    if (body.includes(term)) {
+      score += 1;
+      score += Math.min(body.split(term).length - 1, 4);
+    }
   });
   return score;
 }
@@ -338,10 +356,36 @@ function searchLibrary(context, session, query) {
     });
   });
 
-  return hits
-    .filter(hit => hit.score > 0)
+  const filteredHits = hits.filter(hit => hit.score > 0);
+  if (!filteredHits.length && session.uploaded_docs?.length) {
+    return (session.uploaded_docs || []).slice(0, 3).map(doc => ({
+      type: 'document',
+      source_id: doc.id,
+      label: doc.title,
+      score: 1,
+      snippet: relevantExcerpt(doc.content, query || session.topic, 420)
+    }));
+  }
+
+  return filteredHits
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
+}
+
+function bestMatchingDocument(session, focus = '', docId = '') {
+  const docs = Array.isArray(session.uploaded_docs) ? session.uploaded_docs : [];
+  if (!docs.length) return null;
+  if (docId) {
+    const exact = docs.find(item => item.id === docId);
+    if (exact) return exact;
+  }
+  if (docs.length === 1) return docs[0];
+  return docs
+    .map(doc => ({
+      doc,
+      score: searchScore({ title: doc.title, slug: doc.title, body: doc.content }, focus || session.topic)
+    }))
+    .sort((a, b) => b.score - a.score)[0]?.doc || docs[0];
 }
 
 function readBookFocus(context, bookId, focus) {
@@ -393,7 +437,7 @@ function readBookFocus(context, bookId, focus) {
 }
 
 function readDocumentFocus(session, docId, focus) {
-  const doc = (session.uploaded_docs || []).find(item => item.id === docId);
+  const doc = bestMatchingDocument(session, focus, docId);
   if (!doc) throw new Error('Document not found');
   return {
     document: {
@@ -595,11 +639,24 @@ function userAllowsDirectRewrite(userMessage) {
   return /\b(replace the draft|overwrite the draft|rewrite everything|start over|fresh draft|full rewrite)\b/.test(lower);
 }
 
+function userRequestsParagraph(userMessage) {
+  const lower = String(userMessage || '').toLowerCase();
+  return /\b(paragraph|opening paragraph|intro paragraph|write a paragraph|draft a paragraph)\b/.test(lower);
+}
+
 function shouldUseProposalMode(session, plan, userMessage) {
-  if (!hasExistingDraft(session)) return false;
+  if (userRequestsParagraph(userMessage)) return true;
   if (plan.response_mode === 'outline') return false;
   if (userAllowsDirectRewrite(userMessage)) return false;
-  return true;
+  return ['draft', 'paragraph', 'critique'].includes(plan.response_mode || 'draft') || hasExistingDraft(session);
+}
+
+function draftToSingleParagraph(text) {
+  return String(text || '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/\n{2,}/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function buildPendingProposal(rawProposal, session, evidencePacket) {
@@ -610,13 +667,18 @@ function buildPendingProposal(rawProposal, session, evidencePacket) {
     return null;
   }
 
+  const hasDraft = Boolean(String(session.draft_markdown || '').trim());
+  const requestedPatchMode = ['full_replace', 'append_paragraph'].includes(rawProposal.patch_mode)
+    ? rawProposal.patch_mode
+    : 'section_patch';
+
   return {
     id: randomId(),
     title: clip(rawProposal.title || 'Suggested draft update', 120),
     rationale: clip(rawProposal.rationale || 'The harness found a conservative improvement grounded in the evidence packet.', 280),
     change_summary: clip(rawProposal.change_summary || rawProposal.focus_section || 'Tightens the argument while preserving the existing draft structure.', 240),
     focus_section: clip(rawProposal.focus_section || 'Draft-wide suggestion', 120),
-    patch_mode: rawProposal.patch_mode === 'full_replace' ? 'full_replace' : 'section_patch',
+    patch_mode: hasDraft ? requestedPatchMode : 'append_paragraph',
     before_excerpt: clip(rawProposal.before_excerpt || session.draft_markdown || '', 1200),
     after_excerpt: clip(rawProposal.after_excerpt || afterMarkdown, 1200),
     after_markdown: afterMarkdown,
@@ -629,6 +691,16 @@ function applyProposalPatch(currentDraft, proposal) {
   const draft = String(currentDraft || '');
   const beforeExcerpt = String(proposal.before_excerpt || '').trim();
   const afterExcerpt = String(proposal.after_excerpt || '').trim();
+
+  if (proposal.patch_mode === 'append_paragraph') {
+    const nextDraft = draft.trim()
+      ? `${draft.trim()}\n\n${afterExcerpt || proposal.after_markdown || ''}`.trim()
+      : (afterExcerpt || proposal.after_markdown || '').trim();
+    return {
+      draft: nextDraft,
+      applied_as: 'append_paragraph'
+    };
+  }
 
   if (proposal.patch_mode !== 'full_replace' && beforeExcerpt && afterExcerpt && draft.includes(beforeExcerpt)) {
     return {
@@ -651,7 +723,7 @@ async function executeTool({ tool, args }, context, session) {
     return readBookFocus(context, args.book_id, args.focus || session.topic);
   }
   if (tool === 'read_document') {
-    return readDocumentFocus(session, args.doc_id, args.focus || session.topic);
+    return readDocumentFocus(session, args.doc_id || args.document_id || args.id, args.focus || args.query || session.topic);
   }
   if (tool === 'inspect_wiki') {
     return inspectWiki(context, args.query || session.topic);
@@ -662,33 +734,111 @@ async function executeTool({ tool, args }, context, session) {
   throw new Error(`Unknown tool: ${tool}`);
 }
 
+function clearSessionMemory(session) {
+  session.memory = createInitialMemory({
+    topic: session.topic,
+    audience: session.audience,
+    tone: session.tone,
+    selectedBooks: session.selected_books || [],
+    uploadedDocs: session.uploaded_docs || []
+  });
+  session.transcript = [];
+  session.last_tool_trace = [];
+  session.last_plan = null;
+  session.last_evidence_packet = null;
+  session.pending_draft_updates = [];
+  return session;
+}
+
 function buildDefaultPlan(session, userMessage) {
   const lower = String(userMessage || '').toLowerCase();
   const isOutline = /\boutline|structure|framework\b/.test(lower);
   const isCritique = /\bstress|critique|weak|assumption|pressure\b/.test(lower);
   const isRevision = /\brevise|rewrite|tighten|improve\b/.test(lower);
+  const isParagraph = userRequestsParagraph(userMessage);
   const multiBook = (session.selected_books || []).length >= 2;
+  const hasDocs = Array.isArray(session.uploaded_docs) && session.uploaded_docs.length > 0;
 
   return {
-    phase: isCritique ? 'critique' : (isRevision ? 'revise' : (isOutline ? 'outline' : 'draft')),
+    phase: isCritique ? 'critique' : (isRevision ? 'revise' : (isOutline ? 'outline' : (isParagraph ? 'paragraph' : 'draft'))),
     reasoning_mode: multiBook ? 'cross_book_synthesis' : 'single_source_argument',
-    response_mode: isOutline ? 'outline' : (isCritique ? 'critique' : 'draft'),
-    draft_goal: isOutline ? 'Produce a high-quality outline before full drafting.' : 'Advance the essay with evidence-backed prose.',
+    response_mode: isOutline ? 'outline' : (isCritique ? 'critique' : (isParagraph ? 'paragraph' : 'draft')),
+    draft_goal: isOutline
+      ? 'Produce a high-quality outline before full drafting.'
+      : (isParagraph ? 'Draft a single paragraph that can be accepted into the final essay.' : 'Advance the essay with evidence-backed prose.'),
     source_questions: multiBook
       ? ['What ideas intersect across the selected books?', 'Where do the sources disagree or complicate each other?']
       : ['What source material most directly supports the current claim?'],
     style_directives: multiBook
-      ? ['Avoid book-by-book summary.', 'Produce synthesis, not comparison grids.']
-      : ['Stay grounded in direct source material.'],
+      ? ['Avoid book-by-book summary.', 'Produce synthesis, not comparison grids.', 'Write in continuous prose grounded in the user\'s notes.']
+      : ['Stay grounded in direct source material.', 'Write in continuous prose grounded in the user\'s notes.'],
     tool_calls: [
+      ...(hasDocs ? [{ tool: 'read_document', args: { focus: userMessage || session.topic }, reason: 'Pull the strongest excerpt from the uploaded notes first.' }] : []),
       { tool: 'search_library', args: { query: userMessage || session.topic }, reason: 'Find the most relevant source fragments first.' },
       ...(multiBook ? [{ tool: 'compare_books', args: { focus: userMessage || session.topic }, reason: 'Map the cross-book intersections and tensions.' }] : [])
-    ],
+    ].slice(0, MAX_TOOL_CALLS_PER_PLAN),
     memory_patch: {
-      phase: isOutline ? 'outlining' : (isCritique ? 'critiquing' : 'drafting'),
-      next_actions: isOutline ? ['Turn the outline into a draft opening.'] : ['Tighten the thesis with evidence.']
+      phase: isOutline ? 'outlining' : (isCritique ? 'critiquing' : (isParagraph ? 'paragraph_drafting' : 'drafting')),
+      next_actions: isOutline
+        ? ['Turn the outline into a draft opening.']
+        : (isParagraph ? ['Review the proposed paragraph and accept it or request changes.'] : ['Tighten the thesis with evidence.'])
     }
   };
+}
+
+function synthesizeProposalFromDraft(finalPayload, session, evidencePacket, plan) {
+  const draftMarkdown = String(finalPayload?.draft_markdown || '').trim();
+  if (!draftMarkdown) return null;
+
+  const paragraphMode = plan?.response_mode === 'paragraph';
+  const paragraphText = paragraphMode ? draftToSingleParagraph(draftMarkdown) : '';
+  const proposalText = paragraphMode ? paragraphText : draftMarkdown;
+  if (!proposalText) return null;
+
+  return buildPendingProposal({
+    title: paragraphMode ? 'Proposed paragraph' : 'Proposed draft update',
+    rationale: finalPayload?.assistant_message || 'The harness prepared a draft update and is waiting for your approval.',
+    change_summary: paragraphMode
+      ? 'Adds one paragraph to the draft after you approve it.'
+      : 'Applies the generated draft only after you approve it.',
+    focus_section: paragraphMode ? 'Next paragraph' : 'Draft workspace',
+    patch_mode: paragraphMode
+      ? 'append_paragraph'
+      : (hasExistingDraft(session) ? 'full_replace' : 'append_paragraph'),
+    before_excerpt: paragraphMode ? '' : String(session.draft_markdown || ''),
+    after_excerpt: proposalText,
+    after_markdown: hasExistingDraft(session)
+      ? (paragraphMode ? `${String(session.draft_markdown || '').trim()}\n\n${proposalText}`.trim() : draftMarkdown)
+      : proposalText,
+    working_thesis: evidencePacket?.working_thesis || ''
+  }, session, evidencePacket);
+}
+
+function synthesizeProposalFromEvidence(session, evidencePacket, plan) {
+  const paragraphMode = plan?.response_mode === 'paragraph' || !hasExistingDraft(session);
+  const scaffoldParagraph = draftToSingleParagraph([
+    evidencePacket?.working_thesis || '',
+    ...(Array.isArray(evidencePacket?.argument_map) ? evidencePacket.argument_map.slice(0, 2) : []),
+    ...(Array.isArray(evidencePacket?.intersections) ? evidencePacket.intersections.slice(0, 1) : [])
+  ].filter(Boolean).join(' '));
+
+  if (!scaffoldParagraph) return null;
+
+  return buildPendingProposal({
+    title: paragraphMode ? 'Proposed paragraph from evidence' : 'Proposed draft update from evidence',
+    rationale: 'The harness reconstructed a proposal directly from the retrieved evidence so you still have something concrete to approve.',
+    change_summary: paragraphMode
+      ? 'Builds a paragraph directly from the strongest retrieved notes.'
+      : 'Builds a draft update directly from the strongest retrieved notes.',
+    focus_section: paragraphMode ? 'Next paragraph' : 'Draft workspace',
+    patch_mode: paragraphMode ? 'append_paragraph' : (hasExistingDraft(session) ? 'full_replace' : 'append_paragraph'),
+    before_excerpt: paragraphMode ? '' : String(session.draft_markdown || ''),
+    after_excerpt: scaffoldParagraph,
+    after_markdown: hasExistingDraft(session)
+      ? `${String(session.draft_markdown || '').trim()}\n\n${scaffoldParagraph}`.trim()
+      : scaffoldParagraph,
+    working_thesis: evidencePacket?.working_thesis || ''
+  }, session, evidencePacket);
 }
 
 async function planEssayTurn(session, context, userMessage) {
@@ -752,10 +902,14 @@ Rules:
     });
 
     const plan = llm.data || {};
+    const normalizedResponseMode = plan.response_mode === 'analysis'
+      ? (userRequestsParagraph(userMessage) ? 'paragraph' : 'draft')
+      : (plan.response_mode || 'draft');
+
     const normalizedPlan = {
       phase: plan.phase || 'draft',
       reasoning_mode: plan.reasoning_mode || session.memory?.reasoning_mode || getReasoningMode(session.selected_books),
-      response_mode: plan.response_mode || 'draft',
+      response_mode: normalizedResponseMode,
       draft_goal: clip(plan.draft_goal || 'Advance the essay deliberately.', 260),
       source_questions: clipList(plan.source_questions, 6, 220),
       style_directives: clipList(plan.style_directives, 6, 180),
@@ -872,6 +1026,7 @@ async function draftEssayResponse(session, context, plan, evidencePacket, toolTr
   const systemPrompt = `You are WriteFlow's essay drafting engine.
 
 Write like a sharp research essayist. The user is building a serious blog post, not a fluffy summary.
+Treat the user's notes as the governing source material and preserve their intellectual framing.
 
 When multiple books are selected:
 - produce synthesis rather than serial summary
@@ -890,7 +1045,7 @@ Return ONLY valid JSON:
       "rationale": "string",
       "change_summary": "string",
       "focus_section": "string",
-      "patch_mode": "section_patch" | "full_replace",
+      "patch_mode": "section_patch" | "full_replace" | "append_paragraph",
       "before_excerpt": "string",
       "after_excerpt": "string",
       "after_markdown": "full markdown draft if this proposal is applied",
@@ -917,13 +1072,17 @@ Return ONLY valid JSON:
 Rules:
 - Ground claims in the evidence packet and tool outputs.
 - If response_mode is "outline", return a refined outline rather than a full essay.
+- If response_mode is "paragraph", write exactly one paragraph and do not use headings.
 - If response_mode is "critique", revise or annotate the draft by identifying weak assumptions and unsupported jumps.
+- When response_mode is "draft", prefer continuous prose paragraphs rather than headings unless the user explicitly asked for headings or an outline.
 - Preserve any strong material already in the draft unless the user asked to rewrite it.
 - If proposal_mode is true, do not silently overwrite the draft. Instead return 1-3 conservative proposals and keep "draft_markdown" equal to the current draft.
 - Prefer "section_patch" proposals that update one section or passage at a time.
+- In paragraph mode, return a single proposal with patch_mode "append_paragraph" unless the user is clearly revising an existing paragraph.
 - Only use "full_replace" if the improvement truly requires restructuring the whole draft.
 - When proposing a section patch, "before_excerpt" must match text from the current draft and "after_excerpt" should be the minimally changed replacement.
-- Use markdown headings where helpful.
+- Do not include headings inside a paragraph response.
+- Default to prose, not section headings.
 - Do not fabricate quotations.`;
 
   const userPrompt = JSON.stringify({
@@ -937,7 +1096,8 @@ Rules:
     recent_tool_trace: compactToolTrace(toolTrace),
     current_draft: clip(session.draft_markdown, 9000),
     context_summary: summarizeContextForPrompt(context, session),
-    proposal_mode: proposalMode
+    proposal_mode: proposalMode,
+    paragraph_mode: plan.response_mode === 'paragraph'
   }, null, 2);
 
   try {
@@ -963,18 +1123,24 @@ Rules:
       fallback_reason: llm.fallback_reason || ''
     };
   } catch (error) {
-    const fallbackDraft = session.draft_markdown || [
-      `# ${session.topic}`,
-      '',
-      '## Working Thesis',
-      evidencePacket.working_thesis || 'A thesis is still forming.',
-      '',
-      '## Outline',
-      ...(evidencePacket.outline.length ? evidencePacket.outline.map(item => `- ${item}`) : ['- Gather stronger evidence before drafting.']),
-      '',
-      '## Open Questions',
-      ...(evidencePacket.open_questions.length ? evidencePacket.open_questions.map(item => `- ${item}`) : ['- Tighten the thesis with another pass.'])
-    ].join('\n');
+    const fallbackDraft = plan.response_mode === 'paragraph'
+      ? draftToSingleParagraph([
+          evidencePacket.working_thesis || `The core argument about ${session.topic} is still consolidating.`,
+          evidencePacket.argument_map?.[0] || '',
+          evidencePacket.intersections?.[0] || evidencePacket.outline?.[0] || ''
+        ].filter(Boolean).join(' '))
+      : (session.draft_markdown || [
+          `# ${session.topic}`,
+          '',
+          '## Working Thesis',
+          evidencePacket.working_thesis || 'A thesis is still forming.',
+          '',
+          '## Outline',
+          ...(evidencePacket.outline.length ? evidencePacket.outline.map(item => `- ${item}`) : ['- Gather stronger evidence before drafting.']),
+          '',
+          '## Open Questions',
+          ...(evidencePacket.open_questions.length ? evidencePacket.open_questions.map(item => `- ${item}`) : ['- Tighten the thesis with another pass.'])
+        ].join('\n'));
 
     return {
       mode: proposalMode ? 'proposal_only' : 'direct_update',
@@ -993,6 +1159,29 @@ Rules:
 }
 
 async function runEssayAgentTurn(session, userMessage) {
+  if (matchesSlashCommand(userMessage, 'clear')) {
+    clearSessionMemory(session);
+    session.transcript.push({
+      role: 'assistant',
+      content: 'Cleared the harness memory, tool trace, and pending changes. Your selected sources and approved draft were preserved.',
+      created_at: nowIso()
+    });
+    await saveSession(session);
+    return {
+      session,
+      assistant_message: 'Cleared the harness memory, tool trace, and pending changes. Your selected sources and approved draft were preserved.',
+      draft_markdown: session.draft_markdown,
+      memory: session.memory,
+      pending_draft_updates: [],
+      tool_trace: [],
+      plan: null,
+      evidence_packet: null,
+      backend: session.backend,
+      model: session.model,
+      fallback_reason: ''
+    };
+  }
+
   const context = await fetchSessionContext(session);
   session.transcript.push({ role: 'user', content: userMessage, created_at: nowIso() });
 
@@ -1045,6 +1234,11 @@ async function runEssayAgentTurn(session, userMessage) {
     .map(proposal => buildPendingProposal(proposal, session, evidencePacket))
     .filter(Boolean)
     .slice(0, MAX_PENDING_PROPOSALS);
+  const fallbackProposal = finalPayload.mode === 'proposal_only' && pendingProposals.length === 0
+    ? (synthesizeProposalFromDraft(finalPayload, session, evidencePacket, plan)
+      || synthesizeProposalFromEvidence(session, evidencePacket, plan))
+    : null;
+  const effectiveProposals = fallbackProposal ? [fallbackProposal] : pendingProposals;
 
   session.memory = mergeMemory(session.memory, {
     ...plan.memory_patch,
@@ -1070,13 +1264,13 @@ async function runEssayAgentTurn(session, userMessage) {
       }).slice(0, 4)
     ],
     next_actions: finalPayload.mode === 'proposal_only'
-      ? ['Review the pending draft updates.', 'Accept or dismiss each proposed change.']
+      ? ['Review the pending draft updates.', 'Accept, dismiss, or request changes before the draft is updated.']
       : evidencePacket.recommended_sections
   });
 
   session.memory = mergeMemory(session.memory, finalPayload.memory_patch);
   if (finalPayload.mode === 'proposal_only') {
-    session.pending_draft_updates = pendingProposals;
+    session.pending_draft_updates = effectiveProposals;
   } else {
     session.draft_markdown = finalPayload.draft_markdown || session.draft_markdown;
     session.pending_draft_updates = [];
@@ -1141,10 +1335,83 @@ async function resolveDraftProposal(session, proposalId, action) {
   return session;
 }
 
+async function reviseDraftProposal(session, proposalId, feedback) {
+  const proposals = Array.isArray(session.pending_draft_updates) ? session.pending_draft_updates : [];
+  const proposal = proposals.find(item => item.id === proposalId);
+  if (!proposal) {
+    throw new Error('Proposal not found');
+  }
+  if (!String(feedback || '').trim()) {
+    throw new Error('Revision feedback required');
+  }
+
+  const systemPrompt = `You are revising a pending paragraph or section proposal inside WriteFlow.
+
+Return ONLY valid JSON:
+{
+  "title": "string",
+  "rationale": "string",
+  "change_summary": "string",
+  "focus_section": "string",
+  "patch_mode": "section_patch" | "full_replace" | "append_paragraph",
+  "before_excerpt": "string",
+  "after_excerpt": "string",
+  "after_markdown": "string",
+  "working_thesis": "string",
+  "assistant_message": "string"
+}
+
+Rules:
+- Respect the user's feedback conservatively.
+- If the proposal is for a paragraph, keep it as a single paragraph with no headings.
+- Preserve the existing draft unless the requested change clearly needs more.
+- Keep the patch mode as narrow as possible.`;
+
+  const userPrompt = JSON.stringify({
+    topic: session.topic,
+    audience: session.audience,
+    tone: session.tone,
+    current_draft: clip(session.draft_markdown, 9000),
+    pending_proposal: proposal,
+    user_feedback: String(feedback).trim(),
+    memory: session.memory
+  }, null, 2);
+
+  const llm = await generateJson({
+    backend: session.backend,
+    model: session.model || undefined,
+    systemPrompt,
+    userPrompt,
+    temperature: 0.25,
+    maxTokens: 1800
+  });
+
+  const revised = buildPendingProposal(llm.data || {}, session, session.last_evidence_packet || {});
+  if (!revised) {
+    throw new Error('The model did not return a usable revised proposal');
+  }
+
+  revised.id = proposal.id;
+  revised.created_at = nowIso();
+  session.pending_draft_updates = proposals.map(item => item.id === proposalId ? revised : item);
+  session.transcript.push({
+    role: 'assistant',
+    content: llm.data?.assistant_message || `Revised the proposed change: ${proposal.title}`,
+    created_at: nowIso()
+  });
+  session.memory = mergeMemory(session.memory, {
+    recent_findings: [`Revised pending proposal: ${proposal.title}`],
+    next_actions: ['Review the updated proposal and choose yes, no, or request another change.']
+  });
+  await saveSession(session);
+  return session;
+}
+
 module.exports = {
   createEssaySession,
   loadSession,
   saveSession,
   runEssayAgentTurn,
-  resolveDraftProposal
+  resolveDraftProposal,
+  reviseDraftProposal
 };

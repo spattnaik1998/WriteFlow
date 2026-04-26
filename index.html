@@ -1585,6 +1585,12 @@ body::after {
   padding: 16px 18px 12px;
   border-bottom: 1px solid var(--border);
 }
+.essay-panel-head-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
 .essay-panel-title {
   font-size: 14px;
   font-weight: 700;
@@ -1730,6 +1736,50 @@ body::after {
   background: rgba(255,255,255,.7);
   border: 1px dashed rgba(148,163,184,.24);
 }
+.essay-proposal-inline {
+  margin: 0 auto 18px;
+  max-width: 960px;
+  border: 1px solid rgba(201,168,76,.28);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(201,168,76,.12), rgba(201,168,76,.05));
+  box-shadow: 0 14px 30px rgba(201,168,76,.12);
+  overflow: hidden;
+}
+.essay-proposal-inline-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(201,168,76,.18);
+}
+.essay-proposal-inline-copy {
+  padding: 16px;
+}
+.essay-proposal-inline-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--amber-dk);
+}
+.essay-proposal-inline-text {
+  margin-top: 10px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255,252,244,.95);
+  border: 1px dashed rgba(201,168,76,.3);
+  color: var(--text-1);
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+.essay-proposal-inline-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
 .essay-chat-body {
   flex: 1;
   overflow-y: auto;
@@ -1737,6 +1787,12 @@ body::after {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  scroll-behavior: smooth;
+}
+.essay-chat-scroll-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .essay-msg {
   border-radius: 14px;
@@ -5508,8 +5564,16 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 
             <div class="essay-conversation">
               <div class="essay-panel-head">
-                <div class="essay-panel-title">Agent Conversation</div>
-                <div class="essay-panel-sub" id="essayPlanSummary">Use quick prompts or give direct writing instructions.</div>
+                <div class="essay-panel-head-row">
+                  <div>
+                    <div class="essay-panel-title">Agent Conversation</div>
+                    <div class="essay-panel-sub" id="essayPlanSummary">Use quick prompts or give direct writing instructions.</div>
+                  </div>
+                  <div class="essay-chat-scroll-actions">
+                    <button class="btn-sec btn-sm" type="button" onclick="essayScrollConversation('top')">Oldest</button>
+                    <button class="btn-sec btn-sm" type="button" onclick="essayScrollConversation('bottom')">Newest</button>
+                  </div>
+                </div>
               </div>
               <div class="essay-chat-body" id="essayChatBody"></div>
               <div class="essay-chat-actions">
@@ -5520,7 +5584,7 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
                 <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Revise the current draft for tighter reasoning and stronger evidence.')">Revise Draft</button>
               </div>
               <div class="essay-composer">
-                <input class="essay-input" id="essayMessageInput" type="text" placeholder="Ask the agent to outline, draft, revise, or inspect a source…" onkeydown="if(event.key==='Enter')essaySendMessage()">
+                <input class="essay-input" id="essayMessageInput" type="text" placeholder="Ask the agent to draft, revise, inspect a source, or type /clear to reset memory…" onkeydown="if(event.key==='Enter')essaySendMessage()">
                 <button class="btn-amber" id="essaySendBtn" onclick="essaySendMessage()">Send</button>
               </div>
             </div>
@@ -10468,6 +10532,7 @@ let _essayLastPlan = null;
 let _essayEvidencePacket = null;
 let _essayPendingUpdates = [];
 let _essayOptions = null;
+let _essayChatPinnedToBottom = true;
 
 function essayFillSelect(elId, values, preferred = '') {
   const el = document.getElementById(elId);
@@ -10672,8 +10737,10 @@ function essayRenderSourceList(selectedBooks = null) {
 function essayRenderTranscript() {
   const el = document.getElementById('essayChatBody');
   if (!el) return;
+  const nearBottom = Math.abs((el.scrollTop + el.clientHeight) - el.scrollHeight) < 40;
   if (!_essayTranscript.length) {
     el.innerHTML = '<div class="essay-empty">Start a session, then ask for an outline, a thesis, or a first draft.</div>';
+    _essayChatPinnedToBottom = true;
     return;
   }
 
@@ -10686,6 +10753,20 @@ function essayRenderTranscript() {
     }
     return `<div class="essay-msg ${role}">${escapeHtml(content)}</div>`;
   }).join('');
+  if (_essayChatPinnedToBottom || nearBottom) {
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+function essayScrollConversation(direction) {
+  const el = document.getElementById('essayChatBody');
+  if (!el) return;
+  if (direction === 'top') {
+    _essayChatPinnedToBottom = false;
+    el.scrollTop = 0;
+    return;
+  }
+  _essayChatPinnedToBottom = true;
   el.scrollTop = el.scrollHeight;
 }
 
@@ -10782,15 +10863,40 @@ function essayRenderPendingUpdates(pendingUpdates) {
       <div class="essay-proposal-copy">${escapeHtml(item.rationale || 'No rationale recorded.')}</div>
       <div class="essay-proposal-preview"><strong>Change:</strong> ${escapeHtml(item.change_summary || 'No summary recorded.')}</div>
       <div class="essay-proposal-preview"><strong>Focus:</strong> ${escapeHtml(item.focus_section || 'Draft-wide suggestion')}</div>
-      <div class="essay-proposal-preview"><strong>Mode:</strong> ${escapeHtml(item.patch_mode === 'full_replace' ? 'Full draft replacement' : 'Scoped section patch')}</div>
+      <div class="essay-proposal-preview"><strong>Mode:</strong> ${escapeHtml(item.patch_mode === 'full_replace' ? 'Full draft replacement' : (item.patch_mode === 'append_paragraph' ? 'Append one approved paragraph' : 'Scoped section patch'))}</div>
       <div class="essay-proposal-preview"><strong>Before:</strong> ${escapeHtml(item.before_excerpt || 'No excerpt available.')}</div>
       <div class="essay-proposal-preview"><strong>Preview:</strong> ${escapeHtml(item.after_excerpt || 'Preview unavailable.')}</div>
       <div class="essay-proposal-actions">
         <button class="btn-amber btn-sm" onclick="essayResolveProposal('${item.id}', 'accept')">Yes, apply</button>
         <button class="btn-sec btn-sm" onclick="essayResolveProposal('${item.id}', 'reject')">No, dismiss</button>
+        <button class="btn-sec btn-sm" onclick="essayReviseProposal('${item.id}')">Make other changes</button>
       </div>
     </div>
   `).join('');
+}
+
+function essayProposalInlineMarkup(item) {
+  if (!item) return '';
+  return `
+    <div class="essay-proposal-inline">
+      <div class="essay-proposal-inline-head">
+        <div>
+          <div class="essay-proposal-inline-label">Awaiting approval</div>
+          <div class="essay-proposal-title">${escapeHtml(item.title || 'Suggested change')}</div>
+        </div>
+        <span class="essay-chip">${escapeHtml(item.patch_mode === 'append_paragraph' ? 'Proposed paragraph' : 'Proposed edit')}</span>
+      </div>
+      <div class="essay-proposal-inline-copy">
+        <div class="essay-proposal-copy">${escapeHtml(item.rationale || 'Review this proposed change before it enters the draft.')}</div>
+        <div class="essay-proposal-inline-text">${escapeHtml(item.after_excerpt || item.after_markdown || 'Preview unavailable.')}</div>
+        <div class="essay-proposal-inline-actions">
+          <button class="btn-amber btn-sm" onclick="essayResolveProposal('${item.id}', 'accept')">Yes, keep this</button>
+          <button class="btn-sec btn-sm" onclick="essayResolveProposal('${item.id}', 'reject')">No, discard it</button>
+          <button class="btn-sec btn-sm" onclick="essayReviseProposal('${item.id}')">Make other changes</button>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function essayRenderMemory(memory) {
@@ -10809,11 +10915,33 @@ function essayRenderMemory(memory) {
 function essayRenderDraft(markdown) {
   const el = document.getElementById('essayDraftPreview');
   _essayDraft = markdown || '';
-  if (!_essayDraft.trim()) {
-    el.innerHTML = '<div class="essay-empty">No draft yet. Start a session and ask for an outline or opening.</div>';
+  const primaryProposal = Array.isArray(_essayPendingUpdates) && _essayPendingUpdates.length
+    ? _essayPendingUpdates[0]
+    : null;
+  const acceptedDraftMarkup = _essayDraft.trim()
+    ? marked.parse(_essayDraft)
+    : '<div class="essay-empty">No approved draft yet. Ask the agent for a paragraph or revision and approve the highlighted proposal to keep it.</div>';
+
+  if (!_essayDraft.trim() && !primaryProposal) {
+    el.innerHTML = '<div class="essay-empty">No draft yet. Start a session and ask for a paragraph, opening, or essay section.</div>';
     return;
   }
-  el.innerHTML = marked.parse(_essayDraft);
+  el.innerHTML = `
+    ${primaryProposal ? essayProposalInlineMarkup(primaryProposal) : ''}
+    <div class="essay-proposal-inline-label" style="margin:0 auto 10px;max-width:960px;color:var(--text-3)">
+      ${primaryProposal ? 'Approved draft so far' : 'Current draft'}
+    </div>
+    ${acceptedDraftMarkup}
+  `;
+}
+
+function essayBindChatScrollTracking() {
+  const el = document.getElementById('essayChatBody');
+  if (!el || el.dataset.scrollBound === 'true') return;
+  el.addEventListener('scroll', () => {
+    _essayChatPinnedToBottom = (el.scrollTop + el.clientHeight) >= (el.scrollHeight - 24);
+  });
+  el.dataset.scrollBound = 'true';
 }
 
 function essayHydrateSession(data) {
@@ -10830,6 +10958,8 @@ function essayHydrateSession(data) {
   document.querySelector('#pane-essay .essay-shell')?.classList.add('session-live');
   workspace.classList.add('open');
   document.getElementById('essaySessionStatus').textContent = `Session ${data.id} is live. Backend: ${data.backend || document.getElementById('essayBackendSelect')?.value || 'ollama'}`;
+  essayBindChatScrollTracking();
+  _essayChatPinnedToBottom = true;
 
   essayRenderTranscript();
   essayRenderDraft(_essayDraft);
@@ -10952,6 +11082,29 @@ async function essayResolveProposal(proposalId, action) {
   essayRenderMemory(data.memory || _essayMemory);
   essayRenderPendingUpdates(_essayPendingUpdates);
   showToast(action === 'accept' ? 'Applied the proposed change' : 'Dismissed the proposed change');
+}
+
+async function essayReviseProposal(proposalId) {
+  if (!_essaySessionId || !proposalId) return;
+  const feedback = window.prompt('What would you like changed in this proposed paragraph or edit?');
+  if (!feedback || !feedback.trim()) return;
+
+  const data = await api('POST', `/essay-agent/session/${_essaySessionId}/proposals/${proposalId}`, {
+    action: 'revise',
+    feedback: feedback.trim()
+  });
+  if (!data) {
+    showToast('Could not revise the proposed change');
+    return;
+  }
+
+  _essayTranscript = data.transcript || _essayTranscript;
+  _essayPendingUpdates = data.pending_draft_updates || [];
+  essayRenderTranscript();
+  essayRenderDraft(data.draft_markdown || _essayDraft);
+  essayRenderMemory(data.memory || _essayMemory);
+  essayRenderPendingUpdates(_essayPendingUpdates);
+  showToast('Updated the proposed change');
 }
 
 function essayResetComposer() {

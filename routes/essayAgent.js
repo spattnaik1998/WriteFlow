@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createEssaySession, loadSession, runEssayAgentTurn, resolveDraftProposal } = require('../services/essayAgent');
+const { createEssaySession, loadSession, runEssayAgentTurn, resolveDraftProposal, reviseDraftProposal } = require('../services/essayAgent');
 const { parseUploadedDocument } = require('../services/documentParser');
 const { listWritingBackends } = require('../services/llmClient');
 
@@ -177,13 +177,15 @@ router.post('/session/:id/message', async (req, res) => {
 
 router.post('/session/:id/proposals/:proposalId', async (req, res) => {
   const action = String(req.body?.action || '').trim().toLowerCase();
-  if (!['accept', 'reject'].includes(action)) {
-    return res.status(400).json({ error: 'action must be accept or reject' });
+  if (!['accept', 'reject', 'revise'].includes(action)) {
+    return res.status(400).json({ error: 'action must be accept, reject, or revise' });
   }
 
   try {
     const session = await loadSession(req.params.id);
-    const updated = await resolveDraftProposal(session, req.params.proposalId, action);
+    const updated = action === 'revise'
+      ? await reviseDraftProposal(session, req.params.proposalId, String(req.body?.feedback || ''))
+      : await resolveDraftProposal(session, req.params.proposalId, action);
     res.json({
       id: updated.id,
       draft_markdown: updated.draft_markdown,

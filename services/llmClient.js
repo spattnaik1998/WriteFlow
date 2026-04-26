@@ -12,6 +12,12 @@ const OLLAMA_FALLBACK_MODELS = [
   'mistral:7b'
 ];
 
+const OPENAI_FALLBACK_MODELS = [
+  'gpt-4o',
+  'gpt-4.1',
+  'gpt-4.1-mini'
+];
+
 function stripCodeFence(text) {
   const raw = String(text || '').trim();
   return raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
@@ -59,6 +65,20 @@ async function fetchOllamaModels() {
     .filter(Boolean);
 }
 
+async function fetchOpenAIModels() {
+  if (!openai) return [];
+
+  try {
+    const response = await openai.models.list();
+    return (response.data || [])
+      .map(model => model?.id)
+      .filter(id => /^gpt-(4o|4\.1)/.test(id))
+      .sort();
+  } catch (_error) {
+    return [];
+  }
+}
+
 async function listWritingBackends() {
   const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o';
   const backends = {
@@ -89,6 +109,11 @@ async function listWritingBackends() {
     backends.ollama.error = error.message;
   }
 
+  if (openai) {
+    const models = await fetchOpenAIModels();
+    backends.openai.models = models.length ? models : OPENAI_FALLBACK_MODELS;
+  }
+
   return backends;
 }
 
@@ -115,7 +140,20 @@ async function callOpenAI({ systemPrompt, userPrompt, temperature = 0.35, maxTok
 
 async function generateText(opts) {
   const preferredBackend = opts.backend || process.env.WRITING_AGENT_BACKEND || 'ollama';
-  if (preferredBackend === 'openai') return callOpenAI(opts);
+  if (preferredBackend === 'openai') {
+    try {
+      return await callOpenAI(opts);
+    } catch (openaiErr) {
+      const ollamaResult = await callOllama({
+        ...opts,
+        model: opts.ollamaModel || process.env.OLLAMA_MODEL || opts.model
+      });
+      return {
+        ...ollamaResult,
+        fallback_reason: openaiErr.message
+      };
+    }
+  }
 
   try {
     return await callOllama(opts);
