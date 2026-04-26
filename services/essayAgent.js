@@ -1345,66 +1345,51 @@ async function reviseDraftProposal(session, proposalId, feedback) {
     throw new Error('Revision feedback required');
   }
 
-  const systemPrompt = `You are revising a pending paragraph or section proposal inside WriteFlow.
+  const revisionInstruction = [
+    `Revise the pending proposal titled "${proposal.title}".`,
+    `Focus area: ${proposal.focus_section || 'Draft workspace'}.`,
+    proposal.before_excerpt
+      ? `Existing approved content to preserve unless needed:\n${proposal.before_excerpt}`
+      : 'There is no approved text in this location yet; treat this as a new insertion.',
+    `Current proposed text:\n${proposal.after_excerpt || proposal.after_markdown || ''}`,
+    `Additional user instructions:\n${String(feedback).trim()}`,
+    'Think through the request carefully, revisit the sources if helpful, and return an updated proposal only. Do not apply the change automatically.'
+  ].join('\n\n');
 
-Return ONLY valid JSON:
-{
-  "title": "string",
-  "rationale": "string",
-  "change_summary": "string",
-  "focus_section": "string",
-  "patch_mode": "section_patch" | "full_replace" | "append_paragraph",
-  "before_excerpt": "string",
-  "after_excerpt": "string",
-  "after_markdown": "string",
-  "working_thesis": "string",
-  "assistant_message": "string"
-}
-
-Rules:
-- Respect the user's feedback conservatively.
-- If the proposal is for a paragraph, keep it as a single paragraph with no headings.
-- Preserve the existing draft unless the requested change clearly needs more.
-- Keep the patch mode as narrow as possible.`;
-
-  const userPrompt = JSON.stringify({
-    topic: session.topic,
-    audience: session.audience,
-    tone: session.tone,
-    current_draft: clip(session.draft_markdown, 9000),
-    pending_proposal: proposal,
-    user_feedback: String(feedback).trim(),
-    memory: session.memory
-  }, null, 2);
-
-  const llm = await generateJson({
-    backend: session.backend,
-    model: session.model || undefined,
-    systemPrompt,
-    userPrompt,
-    temperature: 0.25,
-    maxTokens: 1800
-  });
-
-  const revised = buildPendingProposal(llm.data || {}, session, session.last_evidence_packet || {});
-  if (!revised) {
-    throw new Error('The model did not return a usable revised proposal');
-  }
-
-  revised.id = proposal.id;
-  revised.created_at = nowIso();
-  session.pending_draft_updates = proposals.map(item => item.id === proposalId ? revised : item);
-  session.transcript.push({
-    role: 'assistant',
-    content: llm.data?.assistant_message || `Revised the proposed change: ${proposal.title}`,
-    created_at: nowIso()
-  });
+  const originalPending = proposals.map(item => ({ ...item }));
+  session.pending_draft_updates = [];
   session.memory = mergeMemory(session.memory, {
-    recent_findings: [`Revised pending proposal: ${proposal.title}`],
-    next_actions: ['Review the updated proposal and choose yes, no, or request another change.']
+    current_goal: `Revise pending proposal: ${proposal.title}`,
+    next_actions: ['Re-evaluate the proposal against the sources.', 'Return an updated proposal for approval.']
   });
-  await saveSession(session);
-  return session;
+
+  try {
+    const result = await runEssayAgentTurn(session, revisionInstruction);
+    if (!Array.isArray(result.session.pending_draft_updates) || !result.session.pending_draft_updates.length) {
+      session.pending_draft_updates = originalPending;
+      session.transcript.push({
+        role: 'assistant',
+        content: `I revisited the proposal but did not produce a better revision yet, so I restored the previous proposed change for "${proposal.title}".`,
+        created_at: nowIso()
+      });
+      await saveSession(session);
+      return session;
+    }
+
+    result.session.pending_draft_updates = result.session.pending_draft_updates.map((item, index) =>
+      index === 0 ? { ...item, id: proposal.id, created_at: nowIso() } : item
+    );
+    result.session.memory = mergeMemory(result.session.memory, {
+      recent_findings: [`Revised pending proposal: ${proposal.title}`],
+      next_actions: ['Review the updated proposal and choose yes, no, or request another change.']
+    });
+    await saveSession(result.session);
+    return result.session;
+  } catch (error) {
+    session.pending_draft_updates = originalPending;
+    await saveSession(session);
+    throw error;
+  }
 }
 
 module.exports = {

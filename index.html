@@ -10944,7 +10944,7 @@ function essayRenderPendingUpdates(pendingUpdates) {
       <div class="essay-proposal-actions">
         <button class="btn-amber btn-sm" onclick="essayResolveProposal('${item.id}', 'accept')">Yes, apply</button>
         <button class="btn-sec btn-sm" onclick="essayResolveProposal('${item.id}', 'reject')">No, dismiss</button>
-        <button class="btn-sec btn-sm" onclick="essayReviseProposal('${item.id}')">Make other changes</button>
+        <button class="btn-sec btn-sm" onclick="essayReviseProposal('${item.id}')">Make additional changes</button>
       </div>
     </div>
   `).join('');
@@ -10976,7 +10976,7 @@ function essayProposalInlineMarkup(item) {
         <div class="essay-proposal-inline-actions">
           <button class="btn-amber btn-sm" onclick="essayResolveProposal('${item.id}', 'accept')">Yes, keep this</button>
           <button class="btn-sec btn-sm" onclick="essayResolveProposal('${item.id}', 'reject')">No, discard it</button>
-          <button class="btn-sec btn-sm" onclick="essayReviseProposal('${item.id}')">Make other changes</button>
+          <button class="btn-sec btn-sm" onclick="essayReviseProposal('${item.id}')">Make additional changes</button>
         </div>
       </div>
     </div>
@@ -11170,7 +11170,7 @@ async function essayResolveProposal(proposalId, action) {
 
 async function essayReviseProposal(proposalId) {
   if (!_essaySessionId || !proposalId) return;
-  const feedback = window.prompt('What would you like changed in this proposed paragraph or edit?');
+  const feedback = window.prompt('What additional changes would you like the harness to make to this proposed paragraph or edit?');
   if (!feedback || !feedback.trim()) return;
 
   const data = await api('POST', `/essay-agent/session/${_essaySessionId}/proposals/${proposalId}`, {
