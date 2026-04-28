@@ -4,7 +4,7 @@ const supabase = require('./supabase');
 const { generateJson } = require('./llmClient');
 
 const SESSION_DIR = path.join(process.cwd(), '.essay-agent', 'sessions');
-const MAX_TRANSCRIPT_ITEMS = 22;
+const MAX_TRANSCRIPT_ITEMS = 30;
 const MAX_TOOL_STEPS = 5;
 const MAX_TOOL_CALLS_PER_PLAN = 3;
 const MAX_PENDING_PROPOSALS = 4;
@@ -571,23 +571,24 @@ function buildBookContextPacket(book, focus) {
     id: book.id,
     title: book.title,
     author: book.author,
-    why_reading: clip(book.why_reading, 180),
+    why_reading: clip(book.why_reading, 220),
+    chapter_index: (book.notes || []).map(note => note.chapter_name),
     strongest_notes: (book.notes || [])
       .map(note => ({
         chapter_name: note.chapter_name,
         score: searchScore({ title: note.chapter_name, slug: note.chapter_name, body: note.content }, focus),
-        excerpt: relevantExcerpt(note.content, focus, 280)
+        excerpt: relevantExcerpt(note.content, focus, 420)
       }))
       .sort((a, b) => b.score - a.score)
-      .slice(0, 3),
+      .slice(0, 5),
     strongest_ideas: (book.ideas || [])
       .map(idea => ({
         title: idea.title,
         score: searchScore({ title: idea.title, slug: idea.title, body: idea.body }, focus),
-        excerpt: relevantExcerpt(idea.body, focus, 220)
+        excerpt: relevantExcerpt(idea.body, focus, 320)
       }))
       .sort((a, b) => b.score - a.score)
-      .slice(0, 3)
+      .slice(0, 5)
   };
 }
 
@@ -651,7 +652,7 @@ function mergeMemory(memory, patch = {}) {
 function compactTranscript(transcript = []) {
   return transcript.slice(-MAX_TRANSCRIPT_ITEMS).map(entry => ({
     role: entry.role,
-    content: clip(entry.content, entry.role === 'tool' ? 1000 : 650),
+    content: clip(entry.content, entry.role === 'tool' ? 1000 : entry.role === 'user' ? 900 : 700),
     name: entry.name || undefined
   }));
 }
@@ -924,10 +925,11 @@ Return ONLY valid JSON:
 Rules:
 - Use at most 3 tool calls.
 - Prefer search_library first when the user asks a new question.
-- If the user checked a specific book, make sure the plan explicitly inspects that book's notes rather than relying only on generic search.
-- Use compare_books when two or more books are selected and synthesis matters.
+- If one book is selected, ALWAYS include a read_book call to inspect its actual chapter notes — use chapter_index in session_context to pick the most relevant focus chapter.
+- If two or more books are selected, use compare_books instead of read_book to surface cross-book intersections and tensions.
 - Only call read_document if a supporting document is likely useful.
-- If the user asks for critique or stress testing, plan for critique rather than more drafting.`;
+- If the user asks for critique or stress testing, plan for critique rather than more drafting.
+- Never produce a plan with only search_library when books are selected — always pair it with read_book or compare_books.`;
 
   const userPrompt = JSON.stringify({
     session_context: summarizeContextForPrompt(context, session),
@@ -970,6 +972,17 @@ Rules:
 
     if (!normalizedPlan.tool_calls.length) {
       normalizedPlan.tool_calls = buildDefaultPlan(session, userMessage).tool_calls;
+    }
+
+    // Guarantee direct chapter note inspection for single-book sessions when the planner omitted it
+    const hasDirectInspection = normalizedPlan.tool_calls.some(tc => tc.tool === 'read_book' || tc.tool === 'compare_books');
+    const singleBook = (session.selected_books || []).length === 1;
+    if (!hasDirectInspection && singleBook && normalizedPlan.tool_calls.length < MAX_TOOL_CALLS_PER_PLAN) {
+      normalizedPlan.tool_calls.push({
+        tool: 'read_book',
+        args: { book_id: session.selected_books[0].id, focus: userMessage || session.topic },
+        reason: 'Inspect the selected book chapter notes directly so the draft is grounded in the actual source material.'
+      });
     }
 
     return normalizedPlan;
@@ -1404,9 +1417,9 @@ async function reviseDraftProposal(session, proposalId, feedback) {
     proposal.before_excerpt
       ? `Existing approved content to preserve unless needed:\n${proposal.before_excerpt}`
       : 'There is no approved text in this location yet; treat this as a new insertion.',
-    `Current proposed text:\n${proposal.after_excerpt || proposal.after_markdown || ''}`,
-    `Additional user instructions:\n${String(feedback).trim()}`,
-    'Think through the request carefully, revisit the sources if helpful, and return an updated proposal only. Do not apply the change automatically.'
+    `Current proposed text that needs revision:\n${proposal.after_excerpt || proposal.after_markdown || ''}`,
+    `User revision instructions:\n${String(feedback).trim()}`,
+    'Re-inspect the source material as needed, then produce a revised proposal that addresses the user instructions. Return mode "proposal_only" so the user can review the updated change before it is applied. Do not apply the revision to the draft automatically.'
   ].join('\n\n');
 
   const originalPending = proposals.map(item => ({ ...item }));

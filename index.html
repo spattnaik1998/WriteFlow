@@ -1843,6 +1843,37 @@ body::after {
   flex-wrap: wrap;
   margin-top: 14px;
 }
+.essay-revise-form {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148,163,184,.2);
+}
+.essay-revise-input {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  border-radius: 10px;
+  border: 1px solid rgba(148,163,184,.32);
+  background: rgba(255,255,255,.72);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text-1);
+  font-family: inherit;
+  line-height: 1.6;
+  box-sizing: border-box;
+  outline: none;
+}
+.essay-revise-input:focus {
+  border-color: var(--amber);
+  background: rgba(255,255,255,.9);
+}
+.essay-revise-actions {
+  display: flex;
+  gap: 8px;
+}
 .essay-chat-body {
   flex: 1;
   overflow-y: auto;
@@ -10944,7 +10975,14 @@ function essayRenderPendingUpdates(pendingUpdates) {
       <div class="essay-proposal-actions">
         <button class="btn-amber btn-sm" onclick="essayResolveProposal('${item.id}', 'accept')">Yes, apply</button>
         <button class="btn-sec btn-sm" onclick="essayResolveProposal('${item.id}', 'reject')">No, dismiss</button>
-        <button class="btn-sec btn-sm" onclick="essayReviseProposal('${item.id}')">Make additional changes</button>
+        <button class="btn-sec btn-sm" onclick="essayToggleRevise('${item.id}')">Make additional changes</button>
+      </div>
+      <div class="essay-revise-form" id="revise-form-${item.id}">
+        <textarea class="essay-revise-input" id="revise-input-${item.id}" placeholder="Describe what you'd like changed in this proposal… (Ctrl+Enter to send)" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))essaySubmitRevision('${item.id}')"></textarea>
+        <div class="essay-revise-actions">
+          <button class="btn-amber btn-sm" id="revise-btn-${item.id}" onclick="essaySubmitRevision('${item.id}')">Send revision</button>
+          <button class="btn-sec btn-sm" onclick="essayToggleRevise('${item.id}')">Cancel</button>
+        </div>
       </div>
     </div>
   `).join('');
@@ -10976,7 +11014,14 @@ function essayProposalInlineMarkup(item) {
         <div class="essay-proposal-inline-actions">
           <button class="btn-amber btn-sm" onclick="essayResolveProposal('${item.id}', 'accept')">Yes, keep this</button>
           <button class="btn-sec btn-sm" onclick="essayResolveProposal('${item.id}', 'reject')">No, discard it</button>
-          <button class="btn-sec btn-sm" onclick="essayReviseProposal('${item.id}')">Make additional changes</button>
+          <button class="btn-sec btn-sm" onclick="essayToggleRevise('${item.id}')">Make additional changes</button>
+        </div>
+        <div class="essay-revise-form" id="revise-form-${item.id}">
+          <textarea class="essay-revise-input" id="revise-input-${item.id}" placeholder="Describe what you'd like changed in this proposal… (Ctrl+Enter to send)" onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey))essaySubmitRevision('${item.id}')"></textarea>
+          <div class="essay-revise-actions">
+            <button class="btn-amber btn-sm" id="revise-btn-${item.id}" onclick="essaySubmitRevision('${item.id}')">Send revision</button>
+            <button class="btn-sec btn-sm" onclick="essayToggleRevise('${item.id}')">Cancel</button>
+          </div>
         </div>
       </div>
     </div>
@@ -11172,15 +11217,30 @@ async function essayResolveProposal(proposalId, action) {
   showToast(action === 'accept' ? 'Applied the proposed change' : 'Dismissed the proposed change');
 }
 
-async function essayReviseProposal(proposalId) {
+function essayToggleRevise(proposalId) {
+  const form = document.getElementById(`revise-form-${proposalId}`);
+  if (!form) return;
+  const opening = form.style.display !== 'flex';
+  form.style.display = opening ? 'flex' : 'none';
+  if (opening) document.getElementById(`revise-input-${proposalId}`)?.focus();
+}
+
+async function essaySubmitRevision(proposalId) {
   if (!_essaySessionId || !proposalId) return;
-  const feedback = window.prompt('What additional changes would you like the harness to make to this proposed paragraph or edit?');
-  if (!feedback || !feedback.trim()) return;
+  const inputEl = document.getElementById(`revise-input-${proposalId}`);
+  const feedback = inputEl?.value?.trim();
+  if (!feedback) return;
+
+  const btn = document.getElementById(`revise-btn-${proposalId}`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Thinking…'; }
 
   const data = await api('POST', `/essay-agent/session/${_essaySessionId}/proposals/${proposalId}`, {
     action: 'revise',
-    feedback: feedback.trim()
+    feedback
   });
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Send revision'; }
+
   if (!data) {
     showToast('Could not revise the proposed change');
     return;
@@ -11192,7 +11252,7 @@ async function essayReviseProposal(proposalId) {
   essayRenderDraft(data.draft_markdown || _essayDraft);
   essayRenderMemory(data.memory || _essayMemory);
   essayRenderPendingUpdates(_essayPendingUpdates);
-  showToast('Updated the proposed change');
+  showToast('Revised the proposed change');
 }
 
 function essayResetComposer() {
