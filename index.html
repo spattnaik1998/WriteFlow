@@ -11037,6 +11037,10 @@ function essayHydrateSession(data) {
   _essayLastPlan = data.last_plan || null;
   _essayEvidencePacket = data.last_evidence_packet || null;
   _essayPendingUpdates = data.pending_draft_updates || [];
+  if (Array.isArray(data.selected_books) && data.selected_books.length) {
+    _essaySelectedBookIds = new Set(data.selected_books.map(book => book.id).filter(Boolean));
+    essayRenderBookPicker();
+  }
 
   const workspace = document.getElementById('essayWorkspace');
   document.querySelector('#pane-essay .essay-shell')?.classList.add('session-live');

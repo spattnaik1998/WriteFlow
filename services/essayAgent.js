@@ -110,11 +110,15 @@ function createInitialMemory({ topic, audience, tone, selectedBooks, uploadedDoc
       ? [
           'Do not summarize each book separately.',
           'Synthesize the books into a new framework.',
-          'Surface tensions and complementarity explicitly.'
+          'Surface tensions and complementarity explicitly.',
+          'Write like a strong college paper with a clear thesis, conceptual precision, and coherent paragraph transitions.',
+          'Distill sophisticated ideas into readable prose without flattening them into slogans or banal takeaways.'
         ]
       : [
           'Ground every major claim in the source material.',
-          'Use a research-forward but readable tone.'
+          'Use a research-forward but readable tone.',
+          'Write like a strong college paper with a clear thesis, conceptual precision, and coherent paragraph transitions.',
+          'Distill sophisticated ideas into readable prose without flattening them into slogans or banal takeaways.'
         ],
     source_ledger: dedupeList([
       ...bookTitles.map(title => `Book: ${title}`),
@@ -562,6 +566,31 @@ function compareBooks(context, session, focus) {
   };
 }
 
+function buildBookContextPacket(book, focus) {
+  return {
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    why_reading: clip(book.why_reading, 180),
+    strongest_notes: (book.notes || [])
+      .map(note => ({
+        chapter_name: note.chapter_name,
+        score: searchScore({ title: note.chapter_name, slug: note.chapter_name, body: note.content }, focus),
+        excerpt: relevantExcerpt(note.content, focus, 280)
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3),
+    strongest_ideas: (book.ideas || [])
+      .map(idea => ({
+        title: idea.title,
+        score: searchScore({ title: idea.title, slug: idea.title, body: idea.body }, focus),
+        excerpt: relevantExcerpt(idea.body, focus, 220)
+      }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3)
+  };
+}
+
 function summarizeContextForPrompt(context, session) {
   const books = context.books.map(book => ({
     id: book.id,
@@ -577,10 +606,15 @@ function summarizeContextForPrompt(context, session) {
     audience: session.audience,
     tone: session.tone,
     selected_books: books,
+    selected_book_packets: context.books
+      .filter(book => session.selected_book_ids.includes(book.id))
+      .map(book => buildBookContextPacket(book, session.topic))
+      .slice(0, 3),
     uploaded_docs: (session.uploaded_docs || []).map(doc => ({
       id: doc.id,
       title: doc.title,
-      chars: doc.content.length
+      chars: doc.content.length,
+      excerpt: relevantExcerpt(doc.content, session.topic, 240)
     })),
     wiki_pages: (context.wiki_pages || []).map(page => ({
       slug: page.slug,
@@ -757,6 +791,7 @@ function buildDefaultPlan(session, userMessage) {
   const isRevision = /\brevise|rewrite|tighten|improve\b/.test(lower);
   const isParagraph = userRequestsParagraph(userMessage);
   const multiBook = (session.selected_books || []).length >= 2;
+  const hasSelectedBooks = (session.selected_books || []).length > 0;
   const hasDocs = Array.isArray(session.uploaded_docs) && session.uploaded_docs.length > 0;
 
   return {
@@ -770,10 +805,20 @@ function buildDefaultPlan(session, userMessage) {
       ? ['What ideas intersect across the selected books?', 'Where do the sources disagree or complicate each other?']
       : ['What source material most directly supports the current claim?'],
     style_directives: multiBook
-      ? ['Avoid book-by-book summary.', 'Produce synthesis, not comparison grids.', 'Write in continuous prose grounded in the user\'s notes.']
-      : ['Stay grounded in direct source material.', 'Write in continuous prose grounded in the user\'s notes.'],
+      ? [
+          'Avoid book-by-book summary.',
+          'Produce synthesis, not comparison grids.',
+          'Write in continuous prose grounded in the user\'s notes.',
+          'Aim for the clarity and argumentative coherence of a strong college paper.'
+        ]
+      : [
+          'Stay grounded in direct source material.',
+          'Write in continuous prose grounded in the user\'s notes.',
+          'Aim for the clarity and argumentative coherence of a strong college paper.'
+        ],
     tool_calls: [
       ...(hasDocs ? [{ tool: 'read_document', args: { focus: userMessage || session.topic }, reason: 'Pull the strongest excerpt from the uploaded notes first.' }] : []),
+      ...(!multiBook && hasSelectedBooks ? [{ tool: 'read_book', args: { book_id: session.selected_books[0].id, focus: userMessage || session.topic }, reason: 'Inspect the checked book directly so the draft uses the selected notes.' }] : []),
       { tool: 'search_library', args: { query: userMessage || session.topic }, reason: 'Find the most relevant source fragments first.' },
       ...(multiBook ? [{ tool: 'compare_books', args: { focus: userMessage || session.topic }, reason: 'Map the cross-book intersections and tensions.' }] : [])
     ].slice(0, MAX_TOOL_CALLS_PER_PLAN),
@@ -879,6 +924,7 @@ Return ONLY valid JSON:
 Rules:
 - Use at most 3 tool calls.
 - Prefer search_library first when the user asks a new question.
+- If the user checked a specific book, make sure the plan explicitly inspects that book's notes rather than relying only on generic search.
 - Use compare_books when two or more books are selected and synthesis matters.
 - Only call read_document if a supporting document is likely useful.
 - If the user asks for critique or stress testing, plan for critique rather than more drafting.`;
@@ -964,6 +1010,8 @@ Return ONLY valid JSON:
 Rules:
 - Every statement must be grounded in the provided tool results.
 - Keep each item concise and actionable.
+- Prefer conceptual precision over generic summary language.
+- Preserve the user's framing and vocabulary where possible.
 - Prefer 4-6 outline lines and 3-6 argument map lines.`;
 
   const userPrompt = JSON.stringify({
@@ -1025,8 +1073,9 @@ async function draftEssayResponse(session, context, plan, evidencePacket, toolTr
   const proposalMode = shouldUseProposalMode(session, plan, userMessage);
   const systemPrompt = `You are WriteFlow's essay drafting engine.
 
-Write like a sharp research essayist. The user is building a serious blog post, not a fluffy summary.
-Treat the user's notes as the governing source material and preserve their intellectual framing.
+Write like a sharp student writer producing a strong college paper: clear thesis, disciplined argument, coherent paragraph transitions, and real conceptual explanation.
+The purpose of the writing is to distill sophisticated concepts so the audience can actually understand them without diluting the ideas.
+Treat the user's notes as the governing source material and preserve their intellectual framing, distinctions, and implied causal logic.
 
 When multiple books are selected:
 - produce synthesis rather than serial summary
@@ -1075,6 +1124,10 @@ Rules:
 - If response_mode is "paragraph", write exactly one paragraph and do not use headings.
 - If response_mode is "critique", revise or annotate the draft by identifying weak assumptions and unsupported jumps.
 - When response_mode is "draft", prefer continuous prose paragraphs rather than headings unless the user explicitly asked for headings or an outline.
+- Explain terms and relationships when they are sophisticated or non-obvious.
+- Avoid bland, pointed, corporate, or banal prose.
+- Avoid bullet-list energy inside paragraphs; write with argumentative flow.
+- Use the selected notes to anchor the paper's claims and examples.
 - Preserve any strong material already in the draft unless the user asked to rewrite it.
 - If proposal_mode is true, do not silently overwrite the draft. Instead return 1-3 conservative proposals and keep "draft_markdown" equal to the current draft.
 - Prefer "section_patch" proposals that update one section or passage at a time.
