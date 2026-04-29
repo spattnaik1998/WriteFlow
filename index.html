@@ -1554,14 +1554,11 @@ body::after {
 .essay-workspace.open {
   display: grid;
   grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  grid-template-rows: 1fr;
+  grid-template-areas:
+    "sidebar draft"
+    "sidebar conversation";
+  grid-template-rows: minmax(0, 1fr) minmax(220px, 300px);
   min-height: calc(100vh - 150px);
-}
-.essay-main {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
 }
 .essay-sidebar,
 .essay-conversation,
@@ -1577,39 +1574,12 @@ body::after {
   border-right: 1px solid var(--border);
   padding: 16px;
   gap: 16px;
-  overflow-y: auto;
-}
-.essay-draft-pane {
-  flex: 1 1 0;
-  min-height: 0;
-  background: rgba(255,255,255,.015);
 }
 .essay-conversation {
-  flex: 0 0 280px;
-  height: 280px;
-  min-height: 140px;
+  border-top: 1px solid var(--border);
 }
-.essay-resize-handle {
-  flex: 0 0 7px;
-  background: var(--border);
-  cursor: row-resize;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
-  user-select: none;
-}
-.essay-resize-handle:hover,
-.essay-resize-handle.active {
-  background: rgba(201,168,76,.4);
-}
-.essay-resize-handle::after {
-  content: '';
-  width: 38px;
-  height: 3px;
-  border-radius: 3px;
-  background: rgba(255,255,255,.25);
-  pointer-events: none;
+.essay-draft-pane {
+  background: rgba(255,255,255,.015);
 }
 .essay-panel-head {
   padding: 16px 18px 12px;
@@ -1956,15 +1926,6 @@ body::after {
 .essay-composer .essay-input {
   flex: 1;
 }
-.essay-composer textarea.essay-input {
-  resize: none;
-  overflow-y: hidden;
-  min-height: 42px;
-  max-height: 140px;
-  line-height: 1.55;
-  padding-top: 10px;
-  padding-bottom: 10px;
-}
 .essay-draft-scroll {
   flex: 1;
   overflow-y: auto;
@@ -1984,17 +1945,30 @@ body::after {
 }
 @media (max-width: 1500px) {
   .essay-workspace.open {
-    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
+    grid-template-areas:
+      "sidebar draft"
+      "sidebar conversation";
   }
 }
 @media (max-width: 1200px) {
   .essay-grid,
   .essay-workspace.open {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "sidebar"
+      "draft"
+      "conversation";
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
-  .essay-sidebar {
+  .essay-sidebar,
+  .essay-conversation,
+  .essay-draft-pane {
     border-right: none;
     border-bottom: 1px solid var(--border);
+  }
+  .essay-conversation {
+    border-top: none;
   }
 }
 @media (max-width: 760px) {
@@ -5686,54 +5660,48 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
               </div>
             </div>
 
-            <div class="essay-main" id="essayMain">
-              <div class="essay-draft-pane">
-                <div class="essay-panel-head">
-                  <div class="essay-panel-title">Draft Workspace</div>
-                  <div class="essay-panel-sub" id="essayDraftMeta">The agent’s current markdown draft appears here.</div>
-                </div>
-                <div class="essay-source-card" style="margin:18px 18px 0">
-                  <div class="essay-panel-title">Pending Changes</div>
-                  <div class="essay-panel-sub">Once a draft exists, the harness proposes edits and waits for your yes or no.</div>
-                  <div class="essay-proposal-list" id="essayProposalList">
-                    <div class="essay-empty">No pending draft changes.</div>
+            <div class="essay-conversation">
+              <div class="essay-panel-head">
+                <div class="essay-panel-head-row">
+                  <div>
+                    <div class="essay-panel-title">Agent Conversation</div>
+                    <div class="essay-panel-sub" id="essayPlanSummary">Use quick prompts or give direct writing instructions.</div>
                   </div>
-                </div>
-                <div class="essay-draft-scroll">
-                  <div class="essay-draft-markdown wiki-md" id="essayDraftPreview">
-                    <div class="essay-empty">No draft yet. Start a session and ask for an outline or opening.</div>
+                  <div class="essay-chat-scroll-actions">
+                    <button class="btn-sec btn-sm" type="button" onclick="essayScrollConversation('top')">Oldest</button>
+                    <button class="btn-sec btn-sm" type="button" onclick="essayScrollConversation('bottom')">Newest</button>
                   </div>
                 </div>
               </div>
+              <div class="essay-chat-body" id="essayChatBody"></div>
+              <div class="essay-chat-actions">
+                <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Build a high-level outline for this blog before drafting.')">Build Outline</button>
+                <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Draft a strong opening and thesis for this blog.')">Draft Opening</button>
+                <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Pressure-test the current argument and identify weak spots.')">Stress Test</button>
+                <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Synthesize the strongest intersections across the selected books before drafting.')">Synthesize Books</button>
+                <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Revise the current draft for tighter reasoning and stronger evidence.')">Revise Draft</button>
+              </div>
+              <div class="essay-composer">
+                <input class="essay-input" id="essayMessageInput" type="text" placeholder="Ask the agent to draft, revise, inspect a source, or type /clear to reset memory…" onkeydown="if(event.key==='Enter')essaySendMessage()">
+                <button class="btn-amber" id="essaySendBtn" onclick="essaySendMessage()">Send</button>
+              </div>
+            </div>
 
-              <div class="essay-resize-handle" id="essayResizeHandle"></div>
-
-              <div class="essay-conversation">
-                <div class="essay-panel-head">
-                  <div class="essay-panel-head-row">
-                    <div>
-                      <div class="essay-panel-title">Agent Conversation</div>
-                      <div class="essay-panel-sub" id="essayPlanSummary">Use quick prompts or give direct writing instructions.</div>
-                    </div>
-                    <div class="essay-chat-scroll-actions">
-                      <button class="btn-sec btn-sm" type="button" onclick="essayScrollConversation(‘top’)">Oldest</button>
-                      <button class="btn-sec btn-sm" type="button" onclick="essayScrollConversation(‘bottom’)">Newest</button>
-                    </div>
-                  </div>
+            <div class="essay-draft-pane">
+              <div class="essay-panel-head">
+                <div class="essay-panel-title">Draft Workspace</div>
+                <div class="essay-panel-sub" id="essayDraftMeta">The agent’s current markdown draft appears here.</div>
+              </div>
+              <div class="essay-source-card" style="margin:18px 18px 0">
+                <div class="essay-panel-title">Pending Changes</div>
+                <div class="essay-panel-sub">Once a draft exists, the harness proposes edits and waits for your yes or no.</div>
+                <div class="essay-proposal-list" id="essayProposalList">
+                  <div class="essay-empty">No pending draft changes.</div>
                 </div>
-                <div class="essay-chat-body" id="essayChatBody"></div>
-                <div class="essay-chat-actions">
-                  <button class="btn-sec btn-sm" onclick="essayQuickPrompt(‘Build a high-level outline for this blog before drafting.’)">Build Outline</button>
-                  <button class="btn-sec btn-sm" onclick="essayQuickPrompt(‘Draft a strong opening and thesis for this blog.’)">Draft Opening</button>
-                  <button class="btn-sec btn-sm" onclick="essayQuickPrompt(‘Pressure-test the current argument and identify weak spots.’)">Stress Test</button>
-                  <button class="btn-sec btn-sm" onclick="essayQuickPrompt(‘Synthesize the strongest intersections across the selected books before drafting.’)">Synthesize Books</button>
-                  <button class="btn-sec btn-sm" onclick="essayQuickPrompt(‘Revise the current draft for tighter reasoning and stronger evidence.’)">Revise Draft</button>
-                </div>
-                <div class="essay-composer">
-                  <textarea class="essay-input" id="essayMessageInput" rows="1" placeholder="Ask the agent to draft, revise, inspect a source, or type /clear to reset memory… (Shift+Enter for new line)"
-                    onkeydown="if(event.key===’Enter’&&!event.shiftKey){event.preventDefault();essaySendMessage();}"
-                    oninput="this.style.height=’auto’;this.style.height=Math.min(this.scrollHeight,140)+’px’"></textarea>
-                  <button class="btn-amber" id="essaySendBtn" onclick="essaySendMessage()">Send</button>
+              </div>
+              <div class="essay-draft-scroll">
+                <div class="essay-draft-markdown wiki-md" id="essayDraftPreview">
+                  <div class="essay-empty">No draft yet. Start a session and ask for an outline or opening.</div>
                 </div>
               </div>
             </div>
@@ -6704,49 +6672,12 @@ function onNotesInput() {
 // ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
-function initEssayResize() {
-  const handle = document.getElementById('essayResizeHandle');
-  const conversation = document.querySelector('#essayWorkspace .essay-conversation');
-  if (!handle || !conversation) return;
-
-  let dragging = false;
-  let startY = 0;
-  let startH = 0;
-
-  handle.addEventListener('mousedown', e => {
-    dragging = true;
-    startY = e.clientY;
-    startH = conversation.offsetHeight;
-    handle.classList.add('active');
-    document.body.style.cursor = 'row-resize';
-    document.body.style.userSelect = 'none';
-    e.preventDefault();
-  });
-
-  document.addEventListener('mousemove', e => {
-    if (!dragging) return;
-    const delta = startY - e.clientY;
-    const newH = Math.max(140, Math.min(startH + delta, window.innerHeight * 0.72));
-    conversation.style.flex = `0 0 ${newH}px`;
-    conversation.style.height = `${newH}px`;
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (!dragging) return;
-    dragging = false;
-    handle.classList.remove('active');
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-  });
-}
-
 function init() {
   renderBooks();
   scrollChat();
   // Seed chapter state for the default prototype book so the
   // dropdown and accordion work immediately before any book is clicked
   loadProtoContent(selectedBook);
-  initEssayResize();
 }
 
 // ═══════════════════════════════════════
@@ -11230,7 +11161,7 @@ async function essaySendMessage(messageOverride = '') {
   const input = document.getElementById('essayMessageInput');
   const message = (messageOverride || input?.value || '').trim();
   if (!message) return;
-  if (input) { input.value = ''; input.style.height = ''; }
+  if (input) input.value = '';
 
   const btn = document.getElementById('essaySendBtn');
   btn.disabled = true;
