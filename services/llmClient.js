@@ -1,11 +1,17 @@
 const axios = require('axios');
 const OpenAI = require('openai');
+const Anthropic = require('@anthropic-ai/sdk');
 const fs = require('fs/promises');
 const path = require('path');
 const { spawn } = require('child_process');
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+
+const AnthropicClient = Anthropic.default || Anthropic;
+const anthropic = process.env.ANTHROPIC_API_KEY
+  ? new AnthropicClient({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null;
 
 const OLLAMA_FALLBACK_MODELS = [
@@ -22,6 +28,12 @@ const OPENAI_FALLBACK_MODELS = [
   'gpt-4o',
   'gpt-4.1',
   'gpt-4.1-mini'
+];
+
+const ANTHROPIC_FALLBACK_MODELS = [
+  'claude-sonnet-4-6',
+  'claude-opus-4-7',
+  'claude-haiku-4-5-20251001'
 ];
 
 const OLLAMA_RUNTIME_DIR = path.join(process.cwd(), '.ollama-runtime');
@@ -193,6 +205,7 @@ async function fetchOpenAIModels() {
 
 async function listWritingBackends() {
   const openaiModel = process.env.OPENAI_MODEL || 'gpt-4o';
+  const anthropicModel = process.env.ANTHROPIC_MODEL || ANTHROPIC_FALLBACK_MODELS[0];
   const backends = {
     ollama: {
       key: 'ollama',
@@ -207,6 +220,14 @@ async function listWritingBackends() {
       available: Boolean(openai),
       models: openai ? [openaiModel] : [],
       error: openai ? '' : 'OpenAI API key is not configured.'
+    },
+    anthropic: {
+      key: 'anthropic',
+      label: 'Anthropic',
+      available: Boolean(anthropic),
+      models: anthropic ? ANTHROPIC_FALLBACK_MODELS : [],
+      default_model: anthropicModel,
+      error: anthropic ? '' : 'Anthropic API key is not configured.'
     }
   };
 
@@ -250,8 +271,44 @@ async function callOpenAI({ systemPrompt, userPrompt, temperature = 0.35, maxTok
   };
 }
 
+async function callAnthropic({ systemPrompt, userPrompt, temperature = 0.35, maxTokens = 1200, json = false, model }) {
+  if (!anthropic) throw new Error('Anthropic API key is not configured');
+  const resolvedModel = model || process.env.ANTHROPIC_MODEL || ANTHROPIC_FALLBACK_MODELS[0];
+  const effectiveSystem = json
+    ? `${systemPrompt}\n\nYou must respond with valid JSON only. Do not include any text outside the JSON object.`
+    : systemPrompt;
+
+  const response = await anthropic.messages.create({
+    model: resolvedModel,
+    max_tokens: maxTokens,
+    temperature,
+    system: effectiveSystem,
+    messages: [{ role: 'user', content: userPrompt }]
+  });
+
+  return {
+    backend: 'anthropic',
+    model: resolvedModel,
+    content: response.content[0]?.text || ''
+  };
+}
+
 async function generateText(opts) {
   const preferredBackend = opts.backend || process.env.WRITING_AGENT_BACKEND || 'ollama';
+
+  if (preferredBackend === 'anthropic') {
+    try {
+      return await callAnthropic(opts);
+    } catch (anthropicErr) {
+      if (!openai) throw anthropicErr;
+      const fallback = await callOpenAI({
+        ...opts,
+        model: opts.openaiModel || process.env.OPENAI_MODEL || OPENAI_FALLBACK_MODELS[0]
+      });
+      return { ...fallback, fallback_reason: anthropicErr.message };
+    }
+  }
+
   if (preferredBackend === 'openai') {
     try {
       return await callOpenAI(opts);
@@ -260,27 +317,28 @@ async function generateText(opts) {
         ...opts,
         model: opts.ollamaModel || process.env.OLLAMA_MODEL || OLLAMA_FALLBACK_MODELS[0]
       });
-      return {
-        ...ollamaResult,
-        fallback_reason: openaiErr.message
-      };
+      return { ...ollamaResult, fallback_reason: openaiErr.message };
     }
   }
 
   try {
     return await callOllama(opts);
   } catch (ollamaErr) {
-    if (!openai) {
-      throw new Error(`Ollama failed and no OpenAI fallback is configured: ${ollamaErr.message}`);
+    if (anthropic) {
+      const fallback = await callAnthropic({
+        ...opts,
+        model: opts.anthropicModel || process.env.ANTHROPIC_MODEL || ANTHROPIC_FALLBACK_MODELS[0]
+      });
+      return { ...fallback, fallback_reason: ollamaErr.message };
     }
-    const fallback = await callOpenAI({
-      ...opts,
-      model: opts.openaiModel || process.env.OPENAI_MODEL || OPENAI_FALLBACK_MODELS[0]
-    });
-    return {
-      ...fallback,
-      fallback_reason: ollamaErr.message
-    };
+    if (openai) {
+      const fallback = await callOpenAI({
+        ...opts,
+        model: opts.openaiModel || process.env.OPENAI_MODEL || OPENAI_FALLBACK_MODELS[0]
+      });
+      return { ...fallback, fallback_reason: ollamaErr.message };
+    }
+    throw new Error(`Ollama failed and no cloud fallback is configured: ${ollamaErr.message}`);
   }
 }
 

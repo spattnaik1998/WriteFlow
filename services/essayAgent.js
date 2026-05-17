@@ -136,9 +136,11 @@ async function createEssaySession({ topic, audience, tone, backend, model, bookI
   const selectedBooks = await fetchBookSummaries(bookIds);
   const resolvedBackend = backend || process.env.WRITING_AGENT_BACKEND || 'ollama';
   const resolvedModel = model || (
-    resolvedBackend === 'openai'
-      ? (process.env.OPENAI_MODEL || 'gpt-4o')
-      : (process.env.OLLAMA_MODEL || 'qwen3:8b')
+    resolvedBackend === 'anthropic'
+      ? (process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6')
+      : resolvedBackend === 'openai'
+        ? (process.env.OPENAI_MODEL || 'gpt-4o')
+        : (process.env.OLLAMA_MODEL || 'qwen3:8b')
   );
   const session = {
     id: randomId(),
