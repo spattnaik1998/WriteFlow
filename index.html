@@ -1911,6 +1911,18 @@ body::after {
   color: var(--text-3);
   font-size: 11.5px;
 }
+.essay-msg.system-notice {
+  background: rgba(168,139,250,.08);
+  border: 1px dashed rgba(168,139,250,.30);
+  color: rgba(168,139,250,.85);
+  font-size: 11.5px;
+  font-style: italic;
+}
+.essay-msg.system-notice .tool-badge {
+  font-style: normal;
+  margin-right: 4px;
+  opacity: .7;
+}
 .essay-chat-actions {
   padding: 12px 18px;
   border-top: 1px solid var(--border);
@@ -10856,6 +10868,16 @@ function essayRenderTranscript() {
   }
 }
 
+function essayAppendSystemNotice(html) {
+  const el = document.getElementById('essayChatBody');
+  if (!el) return;
+  const notice = document.createElement('div');
+  notice.className = 'essay-msg system-notice';
+  notice.innerHTML = `<span class="tool-badge">&#x2699;</span> ${html}`;
+  el.appendChild(notice);
+  el.scrollTop = el.scrollHeight;
+}
+
 function essayScrollConversation(direction) {
   const el = document.getElementById('essayChatBody');
   if (!el) return;
@@ -11188,6 +11210,14 @@ async function essaySendMessage(messageOverride = '') {
   essayRenderPlan(_essayLastPlan, _essayEvidencePacket);
   essayRenderToolTrace(_essayToolTrace);
   essayRenderPendingUpdates(_essayPendingUpdates);
+
+  const newTools = (_essayToolTrace || []).filter(t => t.is_custom && t.created_new_tool);
+  if (newTools.length > 0) {
+    const toolRegistry = data.tool_registry || {};
+    const totalCustom = Object.keys(toolRegistry).length;
+    const names = newTools.map(t => `<em>${t.tool}</em>`).join(', ');
+    essayAppendSystemNotice(`Tool created: ${names} — ${totalCustom} custom tool${totalCustom !== 1 ? 's' : ''} active this session.`);
+  }
 
   const draftMeta = document.getElementById('essayDraftMeta');
   draftMeta.textContent = data.fallback_reason

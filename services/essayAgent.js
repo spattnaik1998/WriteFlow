@@ -164,7 +164,8 @@ async function createEssaySession({ topic, audience, tone, backend, model, bookI
     last_tool_trace: [],
     last_plan: null,
     last_evidence_packet: null,
-    pending_draft_updates: []
+    pending_draft_updates: [],
+    tool_registry: {}
   };
 
   await saveSession(session);
@@ -621,6 +622,11 @@ function summarizeContextForPrompt(context, session) {
       slug: page.slug,
       title: page.title,
       type: page.page_type
+    })),
+    custom_tools: Object.entries(session.tool_registry || {}).map(([name, entry]) => ({
+      name,
+      purpose: entry.spec.purpose,
+      call_count: entry.call_count
     }))
   };
 }
@@ -766,7 +772,215 @@ async function executeTool({ tool, args }, context, session) {
   if (tool === 'compare_books') {
     return compareBooks(context, session, args.focus || session.topic);
   }
+  // Fall through to session-scoped tool registry (custom tools created during session)
+  const registeredTool = (session.tool_registry || {})[tool];
+  if (registeredTool) {
+    const overriddenSpec = { ...registeredTool.spec };
+    if (args?.query) overriddenSpec.retrieval = { ...overriddenSpec.retrieval, query: args.query };
+    session.tool_registry[tool].call_count += 1;
+    return runCustomToolRetrieval(overriddenSpec, context, session);
+  }
+
   throw new Error(`Unknown tool: ${tool}`);
+}
+
+async function runCustomToolRetrieval(spec, context, session) {
+  const query = spec.retrieval?.query || session.topic;
+  const limit = Math.min(spec.retrieval?.limit || 10, 15);
+  const typeFilter = spec.retrieval?.type || 'all';
+  const bookIds = Array.isArray(spec.retrieval?.book_ids) && spec.retrieval.book_ids.length > 0
+    ? spec.retrieval.book_ids
+    : null;
+
+  const booksToSearch = bookIds
+    ? context.books.filter(book => bookIds.includes(book.id))
+    : context.books;
+
+  const hits = [];
+
+  if (typeFilter === 'all' || typeFilter === 'notes') {
+    booksToSearch.forEach(book => {
+      (book.notes || []).forEach(note => {
+        hits.push({
+          type: 'note',
+          book: book.title,
+          book_id: book.id,
+          chapter: note.chapter_name,
+          score: searchScore({ title: note.chapter_name, slug: note.chapter_name, body: note.content }, query),
+          content: relevantExcerpt(note.content, query, 500)
+        });
+      });
+    });
+  }
+
+  if (typeFilter === 'all' || typeFilter === 'ideas') {
+    booksToSearch.forEach(book => {
+      (book.ideas || []).forEach(idea => {
+        hits.push({
+          type: 'idea',
+          book: book.title,
+          book_id: book.id,
+          title: idea.title,
+          score: searchScore({ title: idea.title, slug: idea.title, body: idea.body }, query),
+          content: relevantExcerpt(idea.body, query, 400)
+        });
+      });
+    });
+  }
+
+  if (typeFilter === 'all' || typeFilter === 'articles') {
+    booksToSearch.forEach(book => {
+      (book.articles || []).forEach(article => {
+        hits.push({
+          type: 'article',
+          book: book.title,
+          book_id: book.id,
+          title: article.title,
+          stance: article.stance,
+          score: searchScore({ title: article.title, slug: article.domain, body: article.snippet }, query),
+          content: clip(article.snippet, 300)
+        });
+      });
+    });
+  }
+
+  if (typeFilter === 'all' || typeFilter === 'wiki') {
+    (context.wiki_pages || []).forEach(page => {
+      hits.push({
+        type: 'wiki',
+        slug: page.slug,
+        title: page.title,
+        score: searchScore({ title: page.title, slug: page.slug, body: page.markdown_content }, query),
+        content: relevantExcerpt(page.markdown_content, query, 450)
+      });
+    });
+  }
+
+  const topHits = hits
+    .filter(hit => hit.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+
+  const result = { purpose: spec.purpose, query, hits: topHits };
+
+  if (spec.analysis_prompt && topHits.length > 0) {
+    try {
+      const llm = await generateJson({
+        backend: session.backend,
+        model: session.model || undefined,
+        systemPrompt: 'You are a research analyst. Analyze the retrieved passages and return a JSON object with your key findings. Be concise and specific. Ground every claim in the retrieved content.',
+        userPrompt: JSON.stringify({
+          query,
+          purpose: spec.purpose,
+          analysis_request: spec.analysis_prompt,
+          retrieved_passages: topHits
+        }, null, 2),
+        temperature: 0.2,
+        maxTokens: 700
+      });
+      result.analysis = llm.data;
+    } catch (err) {
+      result.analysis_error = err.message;
+    }
+  }
+
+  return result;
+}
+
+async function executeCustomTool(spec, context, session) {
+  if (!session.tool_registry) session.tool_registry = {};
+
+  const isNewTool = !session.tool_registry[spec.name];
+  if (isNewTool) {
+    session.tool_registry[spec.name] = {
+      spec,
+      created_at: nowIso(),
+      call_count: 0
+    };
+  }
+  session.tool_registry[spec.name].call_count += 1;
+
+  const result = await runCustomToolRetrieval(spec, context, session);
+
+  return {
+    role: 'tool',
+    name: spec.name,
+    created_at: nowIso(),
+    content: JSON.stringify(result),
+    is_custom: true,
+    created_new_tool: isNewTool
+  };
+}
+
+async function reflectOnToolAdequacy(session, plan, toolTrace) {
+  if (!toolTrace.length) return null;
+
+  const toolRegistry = session.tool_registry || {};
+  const existingCustomTools = Object.entries(toolRegistry).map(
+    ([name, entry]) => `${name}: ${entry.spec.purpose}`
+  );
+
+  const systemPrompt = `You are the reflection engine for WriteFlow's essay harness.
+
+After each tool execution round, decide whether a custom tool would make the next retrieval step more precise or targeted.
+
+Built-in tools: search_library, read_book, read_document, inspect_wiki, compare_books
+
+Return ONLY valid JSON:
+{
+  "create_tool": null | {
+    "name": "snake_case_tool_name",
+    "purpose": "One sentence describing what this retrieves",
+    "retrieval": {
+      "type": "notes" | "ideas" | "articles" | "wiki" | "all",
+      "query": "specific semantic search string",
+      "book_ids": ["id"] | null,
+      "limit": 10
+    },
+    "analysis_prompt": "Optional: specific analytical question to run on the retrieved passages",
+    "output_format": "Description of what the tool returns"
+  }
+}
+
+Create a custom tool ONLY if:
+- The evidence gaps are due to query imprecision, not absent data
+- A more targeted query or content-type filter would surface materially better evidence
+- No existing custom tool already covers this need
+- The tool name does not already exist in existing_custom_tools
+
+If none of these apply, return {"create_tool": null}.`;
+
+  const userPrompt = JSON.stringify({
+    topic: session.topic,
+    current_goal: plan.draft_goal,
+    evidence_gaps: clipList(session.memory?.evidence_gaps, 5, 180),
+    tool_results_summary: toolTrace.map(item => ({
+      tool: item.tool,
+      reason: clip(item.reason || '', 120),
+      hit_count: Array.isArray(item.result) ? item.result.length : (item.result?.hits?.length ?? (item.result ? 1 : 0)),
+      had_error: Boolean(item.error)
+    })),
+    existing_custom_tools: existingCustomTools
+  }, null, 2);
+
+  try {
+    const llm = await generateJson({
+      backend: session.backend,
+      model: session.model || undefined,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.15,
+      maxTokens: 500
+    });
+    const spec = llm.data?.create_tool;
+    if (!spec || typeof spec !== 'object') return null;
+    if (!spec.name || !spec.purpose || !spec.retrieval?.type) return null;
+    if (!/^[a-z][a-z0-9_]*$/.test(spec.name)) return null;
+    if (toolRegistry[spec.name]) return null;
+    return spec;
+  } catch (_err) {
+    return null;
+  }
 }
 
 function clearSessionMemory(session) {
@@ -782,6 +996,7 @@ function clearSessionMemory(session) {
   session.last_plan = null;
   session.last_evidence_packet = null;
   session.pending_draft_updates = [];
+  session.tool_registry = {};
   return session;
 }
 
@@ -908,11 +1123,23 @@ Return ONLY valid JSON:
   "style_directives": ["string"],
   "tool_calls": [
     {
-      "tool": "search_library" | "read_book" | "read_document" | "inspect_wiki" | "compare_books",
+      "tool": "search_library" | "read_book" | "read_document" | "inspect_wiki" | "compare_books" | "<custom_tool_name>",
       "args": {},
       "reason": "why this tool is needed"
     }
   ],
+  "create_tool": null | {
+    "name": "snake_case_name",
+    "purpose": "One sentence: what this tool retrieves and why",
+    "retrieval": {
+      "type": "notes" | "ideas" | "articles" | "wiki" | "all",
+      "query": "specific search string",
+      "book_ids": ["id"] | null,
+      "limit": 10
+    },
+    "analysis_prompt": "Optional: analytical question to run on retrieved passages",
+    "output_format": "Description of what the tool returns"
+  },
   "memory_patch": {
     "phase": "string",
     "current_goal": "string",
@@ -929,7 +1156,9 @@ Rules:
 - If two or more books are selected, use compare_books instead of read_book to surface cross-book intersections and tensions.
 - Only call read_document if a supporting document is likely useful.
 - If the user asks for critique or stress testing, plan for critique rather than more drafting.
-- Never produce a plan with only search_library when books are selected — always pair it with read_book or compare_books.`;
+- Never produce a plan with only search_library when books are selected — always pair it with read_book or compare_books.
+- If custom_tools exist in session_context, you may call them by name in tool_calls just like built-in tools.
+- Set create_tool only when a specific retrieval the built-in tools cannot express would materially improve the evidence. Set it to null otherwise. Do not create duplicate tools.`;
 
   const userPrompt = JSON.stringify({
     session_context: summarizeContextForPrompt(context, session),
@@ -954,6 +1183,17 @@ Rules:
       ? (userRequestsParagraph(userMessage) ? 'paragraph' : 'draft')
       : (plan.response_mode || 'draft');
 
+    const rawCreateTool = plan.create_tool && typeof plan.create_tool === 'object' ? plan.create_tool : null;
+    const validCreateTool = rawCreateTool &&
+      typeof rawCreateTool.name === 'string' &&
+      /^[a-z][a-z0-9_]*$/.test(rawCreateTool.name) &&
+      typeof rawCreateTool.purpose === 'string' &&
+      rawCreateTool.purpose.trim() &&
+      rawCreateTool.retrieval &&
+      ['notes', 'ideas', 'articles', 'wiki', 'all'].includes(rawCreateTool.retrieval.type)
+      ? rawCreateTool
+      : null;
+
     const normalizedPlan = {
       phase: plan.phase || 'draft',
       reasoning_mode: plan.reasoning_mode || session.memory?.reasoning_mode || getReasoningMode(session.selected_books),
@@ -964,6 +1204,7 @@ Rules:
       tool_calls: (Array.isArray(plan.tool_calls) ? plan.tool_calls : [])
         .filter(call => call && call.tool)
         .slice(0, MAX_TOOL_CALLS_PER_PLAN),
+      create_tool: validCreateTool,
       memory_patch: plan.memory_patch || {},
       backend: llm.backend,
       model: llm.model,
@@ -1248,6 +1489,8 @@ async function runEssayAgentTurn(session, userMessage) {
     };
   }
 
+  if (!session.tool_registry) session.tool_registry = {};
+
   const context = await fetchSessionContext(session);
   session.transcript.push({ role: 'user', content: userMessage, created_at: nowIso() });
 
@@ -1282,6 +1525,49 @@ async function runEssayAgentTurn(session, userMessage) {
         reason: toolCall.reason || '',
         error: error.message
       });
+    }
+  }
+
+  // Execute custom tool defined in this plan's create_tool field
+  if (plan.create_tool && !session.tool_registry[plan.create_tool.name]) {
+    try {
+      const customEntry = await executeCustomTool(plan.create_tool, context, session);
+      session.transcript.push(customEntry);
+      toolTrace.push({
+        tool: customEntry.name,
+        args: plan.create_tool.retrieval || {},
+        reason: plan.create_tool.purpose,
+        result: JSON.parse(customEntry.content),
+        is_custom: true,
+        created_new_tool: customEntry.created_new_tool
+      });
+    } catch (err) {
+      toolTrace.push({
+        tool: plan.create_tool.name || 'custom_tool',
+        args: plan.create_tool.retrieval || {},
+        reason: plan.create_tool.purpose || '',
+        error: err.message,
+        is_custom: true
+      });
+    }
+  }
+
+  // Reflection step: ask the agent if a custom tool would help the next step
+  const reflectedSpec = await reflectOnToolAdequacy(session, plan, toolTrace);
+  if (reflectedSpec) {
+    try {
+      const reflectedEntry = await executeCustomTool(reflectedSpec, context, session);
+      session.transcript.push(reflectedEntry);
+      toolTrace.push({
+        tool: reflectedEntry.name,
+        args: reflectedSpec.retrieval || {},
+        reason: reflectedSpec.purpose,
+        result: JSON.parse(reflectedEntry.content),
+        is_custom: true,
+        created_new_tool: reflectedEntry.created_new_tool
+      });
+    } catch (_err) {
+      // Reflection tool failure is non-fatal
     }
   }
 

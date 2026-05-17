@@ -165,6 +165,7 @@ router.post('/session/:id/message', async (req, res) => {
       tool_trace: result.tool_trace,
       plan: result.plan,
       evidence_packet: result.evidence_packet,
+      tool_registry: result.session.tool_registry || {},
       backend: result.backend,
       model: result.model,
       fallback_reason: result.fallback_reason
