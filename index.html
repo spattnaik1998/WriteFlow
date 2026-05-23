@@ -3247,6 +3247,56 @@ body::after {
 }
 .book-revert-btn:hover { background: var(--amber-dk) !important; color: #fff !important; border-color: var(--amber-dk) !important; }
 
+/* Reading DNA (F5) */
+.dna-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.dna-section-hdr {
+  font-size: 11px; font-weight: 700; letter-spacing: .5px;
+  color: var(--text-4); text-transform: uppercase; margin-bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.dna-tag-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
+}
+.dna-tag-label {
+  font-size: 10px; font-weight: 600; letter-spacing: .3px;
+  color: var(--text-3); width: 90px; flex-shrink: 0; text-align: right;
+}
+.dna-tag-bar-wrap { flex: 1; height: 6px; background: var(--bg-dim); border-radius: 3px; }
+.dna-tag-bar { height: 6px; border-radius: 3px; background: var(--amber-dk); transition: width .5s ease; }
+.dna-tag-count { font-size: 10px; color: var(--text-4); width: 24px; flex-shrink: 0; }
+.dna-mastery-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+}
+.dna-mastery-book {
+  font-size: 11px; color: var(--text-2); flex: 1; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.dna-mastery-bar-wrap { width: 60px; height: 4px; background: var(--bg-dim); border-radius: 2px; flex-shrink: 0; }
+.dna-mastery-bar { height: 4px; border-radius: 2px; background: #22c55e; }
+.dna-mastery-pct { font-size: 10px; color: var(--text-4); width: 28px; text-align: right; flex-shrink: 0; }
+.dna-stat-row {
+  display: flex; gap: 10px;
+}
+.dna-stat-card {
+  flex: 1; background: var(--bg-dim); border-radius: 6px; padding: 10px 12px;
+  text-align: center;
+}
+.dna-stat-num { font-size: 20px; font-weight: 700; color: var(--amber); }
+.dna-stat-label { font-size: 10px; color: var(--text-4); margin-top: 2px; }
+.dna-load-btn {
+  width: 100%; padding: 9px; background: none;
+  border: 1px dashed var(--border-hi); border-radius: 7px;
+  color: var(--text-4); font-size: 12px; cursor: pointer;
+  transition: var(--ease); margin-bottom: 10px;
+}
+.dna-load-btn:hover { border-color: var(--amber); color: var(--amber); }
+
 /* Mentor note */
 .dash-mentor-card {
   background: rgba(201,168,76,.06);
@@ -6369,6 +6419,32 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
       <div class="dash-recent-card" id="dashRecentCard" style="display:none">
         <div class="dash-section-hdr">Recently Read</div>
         <div id="dashRecentBooks"></div>
+      </div>
+
+      <!-- Reading DNA -->
+      <button class="dna-load-btn" id="dnaLoadBtn" onclick="loadReadingDNA()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:middle"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        Analyse Reading DNA
+      </button>
+      <div id="dnaSection" style="display:none">
+        <div class="dna-section" id="dnaTagChart">
+          <div class="dna-section-hdr">Intellectual Fingerprint</div>
+          <div id="dnaTagBars"></div>
+        </div>
+        <div class="dna-section" id="dnaMasterySection">
+          <div class="dna-section-hdr">Mastery Heat</div>
+          <div id="dnaMasteryBars"></div>
+        </div>
+        <div class="dna-stat-row" style="margin-bottom:10px">
+          <div class="dna-stat-card">
+            <div class="dna-stat-num" id="dnaTotalIdeas">—</div>
+            <div class="dna-stat-label">Ideas captured</div>
+          </div>
+          <div class="dna-stat-card">
+            <div class="dna-stat-num" id="dnaReviewedIdeas">—</div>
+            <div class="dna-stat-label">Ideas reviewed</div>
+          </div>
+        </div>
       </div>
 
       <!-- Mentor note -->
@@ -10784,6 +10860,57 @@ function _renderHeatmap(heatmap) {
   });
 }
 
+
+// ═══════════════════════════════════════
+// READING DNA (F5)
+// ═══════════════════════════════════════
+async function loadReadingDNA() {
+  const btn = document.getElementById('dnaLoadBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Analysing…'; }
+
+  const data = await api('GET', '/analytics/dna');
+
+  if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:middle"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Refresh DNA'; }
+
+  if (!data) { showToast('Could not load Reading DNA'); return; }
+
+  document.getElementById('dnaSection').style.display = 'block';
+  document.getElementById('dnaTotalIdeas').textContent = data.totalIdeas || 0;
+  document.getElementById('dnaReviewedIdeas').textContent = data.reviewedIdeas || 0;
+
+  // Tag distribution bars
+  const tagBarsEl = document.getElementById('dnaTagBars');
+  if (tagBarsEl && data.tagDistribution?.length) {
+    const maxCount = data.tagDistribution[0].count;
+    tagBarsEl.innerHTML = data.tagDistribution.map(t => `
+      <div class="dna-tag-row">
+        <div class="dna-tag-label">${escapeHtml(t.tag)}</div>
+        <div class="dna-tag-bar-wrap">
+          <div class="dna-tag-bar" style="width:${Math.round(t.count / maxCount * 100)}%"></div>
+        </div>
+        <div class="dna-tag-count">${t.count}</div>
+      </div>`).join('');
+  } else if (tagBarsEl) {
+    tagBarsEl.innerHTML = '<div style="font-size:12px;color:var(--text-4)">No tagged ideas yet — distil some notes first.</div>';
+  }
+
+  // Mastery heat
+  const masteryEl = document.getElementById('dnaMasteryBars');
+  if (masteryEl && data.masteryHeat?.length) {
+    masteryEl.innerHTML = data.masteryHeat.map(b => `
+      <div class="dna-mastery-row">
+        <div class="dna-mastery-book" title="${escapeHtml(b.bookTitle)}">${escapeHtml(b.bookTitle)}</div>
+        <div class="dna-mastery-bar-wrap">
+          <div class="dna-mastery-bar" style="width:${b.avgMastery}%"></div>
+        </div>
+        <div class="dna-mastery-pct">${b.avgMastery}%</div>
+      </div>`).join('');
+  } else if (masteryEl) {
+    masteryEl.innerHTML = '<div style="font-size:12px;color:var(--text-4)">No reviews yet — complete some daily reviews to see mastery data.</div>';
+  }
+
+  document.getElementById('dnaSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 function _mentorMessage(d) {
   const { streak, wordsThisWeek, wordsLastWeek, books, readingGoal, ideas } = d;

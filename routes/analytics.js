@@ -131,6 +131,60 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/analytics/dna — Reading DNA: tag fingerprint + mastery heat
+router.get('/dna', async (req, res) => {
+  try {
+    const [{ data: ideas }, { data: books }] = await Promise.all([
+      supabase.from('ideas').select('book_id, tags, mastery_score, review_count')
+        .not('chapter_name', 'eq', '_broad'),
+      supabase.from('books').select('id, title')
+    ]);
+
+    // Tag frequency across all ideas
+    const tagCounts = {};
+    (ideas || []).forEach(idea => {
+      (idea.tags || []).forEach(tag => {
+        if (tag) tagCounts[tag.toUpperCase()] = (tagCounts[tag.toUpperCase()] || 0) + 1;
+      });
+    });
+    const tagDistribution = Object.entries(tagCounts)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+
+    // Mastery heat per book
+    const bookMap = {};
+    (books || []).forEach(b => { bookMap[b.id] = b.title; });
+    const masteryByBook = {};
+    (ideas || []).forEach(idea => {
+      const title = bookMap[idea.book_id];
+      if (!title) return;
+      if (!masteryByBook[title]) masteryByBook[title] = { total: 0, reviewed: 0, masterySum: 0 };
+      masteryByBook[title].total++;
+      if ((idea.review_count || 0) > 0) masteryByBook[title].reviewed++;
+      masteryByBook[title].masterySum += (idea.mastery_score || 0);
+    });
+    const masteryHeat = Object.entries(masteryByBook)
+      .map(([bookTitle, d]) => ({
+        bookTitle,
+        totalIdeas:   d.total,
+        reviewedIdeas: d.reviewed,
+        avgMastery:   d.total > 0 ? Math.round(d.masterySum / d.total) : 0
+      }))
+      .filter(b => b.totalIdeas > 0)
+      .sort((a, b) => b.avgMastery - a.avgMastery)
+      .slice(0, 8);
+
+    const totalIdeas    = (ideas || []).length;
+    const reviewedIdeas = (ideas || []).filter(i => (i.review_count || 0) > 0).length;
+
+    res.json({ tagDistribution, masteryHeat, totalIdeas, reviewedIdeas });
+  } catch (err) {
+    console.error('[analytics/dna] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // PUT /api/analytics/goal — persist the user's annual reading target
 router.put('/goal', async (req, res) => {
   const n = parseInt(req.body.goal, 10);
