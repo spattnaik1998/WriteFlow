@@ -113,11 +113,17 @@ router.get('/internal', async (req, res) => {
 
   const term = `%${q.trim()}%`;
 
-  const [booksRes, notesRes, ideasRes] = await Promise.all([
-    supabase.from('books').select('id, title, author').or(`title.ilike.${term},author.ilike.${term}`).limit(4),
-    supabase.from('notes').select('id, book_id, chapter_name, content').ilike('content', term).limit(4),
-    supabase.from('ideas').select('id, book_id, title, body').or(`title.ilike.${term},body.ilike.${term}`).limit(4)
-  ]);
+  let booksRes, notesRes, ideasRes;
+  try {
+    [booksRes, notesRes, ideasRes] = await Promise.all([
+      supabase.from('books').select('id, title, author').or(`title.ilike.${term},author.ilike.${term}`).limit(4),
+      supabase.from('notes').select('id, book_id, chapter_name, content').ilike('content', term).limit(4),
+      supabase.from('ideas').select('id, book_id, title, body').or(`title.ilike.${term},body.ilike.${term}`).limit(4)
+    ]);
+  } catch (fetchErr) {
+    console.error('[search/internal] Supabase fetch failed:', fetchErr.message);
+    return res.status(500).json({ error: 'Failed to load library data' });
+  }
 
   res.json({
     books: booksRes.data  || [],

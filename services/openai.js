@@ -1,6 +1,19 @@
 const OpenAI = require('openai');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+
+function parseJsonResponse(content, context = 'openai response') {
+  try {
+    return JSON.parse(content);
+  } catch (err) {
+    throw new Error(
+      `Failed to parse JSON from ${context}: ${err.message}. ` +
+      `Raw (first 200 chars): ${String(content || '').slice(0, 200)}`
+    );
+  }
+}
 
 /**
  * Distil raw notes into structured insights using GPT-4o.
@@ -50,7 +63,7 @@ Return 3-5 insight cards as JSON array. Each card: { title: string, body: string
     max_tokens: 1500
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   if (Array.isArray(raw)) return raw;
   for (const key of ['insights', 'ideas', 'cards', 'data', 'items']) {
     if (Array.isArray(raw[key])) return raw[key];
@@ -159,7 +172,7 @@ Return ONLY valid JSON: { "themes": [{ "name": string, "ideas": [{ "bookTitle": 
     max_tokens: 2500
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return {
     themes:    raw.themes    || [],
     narrative: raw.narrative || ''
@@ -199,7 +212,7 @@ Return ONLY valid JSON: { "stances": ["supporting"|"opposing"|"neutral", ...] } 
     max_tokens: 300
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return raw.stances || articles.map(() => 'neutral');
 }
 
@@ -274,7 +287,7 @@ Generate 3-5 high-signal tweets derived from these notes.`;
     max_tokens: 800
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return raw.tweets || [];
 }
 
@@ -323,7 +336,7 @@ Transform these notes into a single, flowing Twitter thread.`;
     max_tokens: 1800
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return raw.thread || [];
 }
 
@@ -364,7 +377,7 @@ Generate all three LinkedIn post variants.`;
     max_tokens: 2000
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return {
     insight:  raw.insight  || '',
     listicle: raw.listicle || '',
@@ -403,7 +416,7 @@ Rewrite this as a single cohesive LinkedIn post (1500–2000 chars).`;
     max_tokens: 900
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return { post: raw.post || '' };
 }
 
@@ -455,7 +468,7 @@ Generate the weekly newsletter digest.`;
     max_tokens: 2000
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return {
     subject_line:    raw.subject_line    || '',
     opening_hook:    raw.opening_hook    || '',
@@ -513,7 +526,7 @@ Return ONLY valid JSON:
     max_tokens: 2000
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return raw.contradictions || [];
 }
 
@@ -586,7 +599,7 @@ Extract the argument structure from these notes. Return JSON with this exact sha
     max_tokens: 2500
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
 
   // Defensive parsing: handle various response shapes
   return {
@@ -706,7 +719,7 @@ Extract concept structure. Return JSON:
     max_tokens: 2500
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
 
   // Defensive parsing
   return {
@@ -777,7 +790,7 @@ Return valid JSON: { "summary": string, "highlights": string[], "prep_question":
     max_tokens: 700
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return {
     summary:       raw.summary        || '',
     highlights:    Array.isArray(raw.highlights) ? raw.highlights : [],
@@ -836,7 +849,7 @@ Return valid JSON only:
     max_tokens: 1200
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   const qs  = Array.isArray(raw.questions) ? raw.questions : [];
   // Shuffle correct answer to a spread of positions (0,1,2,3,0) to avoid GPT bias
   return qs.slice(0, 5).map((q, i) => {
@@ -900,7 +913,7 @@ Identify the 5 biggest ideas from this book. Return as JSON.`;
     max_tokens: 2000
   });
 
-  const raw   = JSON.parse(response.choices[0].message.content);
+  const raw   = parseJsonResponse(response.choices[0].message.content);
   const ideas = Array.isArray(raw) ? raw : (raw.ideas || raw.insights || raw.cards || []);
   return ideas.slice(0, 5).map(idea => ({
     title: idea.title || '',
@@ -968,7 +981,7 @@ Challenge this argument as a devil's advocate. Identify hidden assumptions, logi
     max_tokens: 2000
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return {
     argument_summary:  raw.argument_summary  || '',
     core_weaknesses:   Array.isArray(raw.core_weaknesses)   ? raw.core_weaknesses   : [],
@@ -1022,7 +1035,7 @@ Rules:
     max_tokens: 2000
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return {
     nodes:     Array.isArray(raw.nodes)     ? raw.nodes     : [],
     edges:     Array.isArray(raw.edges)     ? raw.edges     : [],
@@ -1116,7 +1129,7 @@ OUTPUT FORMAT — return ONLY valid JSON:
     max_tokens: 4000
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return {
     title:    raw.title    || 'Cross-Book Synthesis',
     subtitle: raw.subtitle || '',
@@ -1183,7 +1196,7 @@ Refine the notes now.`;
     max_tokens: 1500
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return {
     refined_notes:   raw.refined_notes   || notes,
     changes_summary: raw.changes_summary || ''
@@ -1247,7 +1260,7 @@ Decide which wiki pages to create or update.`;
     max_tokens:      800
   });
 
-  const planRaw = JSON.parse(planResponse.choices[0].message.content);
+  const planRaw = parseJsonResponse(planResponse.choices[0].message.content, 'ingestSourceToWiki/plan');
   const actions = (planRaw.actions || []).filter(a => a.op !== 'noop');
   let tokensUsed = planResponse.usage?.total_tokens || 0;
 
@@ -1302,7 +1315,7 @@ Write the wiki page markdown.`;
     });
 
     tokensUsed += resp.usage?.total_tokens || 0;
-    const raw = JSON.parse(resp.choices[0].message.content);
+    const raw = parseJsonResponse(resp.choices[0].message.content, 'ingestSourceToWiki/page');
     return { ...action, markdown: raw.markdown || '', summary: raw.summary || '' };
   };
 
@@ -1350,7 +1363,7 @@ Return ONLY valid JSON:
     max_tokens:      1000
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return {
     answer:           raw.answer          || '',
     cited_slugs:      raw.cited_slugs     || [],
@@ -1394,7 +1407,7 @@ Return ONLY valid JSON:
     max_tokens:      1500
   });
 
-  const raw = JSON.parse(response.choices[0].message.content);
+  const raw = parseJsonResponse(response.choices[0].message.content);
   return {
     contradictions:   raw.contradictions   || [],
     orphans:          [],
