@@ -1103,6 +1103,105 @@ body::after {
   border-color: var(--amber);
   color: var(--amber);
 }
+.mastery-badge {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.mastery-low  { background: var(--text-4); }
+.mastery-mid  { background: var(--amber-dk); }
+.mastery-high { background: #22c55e; }
+
+/* Daily Review Modal */
+.review-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1200;
+}
+.review-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-hi);
+  border-radius: 12px;
+  width: min(540px, 96vw);
+  max-height: 90vh;
+  overflow: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.review-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.review-modal-title {
+  font-size: 15px; font-weight: 700; color: var(--text-1);
+}
+.review-modal-progress {
+  font-size: 12px; color: var(--text-4);
+}
+.review-modal-close {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-4); font-size: 18px; padding: 2px 6px;
+}
+.review-modal-close:hover { color: var(--text-1); }
+.review-modal-body { padding: 20px; }
+.review-card-num {
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  color: var(--text-4); margin-bottom: 8px;
+}
+.review-card-title {
+  font-size: 18px; font-weight: 700; color: var(--text-1);
+  margin-bottom: 8px; line-height: 1.3;
+}
+.review-card-hint {
+  font-size: 12px; color: var(--text-4); margin-bottom: 14px;
+  font-style: italic;
+}
+.review-card-body {
+  font-size: 13.5px; color: var(--text-2); line-height: 1.6;
+  background: var(--bg-dim); border-radius: 6px;
+  padding: 12px 14px; margin-bottom: 14px;
+}
+.review-card-tags { margin-bottom: 18px; display: flex; gap: 5px; flex-wrap: wrap; }
+.review-reveal-btn {
+  width: 100%; padding: 11px;
+  background: var(--bg-input); border: 1px solid var(--border-hi);
+  border-radius: 7px; color: var(--text-2);
+  font-size: 13px; cursor: pointer; transition: var(--ease);
+}
+.review-reveal-btn:hover { border-color: var(--amber); color: var(--amber); }
+.review-reflection-row {
+  margin-bottom: 14px;
+}
+.review-reflection-input {
+  width: 100%; box-sizing: border-box;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-1); font-size: 13px;
+  padding: 9px 12px; outline: none; transition: var(--ease);
+}
+.review-reflection-input:focus { border-color: var(--amber); }
+.review-rating-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.review-rating-btn {
+  padding: 10px 6px; border-radius: 7px; font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: var(--ease); border: 1px solid;
+}
+.review-rating-forgot    { background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.3); color: #ef4444; }
+.review-rating-forgot:hover    { background: rgba(239,68,68,.2); }
+.review-rating-fuzzy     { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.3); color: #f59e0b; }
+.review-rating-fuzzy:hover     { background: rgba(245,158,11,.2); }
+.review-rating-remembered { background: rgba(34,197,94,.1); border-color: rgba(34,197,94,.3); color: #22c55e; }
+.review-rating-remembered:hover { background: rgba(34,197,94,.2); }
+.review-complete-wrap {
+  text-align: center; padding: 30px 20px;
+}
+.review-complete-icon { font-size: 40px; margin-bottom: 10px; }
+.review-complete-text { font-size: 18px; font-weight: 700; color: var(--text-1); margin-bottom: 4px; }
+.review-complete-sub  { font-size: 13px; color: var(--text-4); margin-bottom: 20px; }
 
 /* Idea card CRUD controls */
 .idea-card { position: relative; }
@@ -6361,6 +6460,18 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
   </div>
 </div>
 
+<!-- Daily Review Modal (F3 — Idea Mastery Loop) -->
+<div class="review-overlay" id="reviewModalOverlay" style="display:none">
+  <div class="review-modal">
+    <div class="review-modal-header">
+      <span class="review-modal-title">Daily Review</span>
+      <span class="review-modal-progress" id="reviewProgress"></span>
+      <button class="review-modal-close" onclick="closeReviewModal()">×</button>
+    </div>
+    <div class="review-modal-body" id="reviewBody"></div>
+  </div>
+</div>
+
 <!-- Brand Voice Modal -->
 <div class="modal-overlay" id="brandModalOverlay" onclick="outsideBrandClose(event)">
   <div class="modal">
@@ -7326,6 +7437,11 @@ function buildIdeaCard(idea, idx) {
   const tagsHtml    = (idea.tags || []).map(t => `<span class="idea-tag">${escapeHtml(t)}</span>`).join('');
   const manualBadge = idea.is_manual ? ' <span class="idea-manual-badge">Manual</span>' : '';
   const safeTitle   = (idea.title || '').replace(/'/g, "\\'");
+  const mastery     = idea.mastery_score || 0;
+  const masteryLevel = mastery >= 61 ? 'high' : mastery >= 31 ? 'mid' : 'low';
+  const masteryDot  = idea.next_review_at
+    ? `<span class="mastery-badge mastery-${masteryLevel}" title="Mastery: ${mastery}%"></span>`
+    : '';
 
   card.innerHTML = `
     <div class="idea-card-view">
@@ -7337,7 +7453,7 @@ function buildIdeaCard(idea, idx) {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6m4-6v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
       </div>
-      <div class="idea-num">INSIGHT ${String(idea.number || idx + 1).padStart(2, '0')}${manualBadge}</div>
+      <div class="idea-num">INSIGHT ${String(idea.number || idx + 1).padStart(2, '0')}${manualBadge}${masteryDot}</div>
       <div class="idea-title">${escapeHtml(idea.title)}</div>
       <div class="idea-body">${escapeHtml(idea.body || '')}</div>
       <div class="idea-tags">${tagsHtml}</div>
@@ -10378,6 +10494,93 @@ async function exploreAsEssayFromTension(collisionIdx) {
 }
 
 // ═══════════════════════════════════════
+// IDEA MASTERY LOOP — SPACED REPETITION (F3)
+// ═══════════════════════════════════════
+let _reviewQueue = [];
+let _reviewIdx   = 0;
+let _reviewRevealed = false;
+
+async function checkDailyReview() {
+  const data = await api('GET', '/distill/review');
+  if (!Array.isArray(data) || data.length === 0) return;
+  _reviewQueue = data;
+  _reviewIdx   = 0;
+  openReviewModal();
+}
+
+function openReviewModal() {
+  document.getElementById('reviewModalOverlay').style.display = 'flex';
+  renderReviewCard();
+}
+
+function closeReviewModal() {
+  document.getElementById('reviewModalOverlay').style.display = 'none';
+  _reviewQueue = [];
+  _reviewIdx   = 0;
+}
+
+function renderReviewCard() {
+  const progressEl = document.getElementById('reviewProgress');
+  const bodyEl     = document.getElementById('reviewBody');
+  if (!bodyEl) return;
+
+  if (_reviewIdx >= _reviewQueue.length) {
+    const total = _reviewQueue.length;
+    if (progressEl) progressEl.textContent = `${total} of ${total}`;
+    bodyEl.innerHTML = `
+      <div class="review-complete-wrap">
+        <div class="review-complete-icon">✓</div>
+        <div class="review-complete-text">Review complete!</div>
+        <div class="review-complete-sub">${total} idea${total !== 1 ? 's' : ''} reviewed today</div>
+        <button class="btn-amber" onclick="closeReviewModal()">Done</button>
+      </div>`;
+    return;
+  }
+
+  const idea = _reviewQueue[_reviewIdx];
+  if (progressEl) progressEl.textContent = `${_reviewIdx + 1} of ${_reviewQueue.length}`;
+  _reviewRevealed = false;
+
+  bodyEl.innerHTML = `
+    <div>
+      <div class="review-card-num">INSIGHT ${String(_reviewIdx + 1).padStart(2, '0')}</div>
+      <div class="review-card-title">${escapeHtml(idea.title)}</div>
+      <div class="review-card-hint">Try to recall this idea before revealing…</div>
+      <div class="review-card-body" id="reviewCardBody" style="display:none">${escapeHtml(idea.body || '')}</div>
+      <div class="review-card-tags">${(idea.tags || []).map(t => `<span class="idea-tag">${escapeHtml(t)}</span>`).join('')}</div>
+      <div id="reviewRevealWrap">
+        <button class="review-reveal-btn" onclick="revealReviewCard()">Reveal Idea</button>
+      </div>
+      <div id="reviewRateWrap" style="display:none">
+        <div class="review-reflection-row">
+          <input class="review-reflection-input" id="reviewReflectionInput" type="text"
+            placeholder="Does this connect to anything you're reading now? (optional)">
+        </div>
+        <div class="review-rating-row">
+          <button class="review-rating-btn review-rating-forgot"     onclick="submitReview('forgot')">Forgot</button>
+          <button class="review-rating-btn review-rating-fuzzy"      onclick="submitReview('fuzzy')">Fuzzy</button>
+          <button class="review-rating-btn review-rating-remembered" onclick="submitReview('remembered')">Remembered</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function revealReviewCard() {
+  document.getElementById('reviewCardBody').style.display = 'block';
+  document.getElementById('reviewRevealWrap').style.display = 'none';
+  document.getElementById('reviewRateWrap').style.display = 'block';
+  document.getElementById('reviewReflectionInput')?.focus();
+}
+
+async function submitReview(rating) {
+  const idea       = _reviewQueue[_reviewIdx];
+  const reflection = document.getElementById('reviewReflectionInput')?.value?.trim() || '';
+  api('POST', `/distill/${idea.id}/review`, { rating, reflection }).catch(() => {});
+  _reviewIdx++;
+  renderReviewCard();
+}
+
+// ═══════════════════════════════════════
 // ANALYTICS DASHBOARD STATE
 // ═══════════════════════════════════════
 let _analyticsLoaded = false;
@@ -10620,6 +10823,7 @@ fetch('/api/health').then(r => {
     });
     loadBrandProfile();
     loadAnalytics(); // populate dashboard immediately on backend connect
+    setTimeout(checkDailyReview, 2000); // check for due reviews after UI settles
     console.log('[WriteFlow] Backend connected ✓');
   }
 }).catch(() => {

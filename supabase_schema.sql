@@ -267,6 +267,12 @@ create table if not exists contradictions (
 );
 create unique index if not exists contradictions_pair on contradictions (idea_a_id, idea_b_id);
 
+-- Idea Mastery Loop — spaced repetition columns (F3)
+alter table ideas add column if not exists mastery_score       integer   default 0;
+alter table ideas add column if not exists next_review_at      timestamptz;
+alter table ideas add column if not exists review_interval_days float    default 1;
+alter table ideas add column if not exists reflection_notes    jsonb     default '[]';
+
 -- ===== ROW LEVEL SECURITY (enable when you add auth) =====
 -- alter table books        enable row level security;
 -- alter table notes        enable row level security;

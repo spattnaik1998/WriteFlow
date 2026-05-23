@@ -3,6 +3,75 @@ const router   = express.Router();
 const supabase = require('../services/supabase');
 const { distillNotes, generateBroadIdeas } = require('../services/openai');
 
+// SM-2 simplified spaced repetition helpers
+function sm2NextInterval(currentInterval, rating) {
+  if (rating === 'forgot')     return 1;
+  if (rating === 'fuzzy')      return Math.max((currentInterval || 1) * 1.3, 1);
+  if (rating === 'remembered') return Math.max((currentInterval || 1) * 2.5, 3);
+  return 1;
+}
+function sm2MasteryDelta(rating) {
+  if (rating === 'forgot')     return -15;
+  if (rating === 'fuzzy')      return   5;
+  if (rating === 'remembered') return  15;
+  return 0;
+}
+
+// GET /api/distill/review — ideas due for spaced-repetition review
+router.get('/review', async (req, res) => {
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from('ideas')
+    .select('id, book_id, title, body, tags, mastery_score, next_review_at, review_count')
+    .neq('chapter_name', '_broad')
+    .lte('next_review_at', now)
+    .not('next_review_at', 'is', null)
+    .order('next_review_at', { ascending: true })
+    .limit(10);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
+// POST /api/distill/:id/review — record a review, advance SM-2 schedule
+router.post('/:id/review', async (req, res) => {
+  const { rating, reflection } = req.body;
+  if (!['remembered', 'fuzzy', 'forgot'].includes(rating)) {
+    return res.status(400).json({ error: 'rating must be remembered, fuzzy, or forgot' });
+  }
+
+  const { data: idea, error: fetchErr } = await supabase
+    .from('ideas')
+    .select('mastery_score, review_count, review_interval_days, reflection_notes')
+    .eq('id', req.params.id)
+    .single();
+  if (fetchErr || !idea) return res.status(404).json({ error: 'Idea not found' });
+
+  const nextInterval  = sm2NextInterval(idea.review_interval_days, rating);
+  const nextReviewAt  = new Date(Date.now() + nextInterval * 86400000).toISOString();
+  const newMastery    = Math.max(0, Math.min(100, (idea.mastery_score || 0) + sm2MasteryDelta(rating)));
+  const notes         = Array.isArray(idea.reflection_notes) ? [...idea.reflection_notes] : [];
+  if (typeof reflection === 'string' && reflection.trim()) {
+    notes.push({ text: reflection.trim(), created_at: new Date().toISOString() });
+  }
+
+  const { data: updated, error: updateErr } = await supabase
+    .from('ideas')
+    .update({
+      mastery_score:        newMastery,
+      next_review_at:       nextReviewAt,
+      review_interval_days: nextInterval,
+      review_count:         (idea.review_count || 0) + 1,
+      reflection_notes:     notes,
+      last_reviewed_at:     new Date().toISOString()
+    })
+    .eq('id', req.params.id)
+    .select()
+    .single();
+
+  if (updateErr) return res.status(500).json({ error: updateErr.message });
+  res.json(updated);
+});
+
 // GET /api/distill/broad?book_id= — fetch cached broad ideas for a book
 router.get('/broad', async (req, res) => {
   const { book_id } = req.query;
@@ -112,14 +181,16 @@ router.post('/', async (req, res) => {
       existingIdeas: existing || []
     });
 
-    // Persist each idea card to Supabase
+    // Persist each idea card to Supabase; schedule first review for tomorrow
+    const firstReviewAt = new Date(Date.now() + 86400000).toISOString();
     const toInsert = ideas.map((idea, i) => ({
       book_id,
-      chapter_name: chapter_name || null,
-      title:        idea.title,
-      body:         idea.body,
-      tags:         idea.tags || [],
-      number:       (existing?.length || 0) + i + 1
+      chapter_name:   chapter_name || null,
+      title:          idea.title,
+      body:           idea.body,
+      tags:           idea.tags || [],
+      number:         (existing?.length || 0) + i + 1,
+      next_review_at: firstReviewAt
     }));
 
     const { data: saved, error: saveErr } = await supabase
@@ -203,10 +274,11 @@ router.post('/manual', async (req, res) => {
     .insert([{
       book_id,
       title,
-      body:      body  || '',
-      tags:      tags  || [],
-      number:    (count || 0) + 1,
-      is_manual: true
+      body:           body  || '',
+      tags:           tags  || [],
+      number:         (count || 0) + 1,
+      is_manual:      true,
+      next_review_at: new Date(Date.now() + 86400000).toISOString()
     }])
     .select()
     .single();
