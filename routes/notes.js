@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const supabase = require('../services/supabase');
+const { parseKindleClippings } = require('../services/kindleParser');
 
 // GET /api/notes?book_id=... — all notes for a book
 router.get('/', async (req, res) => {
@@ -62,6 +63,52 @@ router.delete('/:id', async (req, res) => {
   const { error } = await supabase.from('notes').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ success: true });
+});
+
+// POST /api/notes/kindle-parse — parse Kindle My Clippings.txt, return preview
+router.post('/kindle-parse', (req, res) => {
+  const { file_text } = req.body;
+  if (!file_text || typeof file_text !== 'string') {
+    return res.status(400).json({ error: 'file_text required' });
+  }
+  try {
+    const books = parseKindleClippings(file_text);
+    res.json({ books });
+  } catch (err) {
+    console.error('[notes/kindle-parse] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/notes/kindle-save — save parsed highlights into the notes table
+router.post('/kindle-save', async (req, res) => {
+  const { book_id, highlights } = req.body;
+  if (!book_id) return res.status(400).json({ error: 'book_id required' });
+  if (!Array.isArray(highlights) || highlights.length === 0) {
+    return res.status(400).json({ error: 'highlights required' });
+  }
+
+  const content = highlights
+    .map((h, i) => {
+      const loc   = h.location ? ` [loc ${h.location}]` : '';
+      const label = h.type === 'note' ? 'NOTE' : 'HIGHLIGHT';
+      return `${i + 1}. [${label}${loc}]\n${h.text}`;
+    })
+    .join('\n\n');
+
+  const { data, error } = await supabase
+    .from('notes')
+    .upsert([{
+      book_id,
+      chapter_name:  'Kindle Highlights',
+      chapter_order: 999,
+      content
+    }], { onConflict: 'book_id,chapter_name' })
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ saved: true, chapter_name: 'Kindle Highlights', notes: data });
 });
 
 module.exports = router;

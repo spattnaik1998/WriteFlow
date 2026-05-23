@@ -4294,6 +4294,40 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
   border-top: 1px solid var(--border);
 }
 
+/* Kindle Import (F4) */
+.kindle-drop-zone {
+  border: 2px dashed var(--border-hi);
+  border-radius: 10px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--ease);
+  color: var(--text-3);
+  font-size: 14px;
+}
+.kindle-drop-zone:hover, .kindle-drop-zone.drag-over {
+  border-color: var(--amber);
+  background: var(--amber-glow);
+  color: var(--amber);
+}
+.kindle-mapping-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px; flex-wrap: wrap;
+}
+.kindle-parsed-book {
+  flex: 1; font-size: 13px; color: var(--text-1); min-width: 160px;
+}
+.kindle-count {
+  font-size: 11px; color: var(--text-4); margin-left: 4px;
+}
+.kindle-book-select { flex: 1; min-width: 160px; }
+.kindle-import-btn {
+  background: none; border: 1px solid var(--border);
+  border-radius: 5px; padding: 3px 8px; cursor: pointer;
+  color: var(--text-4); font-size: 12px; transition: var(--ease);
+}
+.kindle-import-btn:hover { border-color: var(--amber-dk); color: var(--amber-dk); }
+
 /* Insight Collision / Tension cards */
 .tension-card {
   background: var(--bg-card);
@@ -5464,7 +5498,12 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
       <div style="padding: 0 0 8px">
         <div class="section-header">
           <span class="section-label">My Library</span>
-          <button class="add-book-btn" onclick="openModal()" title="Add new book">+</button>
+          <div style="display:flex;gap:4px;align-items:center">
+            <button class="kindle-import-btn" onclick="openKindleModal()" title="Import Kindle highlights">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h3"/></svg>
+            </button>
+            <button class="add-book-btn" onclick="openModal()" title="Add new book">+</button>
+          </div>
         </div>
         <div class="library-filter">
           <button class="filter-btn active" id="filterInProgress" onclick="setLibraryFilter('in_progress')">In Progress</button>
@@ -6456,6 +6495,27 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
         → LinkedIn
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Kindle Import Modal (F4) -->
+<div class="review-overlay" id="kindleModalOverlay" style="display:none">
+  <div class="review-modal" style="width:min(600px,96vw)">
+    <div class="review-modal-header">
+      <span class="review-modal-title">Import Kindle Highlights</span>
+      <button class="review-modal-close" onclick="closeKindleModal()">×</button>
+    </div>
+    <div class="review-modal-body" id="kindleModalBody">
+      <div id="kindleStep1">
+        <div id="kindleDropZone" class="kindle-drop-zone">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:10px;opacity:.5"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <div>Drop <strong>My Clippings.txt</strong> here</div>
+          <div style="font-size:11px;color:var(--text-4);margin-top:6px">or click to select file</div>
+          <input type="file" id="kindleFileInput" accept=".txt" style="display:none" onchange="handleKindleFile(this.files[0])">
+        </div>
+      </div>
+      <div id="kindleStep2" style="display:none"></div>
     </div>
   </div>
 </div>
@@ -10829,6 +10889,92 @@ fetch('/api/health').then(r => {
 }).catch(() => {
   console.log('[WriteFlow] Running in prototype mode (no backend)');
 });
+
+// ═══════════════════════════════════════
+// KINDLE HIGHLIGHTS IMPORT (F4)
+// ═══════════════════════════════════════
+let _kindleParsedBooks = [];
+
+function openKindleModal() {
+  document.getElementById('kindleModalOverlay').style.display = 'flex';
+  document.getElementById('kindleStep1').style.display = 'block';
+  document.getElementById('kindleStep2').style.display = 'none';
+
+  const dropZone = document.getElementById('kindleDropZone');
+  dropZone.onclick = () => document.getElementById('kindleFileInput').click();
+  dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('drag-over'); };
+  dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
+  dropZone.ondrop = e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleKindleFile(file);
+  };
+}
+
+function closeKindleModal() {
+  document.getElementById('kindleModalOverlay').style.display = 'none';
+  _kindleParsedBooks = [];
+}
+
+async function handleKindleFile(file) {
+  if (!file) return;
+  showToast('Parsing clippings…');
+  const text = await file.text();
+  const data = await api('POST', '/notes/kindle-parse', { file_text: text });
+  if (!data || !data.books) { showToast('Failed to parse file'); return; }
+
+  _kindleParsedBooks = data.books;
+  if (_kindleParsedBooks.length === 0) {
+    showToast('No highlights found in this file');
+    return;
+  }
+
+  document.getElementById('kindleStep1').style.display = 'none';
+  const step2 = document.getElementById('kindleStep2');
+  step2.style.display = 'block';
+  step2.innerHTML = `
+    <div style="margin-bottom:14px;font-size:13px;color:var(--text-2)">
+      Found <strong>${_kindleParsedBooks.length}</strong> book${_kindleParsedBooks.length !== 1 ? 's' : ''}.
+      Map each to a book in your library to import its highlights.
+    </div>
+    <div id="kindleBookMappings">
+      ${_kindleParsedBooks.map((kb, i) => `
+        <div class="kindle-mapping-row">
+          <div class="kindle-parsed-book">${escapeHtml(kb.bookTitle)}
+            <span class="kindle-count">${kb.highlights.length} highlight${kb.highlights.length !== 1 ? 's' : ''}</span>
+          </div>
+          <select class="kindle-book-select essay-select" data-idx="${i}">
+            <option value="">— Skip —</option>
+            ${(BOOKS || []).map(b => `<option value="${b.id}">${escapeHtml(b.title)}</option>`).join('')}
+          </select>
+        </div>
+      `).join('')}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn-amber" onclick="confirmKindleImport()">Import Selected</button>
+      <button class="btn-sec" onclick="closeKindleModal()">Cancel</button>
+    </div>`;
+}
+
+async function confirmKindleImport() {
+  const selects = document.querySelectorAll('.kindle-book-select');
+  let imported = 0;
+  for (const sel of selects) {
+    const bookId = sel.value;
+    if (!bookId) continue;
+    const kb = _kindleParsedBooks[parseInt(sel.dataset.idx)];
+    const result = await api('POST', '/notes/kindle-save', { book_id: bookId, highlights: kb.highlights });
+    if (result?.saved) imported++;
+  }
+  closeKindleModal();
+  if (imported) {
+    showToast(`${imported} book${imported !== 1 ? 's' : ''} imported → "Kindle Highlights" chapter`);
+    if (CURRENT_BOOK_ID) loadBookContent(CURRENT_BOOK_ID);
+  } else {
+    showToast('No books selected — nothing imported');
+  }
+}
 
 // ═══════════════════════════════════════
 // BRAND VOICE PROFILE
