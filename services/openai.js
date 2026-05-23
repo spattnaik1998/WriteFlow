@@ -51,7 +51,12 @@ Return 3-5 insight cards as JSON array. Each card: { title: string, body: string
   });
 
   const raw = JSON.parse(response.choices[0].message.content);
-  return Array.isArray(raw) ? raw : (raw.insights || raw.ideas || raw.cards || []);
+  if (Array.isArray(raw)) return raw;
+  for (const key of ['insights', 'ideas', 'cards', 'data', 'items']) {
+    if (Array.isArray(raw[key])) return raw[key];
+  }
+  console.warn('[distillNotes] Unexpected JSON shape, keys:', Object.keys(raw));
+  return [];
 }
 
 /**

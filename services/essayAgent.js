@@ -749,8 +749,9 @@ function applyProposalPatch(currentDraft, proposal) {
   }
 
   if (proposal.patch_mode !== 'full_replace' && beforeExcerpt && afterExcerpt && draft.includes(beforeExcerpt)) {
+    const safePattern = beforeExcerpt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return {
-      draft: draft.replace(beforeExcerpt, afterExcerpt),
+      draft: draft.replace(new RegExp(safePattern), afterExcerpt),
       applied_as: 'section_patch'
     };
   }
@@ -1177,8 +1178,8 @@ function buildProgressStatus(session) {
   const memory = session.memory || {};
   const outline = Array.isArray(memory.outline) ? memory.outline : [];
   const gapCount = Array.isArray(memory.evidence_gaps) ? memory.evidence_gaps.length : 0;
-  const normalizedDraft = normalizeSearchText(draft);
-  const coveredSections = outline.filter(item => normalizedDraft.includes(normalizeSearchText(item))).length;
+  const ledger = session.section_ledger || {};
+  const coveredSections = outline.filter(item => ledger[normalizeSearchText(item)]).length;
   let status;
   if (turn <= 3 || !draft.trim()) status = 'BUILDING';
   else if (gapCount === 0) status = 'NEAR_COMPLETE';
@@ -1197,7 +1198,7 @@ function buildProgressStatus(session) {
 function parseDraftSections(draftMarkdown) {
   const sections = [];
   String(draftMarkdown || '').split('\n').forEach(line => {
-    const match = line.match(/^(#{1,3})\s+(.+)/);
+    const match = line.match(/^(#{1,6})\s+(.+)/);
     if (match) sections.push({ heading: match[2].trim(), level: match[1].length });
   });
   return sections;
@@ -1571,10 +1572,10 @@ Rules:
           evidencePacket.working_thesis || 'A thesis is still forming.',
           '',
           '## Outline',
-          ...(evidencePacket.outline.length ? evidencePacket.outline.map(item => `- ${item}`) : ['- Gather stronger evidence before drafting.']),
+          ...(Array.isArray(evidencePacket?.outline) && evidencePacket.outline.length ? evidencePacket.outline.map(item => `- ${item}`) : ['- Gather stronger evidence before drafting.']),
           '',
           '## Open Questions',
-          ...(evidencePacket.open_questions.length ? evidencePacket.open_questions.map(item => `- ${item}`) : ['- Tighten the thesis with another pass.'])
+          ...(Array.isArray(evidencePacket?.open_questions) && evidencePacket.open_questions.length ? evidencePacket.open_questions.map(item => `- ${item}`) : ['- Tighten the thesis with another pass.'])
         ].join('\n'));
 
     return {
@@ -1706,10 +1707,15 @@ async function runEssayAgentTurn(session, userMessage) {
   // Populate rolling action history from this turn's tool trace
   const currentTurn = session.turn_count;
   for (const item of toolTrace) {
-    const query = String(item.args?.query || item.args?.focus || item.args?.book_id || '').slice(0, 120);
+    let query = '';
+    if (item.tool === 'search_library' || item.tool === 'inspect_wiki') query = item.args?.query || '';
+    else if (item.tool === 'read_book') query = item.args?.focus || '';
+    else if (item.tool === 'read_document') query = item.args?.focus || item.args?.query || '';
+    else if (item.tool === 'compare_books') query = item.args?.focus || '';
+    else query = item.args?.query || item.args?.focus || '';
     session.action_history = [
       ...session.action_history,
-      { turn: currentTurn, tool: item.tool, query, outcome: item.error ? `error: ${item.error}` : 'ok' }
+      { turn: currentTurn, tool: item.tool, query: String(query).slice(0, 120), outcome: item.error ? `error: ${item.error}` : 'ok' }
     ].slice(-20);
   }
 
@@ -1771,8 +1777,13 @@ async function runEssayAgentTurn(session, userMessage) {
     session.pending_draft_updates = [];
     parseDraftSections(session.draft_markdown).forEach(({ heading, level }) => {
       const key = normalizeSearchText(heading);
-      if (!session.section_ledger[key])
-        session.section_ledger[key] = { heading, level, turn_accepted: session.turn_count || 0 };
+      const existing = session.section_ledger[key];
+      session.section_ledger[key] = {
+        heading,
+        level,
+        turn_accepted: session.turn_count || 0,
+        revision_count: (existing?.revision_count || 0) + (existing ? 1 : 0)
+      };
     });
   }
   session.last_tool_trace = toolTrace;
@@ -1814,8 +1825,13 @@ async function resolveDraftProposal(session, proposalId, action) {
     if (!session.section_ledger) session.section_ledger = {};
     parseDraftSections(session.draft_markdown).forEach(({ heading, level }) => {
       const key = normalizeSearchText(heading);
-      if (!session.section_ledger[key])
-        session.section_ledger[key] = { heading, level, turn_accepted: session.turn_count || 0 };
+      const existing = session.section_ledger[key];
+      session.section_ledger[key] = {
+        heading,
+        level,
+        turn_accepted: session.turn_count || 0,
+        revision_count: (existing?.revision_count || 0) + (existing ? 1 : 0)
+      };
     });
     session.memory = mergeMemory(session.memory, {
       recent_findings: [`Accepted draft update: ${proposal.title} (${applied.applied_as})`],

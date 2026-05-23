@@ -11,11 +11,20 @@ router.post('/', async (req, res) => {
   }
 
   // Fetch book + all chapter notes + idea cards in parallel
-  const [{ data: book }, { data: dbNotes }, { data: ideas }] = await Promise.all([
-    supabase.from('books').select('title, author, category, why_reading').eq('id', book_id).single(),
-    supabase.from('notes').select('content, chapter_name').eq('book_id', book_id),
-    supabase.from('ideas').select('title, body, chapter_name, tags').eq('book_id', book_id).limit(25)
-  ]);
+  let book, dbNotes, ideas;
+  try {
+    const [bookRes, notesRes, ideasRes] = await Promise.all([
+      supabase.from('books').select('title, author, category, why_reading').eq('id', book_id).single(),
+      supabase.from('notes').select('content, chapter_name').eq('book_id', book_id),
+      supabase.from('ideas').select('title, body, chapter_name, tags').eq('book_id', book_id).limit(25)
+    ]);
+    book = bookRes.data;
+    dbNotes = notesRes.data;
+    ideas = ideasRes.data;
+  } catch (fetchErr) {
+    console.error('Chat fetch error:', fetchErr.message);
+    return res.status(500).json({ error: 'Failed to load book data' });
+  }
 
   if (!book) return res.status(404).json({ error: 'Book not found' });
 
@@ -132,6 +141,8 @@ router.post('/suggest', async (req, res) => {
     supabase.from('books').select('title, author').eq('id', book_id).single(),
     supabase.from('ideas').select('title, body').eq('book_id', book_id).limit(6)
   ]);
+
+  if (!book) return res.status(404).json({ error: 'Book not found' });
 
   try {
     const suggestion = await suggestWriting({

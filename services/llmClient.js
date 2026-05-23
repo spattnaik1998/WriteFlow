@@ -40,7 +40,8 @@ const OLLAMA_RUNTIME_DIR = path.join(process.cwd(), '.ollama-runtime');
 let ollamaBootstrapPromise = null;
 
 function ollamaTimeoutMs() {
-  return Number(process.env.OLLAMA_TIMEOUT_MS || 240000);
+  const parsed = Number(process.env.OLLAMA_TIMEOUT_MS);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 240000;
 }
 
 function stripCodeFence(text) {
@@ -344,10 +345,14 @@ async function generateText(opts) {
 
 async function generateJson(opts) {
   const result = await generateText({ ...opts, json: true });
-  return {
-    ...result,
-    data: JSON.parse(stripCodeFence(result.content))
-  };
+  try {
+    return {
+      ...result,
+      data: JSON.parse(stripCodeFence(result.content))
+    };
+  } catch (parseErr) {
+    throw new Error(`JSON parse failed: ${parseErr.message}. Raw (first 200 chars): ${String(result.content || '').slice(0, 200)}`);
+  }
 }
 
 module.exports = {

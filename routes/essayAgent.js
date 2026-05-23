@@ -142,7 +142,11 @@ router.get('/session/:id', async (req, res) => {
       pending_draft_updates: session.pending_draft_updates || []
     });
   } catch (error) {
-    res.status(404).json({ error: 'Session not found' });
+    if (error.code === 'ENOENT') {
+      return res.status(404).json({ error: 'Session not found' });
+    }
+    console.error('[essay-agent/session] load failed:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -180,6 +184,9 @@ router.post('/session/:id/proposals/:proposalId', async (req, res) => {
   const action = String(req.body?.action || '').trim().toLowerCase();
   if (!['accept', 'reject', 'revise'].includes(action)) {
     return res.status(400).json({ error: 'action must be accept, reject, or revise' });
+  }
+  if (action === 'revise' && !String(req.body?.feedback || '').trim()) {
+    return res.status(400).json({ error: 'feedback is required when action is revise' });
   }
 
   try {
