@@ -1078,6 +1078,31 @@ body::after {
   color: var(--amber);
   background: var(--amber-glow);
 }
+.idea-card-footer {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.idea-write-btn {
+  background: none;
+  border: 1px solid var(--amber-glow2);
+  border-radius: 5px;
+  color: var(--amber-dk);
+  font-family: 'Inter', sans-serif;
+  font-size: 11.5px;
+  padding: 5px 11px;
+  cursor: pointer;
+  transition: var(--ease);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.idea-write-btn:hover {
+  background: var(--amber-glow);
+  border-color: var(--amber);
+  color: var(--amber);
+}
 
 /* Idea card CRUD controls */
 .idea-card { position: relative; }
@@ -7216,10 +7241,16 @@ function buildIdeaCard(idea, idx) {
         <button class="idea-delete-yes" onclick="deleteIdeaCard(this.closest('.idea-card'))">Yes</button>
         <button class="idea-delete-no" onclick="cancelDeleteConfirm(this.closest('.idea-card'))">No</button>
       </div>
-      <button class="idea-explore" onclick="exploreIdea('${safeTitle}')">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
-        Explore Further
-      </button>
+      <div class="idea-card-footer">
+        <button class="idea-explore" onclick="exploreIdea('${safeTitle}')">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
+          Explore Further
+        </button>
+        <button class="idea-write-btn" onclick="writeFromIdea(this.closest('.idea-card'))">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Write Essay
+        </button>
+      </div>
     </div>
     <div class="idea-card-edit" style="display:none">
       <input class="idea-edit-title" type="text" value="${escapeHtml(idea.title)}">
@@ -7273,12 +7304,12 @@ async function saveIdeaCard(card) {
 
 function confirmDeleteIdea(card) {
   card.querySelector('.idea-delete-confirm').style.display = 'flex';
-  card.querySelector('.idea-explore').style.display = 'none';
+  card.querySelector('.idea-card-footer').style.display = 'none';
 }
 
 function cancelDeleteConfirm(card) {
   card.querySelector('.idea-delete-confirm').style.display = 'none';
-  card.querySelector('.idea-explore').style.display = '';
+  card.querySelector('.idea-card-footer').style.display = '';
 }
 
 async function deleteIdeaCard(card) {
@@ -7288,6 +7319,51 @@ async function deleteIdeaCard(card) {
   card.style.opacity    = '0';
   card.style.transform  = 'scale(0.95)';
   setTimeout(() => card.remove(), 320);
+}
+
+async function writeFromIdea(card) {
+  const ideaTitle = card.dataset.title || '';
+  const ideaBody  = card.dataset.body  || '';
+  if (!ideaTitle) return;
+  if (!CURRENT_BOOK_ID) { showToast('Select a book first'); return; }
+
+  // Topic = title + first 100 chars of body as seed thesis
+  const bodySeed = ideaBody ? ` — ${ideaBody.slice(0, 100).trim()}` : '';
+  const topic = `${ideaTitle}${bodySeed}`;
+
+  // Navigate to essay tab
+  switchTab('essay');
+
+  // Ensure options are loaded before setting select values
+  if (!_essayOptions) await essayLoadOptions();
+
+  // Pre-fill topic
+  const topicInput = document.getElementById('essayTopicInput');
+  if (topicInput) topicInput.value = topic;
+
+  // Apply brand voice audience and tone (best-effort match against select options)
+  const audienceEl = document.getElementById('essayAudienceInput');
+  if (audienceEl && BRAND_PROFILE?.audience) {
+    const opt = [...audienceEl.options].find(o => o.value === BRAND_PROFILE.audience);
+    if (opt) audienceEl.value = BRAND_PROFILE.audience;
+  }
+  const toneEl = document.getElementById('essayToneInput');
+  if (toneEl && BRAND_PROFILE?.tone) {
+    const opt = [...toneEl.options].find(o => o.value === BRAND_PROFILE.tone);
+    if (opt) toneEl.value = BRAND_PROFILE.tone;
+  }
+
+  // Ensure the idea's source book is selected
+  _essaySelectedBookIds.add(CURRENT_BOOK_ID);
+  essayRenderBookPicker();
+
+  // Create the session
+  await essayStartSession();
+
+  // Fire the first agent turn immediately
+  if (_essaySessionId) {
+    await essaySendMessage('Build an outline and begin drafting the opening section.');
+  }
 }
 
 function showAddInsightForm() {
