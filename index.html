@@ -10632,15 +10632,15 @@ async function exploreAsEssayFromTension(collisionIdx) {
 // ═══════════════════════════════════════
 // IDEA MASTERY LOOP — SPACED REPETITION (F3)
 // ═══════════════════════════════════════
-let _reviewQueue = [];
-let _reviewIdx   = 0;
-let _reviewRevealed = false;
+let _dailyReviewQueue = [];
+let _reviewIdx        = 0;
+let _reviewRevealed   = false;
 
 async function checkDailyReview() {
   const data = await api('GET', '/distill/review');
   if (!Array.isArray(data) || data.length === 0) return;
-  _reviewQueue = data;
-  _reviewIdx   = 0;
+  _dailyReviewQueue = data;
+  _reviewIdx        = 0;
   openReviewModal();
 }
 
@@ -10651,8 +10651,8 @@ function openReviewModal() {
 
 function closeReviewModal() {
   document.getElementById('reviewModalOverlay').style.display = 'none';
-  _reviewQueue = [];
-  _reviewIdx   = 0;
+  _dailyReviewQueue = [];
+  _reviewIdx        = 0;
 }
 
 function renderReviewCard() {
@@ -10660,8 +10660,8 @@ function renderReviewCard() {
   const bodyEl     = document.getElementById('reviewBody');
   if (!bodyEl) return;
 
-  if (_reviewIdx >= _reviewQueue.length) {
-    const total = _reviewQueue.length;
+  if (_reviewIdx >= _dailyReviewQueue.length) {
+    const total = _dailyReviewQueue.length;
     if (progressEl) progressEl.textContent = `${total} of ${total}`;
     bodyEl.innerHTML = `
       <div class="review-complete-wrap">
@@ -10673,8 +10673,8 @@ function renderReviewCard() {
     return;
   }
 
-  const idea = _reviewQueue[_reviewIdx];
-  if (progressEl) progressEl.textContent = `${_reviewIdx + 1} of ${_reviewQueue.length}`;
+  const idea = _dailyReviewQueue[_reviewIdx];
+  if (progressEl) progressEl.textContent = `${_reviewIdx + 1} of ${_dailyReviewQueue.length}`;
   _reviewRevealed = false;
 
   bodyEl.innerHTML = `
@@ -10709,7 +10709,7 @@ function revealReviewCard() {
 }
 
 async function submitReview(rating) {
-  const idea       = _reviewQueue[_reviewIdx];
+  const idea       = _dailyReviewQueue[_reviewIdx];
   const reflection = document.getElementById('reviewReflectionInput')?.value?.trim() || '';
   api('POST', `/distill/${idea.id}/review`, { rating, reflection }).catch(() => {});
   _reviewIdx++;
