@@ -1416,4 +1416,45 @@ Return ONLY valid JSON:
   };
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, lintWiki };
+/**
+ * Find high-tension idea pairs across books.
+ * Input: ideaCards = [{id, bookTitle, title, body}]
+ * Returns: [{idea_a, idea_b, tension, essay_hook}]
+ */
+async function generateInsightCollisions({ ideaCards }) {
+  if (!openai) throw new Error('OpenAI client not initialised — check OPENAI_API_KEY');
+  if (!ideaCards || ideaCards.length < 4) return [];
+
+  const cardList = ideaCards.slice(0, 60).map((c, i) =>
+    `[${i}] "${c.title}" (${c.bookTitle}): ${(c.body || '').slice(0, 200)}`
+  ).join('\n');
+
+  const systemPrompt = `You identify high-tension conceptual conflicts between ideas from different books.
+Return a JSON object: { "collisions": [ { "idx_a": number, "idx_b": number, "tension": string (1-2 sentences describing the genuine conceptual conflict), "essay_hook": string (1 compelling opening sentence for an essay exploring this tension) } ] }
+Rules:
+- Find exactly 3–5 pairs that come from DIFFERENT books (idx_a and idx_b must reference different bookTitles)
+- The conflict must be genuine: contradictory claims or fundamentally different framings, not merely related topics
+- Rank by intellectual interestingness
+- Return only the JSON object`;
+
+  const response = await openai.chat.completions.create({
+    model:           'gpt-4o',
+    messages:        [{ role: 'system', content: systemPrompt }, { role: 'user', content: `## Idea Cards\n${cardList}` }],
+    response_format: { type: 'json_object' },
+    temperature:     0.7,
+    max_tokens:      1400
+  });
+
+  const raw = parseJsonResponse(response.choices[0].message.content, 'generateInsightCollisions');
+  return (raw.collisions || [])
+    .filter(c => Number.isInteger(c.idx_a) && Number.isInteger(c.idx_b) && c.idx_a !== c.idx_b)
+    .map(c => ({
+      idea_a:     { ...ideaCards[c.idx_a] },
+      idea_b:     { ...ideaCards[c.idx_b] },
+      tension:    c.tension    || '',
+      essay_hook: c.essay_hook || ''
+    }))
+    .filter(c => c.idea_a?.bookTitle && c.idea_b?.bookTitle && c.idea_a.bookTitle !== c.idea_b.bookTitle);
+}
+
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, lintWiki, generateInsightCollisions };

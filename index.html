@@ -4194,6 +4194,96 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
   padding-top: 20px;
   border-top: 1px solid var(--border);
 }
+
+/* Insight Collision / Tension cards */
+.tension-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+  animation: cardReveal .4s ease both;
+}
+.tension-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.tension-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f59e0b;
+  background: rgba(245,158,11,.12);
+  border: 1px solid rgba(245,158,11,.25);
+  border-radius: 4px;
+  padding: 2px 7px;
+  margin-top: 2px;
+}
+.tension-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.tension-pair {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+.tension-side {
+  background: var(--bg-dim);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.tension-book-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--amber-dk);
+  letter-spacing: .3px;
+  margin-bottom: 4px;
+}
+.tension-idea-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-1);
+  margin-bottom: 4px;
+}
+.tension-idea-body {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+.tension-vs {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-4);
+  align-self: center;
+  padding-top: 16px;
+}
+.tension-hook {
+  font-size: 12.5px;
+  color: var(--text-3);
+  font-style: italic;
+  border-left: 3px solid var(--amber-glow2);
+  padding-left: 10px;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.tension-actions {
+  display: flex;
+  gap: 7px;
+}
+.tensions-empty {
+  font-size: 13px;
+  color: var(--text-4);
+  text-align: center;
+  padding: 20px 0;
+}
 .narrative-label {
   font-size: 10px;
   font-weight: 600;
@@ -5892,6 +5982,21 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
               <div class="narrative-prose" id="narrativeProse"></div>
             </div>
           </div>
+        </div>
+
+        <!-- Section D: Insight Tensions -->
+        <div class="conn-section" id="tensionsSection">
+          <div class="conn-section-head">
+            <div>
+              <span class="conn-section-label">Insight Tensions</span>
+              <div class="connections-sub">Conflicting ideas across your library — the most powerful essay seeds</div>
+            </div>
+            <button class="btn-amber btn-sm" id="tensionsBtn" onclick="findTensions()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              Find Tensions
+            </button>
+          </div>
+          <div id="tensionsOutput"></div>
         </div>
 
       </div>
@@ -10170,6 +10275,106 @@ async function generateNarrative() {
   }
 
   showToast('Macro narrative generated');
+}
+
+// ═══════════════════════════════════════
+// INSIGHT TENSIONS (F2)
+// ═══════════════════════════════════════
+let _tensionCollisions = [];
+
+async function findTensions() {
+  const btn = document.getElementById('tensionsBtn');
+  if (btn.classList.contains('loading')) return;
+  btn.classList.add('loading');
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Finding…`;
+
+  const data = await api('POST', '/narrative/collisions', {});
+  btn.classList.remove('loading');
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Find Tensions`;
+
+  if (!data) { showToast('Could not find tensions — check that you have ideas from multiple books'); return; }
+  if (data.error) { showToast(data.error); return; }
+
+  _tensionCollisions = data.collisions || [];
+  const container = document.getElementById('tensionsOutput');
+  if (!container) return;
+
+  if (_tensionCollisions.length === 0) {
+    container.innerHTML = '<div class="tensions-empty">No strong tensions found. Add more idea cards from different books to unlock this feature.</div>';
+    return;
+  }
+
+  container.innerHTML = _tensionCollisions.map((c, i) => `
+    <div class="tension-card">
+      <div class="tension-header">
+        <span class="tension-badge">TENSION</span>
+        <span class="tension-desc">${escapeHtml(c.tension)}</span>
+      </div>
+      <div class="tension-pair">
+        <div class="tension-side">
+          <div class="tension-book-label">${escapeHtml(c.idea_a.bookTitle)}</div>
+          <div class="tension-idea-title">${escapeHtml(c.idea_a.title)}</div>
+          <div class="tension-idea-body">${escapeHtml((c.idea_a.body || '').slice(0, 120))}${(c.idea_a.body || '').length > 120 ? '…' : ''}</div>
+        </div>
+        <div class="tension-vs">vs</div>
+        <div class="tension-side">
+          <div class="tension-book-label">${escapeHtml(c.idea_b.bookTitle)}</div>
+          <div class="tension-idea-title">${escapeHtml(c.idea_b.title)}</div>
+          <div class="tension-idea-body">${escapeHtml((c.idea_b.body || '').slice(0, 120))}${(c.idea_b.body || '').length > 120 ? '…' : ''}</div>
+        </div>
+      </div>
+      ${c.essay_hook ? `<div class="tension-hook">"${escapeHtml(c.essay_hook)}"</div>` : ''}
+      <div class="tension-actions">
+        <button class="btn-amber btn-sm" onclick="exploreAsEssayFromTension(${i})">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Explore as Essay
+        </button>
+        <button class="btn-sec btn-sm" onclick="this.closest('.tension-card').remove()">Dismiss</button>
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('tensionsSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function exploreAsEssayFromTension(collisionIdx) {
+  const collision = _tensionCollisions[collisionIdx];
+  if (!collision) return;
+
+  const topic = collision.essay_hook || collision.tension;
+  const bookA  = (BOOKS || []).find(b => b.title === collision.idea_a.bookTitle);
+  const bookB  = (BOOKS || []).find(b => b.title === collision.idea_b.bookTitle);
+
+  switchTab('essay');
+  if (!_essayOptions) await essayLoadOptions();
+
+  const topicInput = document.getElementById('essayTopicInput');
+  if (topicInput) topicInput.value = topic;
+
+  const audienceEl = document.getElementById('essayAudienceInput');
+  if (audienceEl && BRAND_PROFILE?.audience) {
+    const opt = [...audienceEl.options].find(o => o.value === BRAND_PROFILE.audience);
+    if (opt) audienceEl.value = BRAND_PROFILE.audience;
+  }
+  const toneEl = document.getElementById('essayToneInput');
+  if (toneEl && BRAND_PROFILE?.tone) {
+    const opt = [...toneEl.options].find(o => o.value === BRAND_PROFILE.tone);
+    if (opt) toneEl.value = BRAND_PROFILE.tone;
+  }
+
+  if (bookA) _essaySelectedBookIds.add(bookA.id);
+  if (bookB) _essaySelectedBookIds.add(bookB.id);
+  essayRenderBookPicker();
+
+  await essayStartSession();
+
+  if (_essaySessionId) {
+    const ctx = `This essay explores a conceptual tension between two books:\n\n` +
+      `From "${collision.idea_a.bookTitle}": ${collision.idea_a.title} — ${collision.idea_a.body || ''}\n\n` +
+      `From "${collision.idea_b.bookTitle}": ${collision.idea_b.title} — ${collision.idea_b.body || ''}\n\n` +
+      `Tension: ${collision.tension}\n\nBuild an outline that directly addresses this conflict and begin drafting the opening section.`;
+    await essaySendMessage(ctx);
+  }
 }
 
 // ═══════════════════════════════════════

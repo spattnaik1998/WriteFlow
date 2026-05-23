@@ -1,7 +1,7 @@
 const express  = require('express');
 const router   = express.Router();
 const supabase = require('../services/supabase');
-const { generateMacroNarrative, generateBookKnowledgeMap } = require('../services/openai');
+const { generateMacroNarrative, generateBookKnowledgeMap, generateInsightCollisions } = require('../services/openai');
 
 // GET /api/narrative/ideas — fetch all books with their ideas
 router.get('/ideas', async (req, res) => {
@@ -114,6 +114,46 @@ router.post('/book', async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('[narrative/book] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/narrative/collisions — find high-tension idea pairs across books
+router.post('/collisions', async (req, res) => {
+  const { data: books, error: booksErr } = await supabase
+    .from('books')
+    .select('id, title');
+  if (booksErr) return res.status(500).json({ error: booksErr.message });
+  if (!books || books.length < 2) {
+    return res.status(400).json({ error: 'Need ideas from at least 2 books to find tensions' });
+  }
+
+  const { data: ideas, error: ideasErr } = await supabase
+    .from('ideas')
+    .select('id, book_id, title, body')
+    .limit(80);
+  if (ideasErr) return res.status(500).json({ error: ideasErr.message });
+  if (!ideas || ideas.length < 4) {
+    return res.status(400).json({ error: 'Need at least 4 idea cards across 2 books to find tensions' });
+  }
+
+  const bookMap = {};
+  books.forEach(b => { bookMap[b.id] = b.title; });
+
+  const ideaCards = ideas
+    .filter(i => bookMap[i.book_id])
+    .map(i => ({ id: i.id, bookTitle: bookMap[i.book_id], title: i.title, body: i.body }));
+
+  const distinctBooks = new Set(ideaCards.map(c => c.bookTitle));
+  if (distinctBooks.size < 2) {
+    return res.status(400).json({ error: 'Need ideas from at least 2 books to find tensions' });
+  }
+
+  try {
+    const collisions = await generateInsightCollisions({ ideaCards });
+    res.json({ collisions });
+  } catch (err) {
+    console.error('[narrative/collisions] error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
