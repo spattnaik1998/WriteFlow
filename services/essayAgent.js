@@ -167,7 +167,10 @@ async function createEssaySession({ topic, audience, tone, backend, model, bookI
     last_plan: null,
     last_evidence_packet: null,
     pending_draft_updates: [],
-    tool_registry: {}
+    tool_registry: {},
+    action_history: [],
+    turn_count: 0,
+    section_ledger: {}
   };
 
   await saveSession(session);
@@ -999,6 +1002,9 @@ function clearSessionMemory(session) {
   session.last_evidence_packet = null;
   session.pending_draft_updates = [];
   session.tool_registry = {};
+  session.action_history = [];
+  session.turn_count = 0;
+  session.section_ledger = {};
   return session;
 }
 
@@ -1104,8 +1110,123 @@ function synthesizeProposalFromEvidence(session, evidencePacket, plan) {
   }, session, evidencePacket);
 }
 
+function buildSpecificationAnchor(session) {
+  const memory = session.memory || {};
+  const outline = Array.isArray(memory.outline) ? memory.outline.slice(0, 8) : [];
+  const gapCount = Array.isArray(memory.evidence_gaps) ? memory.evidence_gaps.length : 0;
+  const outlineText = outline.length
+    ? outline.map((item, i) => `  ${i + 1}. ${item}`).join('\n')
+    : '  (no outline yet)';
+  return [
+    '## ESSAY SPECIFICATION ANCHOR',
+    `Topic: ${session.topic || 'unspecified'}`,
+    `Audience: ${session.audience || 'general'}`,
+    `Tone: ${session.tone || 'unspecified'}`,
+    `Phase: ${memory.phase || 'planning'}`,
+    `Working thesis: ${memory.working_thesis || 'not yet established'}`,
+    `Outline (${outline.length} section${outline.length === 1 ? '' : 's'}):`,
+    outlineText,
+    `Evidence gaps outstanding: ${gapCount}`
+  ].join('\n');
+}
+
+function buildActionHistory(session) {
+  const history = Array.isArray(session.action_history) ? session.action_history : [];
+  if (!history.length) return '';
+  const last20 = history.slice(-20);
+  const countMap = new Map();
+  last20.forEach(entry => {
+    const key = `${entry.tool}::${normalizeSearchText(entry.query || '')}`;
+    countMap.set(key, (countMap.get(key) || 0) + 1);
+  });
+  const lines = history.slice(-5).map(entry => {
+    const key = `${entry.tool}::${normalizeSearchText(entry.query || '')}`;
+    const count = countMap.get(key) || 1;
+    const repeatTag = count >= 3 ? `  *** REPEATED x${count} ***` : count >= 2 ? '  *** REPEATED ***' : '';
+    const queryStr = entry.query ? `("${entry.query}")` : '';
+    return `Turn ${entry.turn}: ${entry.tool}${queryStr} → ${entry.outcome}${repeatTag}`;
+  });
+  return `## RECENT ACTION HISTORY (last ${lines.length})\n${lines.join('\n')}`;
+}
+
+function detectLoopInActions(session, currentToolTrace) {
+  const history = Array.isArray(session.action_history) ? session.action_history.slice(-8) : [];
+  const currentEntries = (currentToolTrace || []).map(item => ({
+    tool: item.tool,
+    query: String(item.args?.query || item.args?.focus || item.args?.book_id || '').slice(0, 120)
+  }));
+  const allEntries = [...history, ...currentEntries];
+  const countMap = new Map();
+  allEntries.forEach(entry => {
+    const key = `${entry.tool}::${normalizeSearchText(entry.query || '')}`;
+    countMap.set(key, (countMap.get(key) || 0) + 1);
+  });
+  for (const [key, count] of countMap) {
+    if (count >= 3) {
+      const [tool, query] = key.split('::');
+      return `LOOP DETECTED: "${tool}(${query})" has been called ${count} times in the last 8 actions without yielding new results.\nStop repeating this action. Instead: (1) identify what specific evidence you are still missing, (2) try a different tool or a more specific query phrasing, or (3) proceed to drafting with the evidence already retrieved — acknowledge the gap explicitly in the essay.`;
+    }
+  }
+  return null;
+}
+
+function buildProgressStatus(session) {
+  const turn = session.turn_count || 0;
+  const draft = String(session.draft_markdown || '');
+  const wordCount = draft.split(/\s+/).filter(Boolean).length;
+  const memory = session.memory || {};
+  const outline = Array.isArray(memory.outline) ? memory.outline : [];
+  const gapCount = Array.isArray(memory.evidence_gaps) ? memory.evidence_gaps.length : 0;
+  const normalizedDraft = normalizeSearchText(draft);
+  const coveredSections = outline.filter(item => normalizedDraft.includes(normalizeSearchText(item))).length;
+  let status;
+  if (turn <= 3 || !draft.trim()) status = 'BUILDING';
+  else if (gapCount === 0) status = 'NEAR_COMPLETE';
+  else if (gapCount <= 2) status = 'REVISING';
+  else status = 'DRAFTING';
+  return [
+    '## PROGRESS STATUS',
+    `Turn: ${turn}`,
+    `Draft: ${wordCount} words`,
+    `Outline coverage: ${coveredSections} / ${outline.length} sections have content`,
+    `Evidence gaps: ${gapCount} outstanding`,
+    `Status: ${status}`
+  ].join('\n');
+}
+
+function parseDraftSections(draftMarkdown) {
+  const sections = [];
+  String(draftMarkdown || '').split('\n').forEach(line => {
+    const match = line.match(/^(#{1,3})\s+(.+)/);
+    if (match) sections.push({ heading: match[2].trim(), level: match[1].length });
+  });
+  return sections;
+}
+
+function buildSectionLedgerSummary(session) {
+  const ledger = session.section_ledger || {};
+  const drafted = Object.values(ledger);
+  const memory = session.memory || {};
+  const outline = Array.isArray(memory.outline) ? memory.outline : [];
+  const notDrafted = outline.filter(item => !ledger[normalizeSearchText(item)]);
+  const draftedLines = drafted.length
+    ? drafted.map(s => `  - ${s.heading} (H${s.level}, turn ${s.turn_accepted})`).join('\n')
+    : '  (none yet)';
+  const missingLines = notDrafted.length
+    ? notDrafted.map(item => `  - ${item}`).join('\n')
+    : '  (all outlined sections present)';
+  return [
+    '## SECTION LEDGER',
+    'Drafted sections:',
+    draftedLines,
+    'Outline sections not yet drafted:',
+    missingLines
+  ].join('\n');
+}
+
 async function planEssayTurn(session, context, userMessage) {
-  const systemPrompt = `You are the planning engine for WriteFlow's essay harness.
+  const anchor = buildSpecificationAnchor(session);
+  const systemPrompt = `${anchor}\n\n---\n\nYou are the planning engine for WriteFlow's essay harness.
 
 Your job is to decide how the essay agent should think next.
 
@@ -1165,6 +1286,8 @@ Rules:
   const userPrompt = JSON.stringify({
     session_context: summarizeContextForPrompt(context, session),
     memory: session.memory,
+    action_history: buildActionHistory(session),
+    progress_status: buildProgressStatus(session),
     user_message: userMessage,
     current_draft: clip(session.draft_markdown, 5000),
     transcript: compactTranscript(session.transcript)
@@ -1239,7 +1362,7 @@ Rules:
   }
 }
 
-async function buildEvidencePacket(session, context, plan, toolTrace, userMessage) {
+async function buildEvidencePacket(session, context, plan, toolTrace, userMessage, loopIntervention = null) {
   const systemPrompt = `You are the evidence synthesizer inside WriteFlow's essay harness.
 
 You are not drafting the final essay yet. You are distilling the inspected evidence into a compact thinking packet for the drafter.
@@ -1277,6 +1400,7 @@ Rules:
     plan,
     memory: session.memory,
     user_message: userMessage,
+    loop_intervention: loopIntervention || undefined,
     context_summary: summarizeContextForPrompt(context, session),
     tool_trace: compactToolTrace(toolTrace)
   }, null, 2);
@@ -1398,6 +1522,8 @@ Rules:
     topic: session.topic,
     audience: session.audience,
     tone: session.tone,
+    specification_anchor: buildSpecificationAnchor(session),
+    section_ledger_summary: buildSectionLedgerSummary(session),
     user_message: userMessage,
     plan,
     working_memory: session.memory,
@@ -1492,6 +1618,10 @@ async function runEssayAgentTurn(session, userMessage) {
   }
 
   if (!session.tool_registry) session.tool_registry = {};
+  if (!session.action_history) session.action_history = [];
+  if (!session.section_ledger) session.section_ledger = {};
+  if (!session.turn_count) session.turn_count = 0;
+  session.turn_count += 1;
 
   const context = await fetchSessionContext(session);
   session.transcript.push({ role: 'user', content: userMessage, created_at: nowIso() });
@@ -1573,7 +1703,18 @@ async function runEssayAgentTurn(session, userMessage) {
     }
   }
 
-  const evidencePacket = await buildEvidencePacket(session, context, plan, toolTrace, userMessage);
+  // Populate rolling action history from this turn's tool trace
+  const currentTurn = session.turn_count;
+  for (const item of toolTrace) {
+    const query = String(item.args?.query || item.args?.focus || item.args?.book_id || '').slice(0, 120);
+    session.action_history = [
+      ...session.action_history,
+      { turn: currentTurn, tool: item.tool, query, outcome: item.error ? `error: ${item.error}` : 'ok' }
+    ].slice(-20);
+  }
+
+  const loopIntervention = detectLoopInActions(session, toolTrace);
+  const evidencePacket = await buildEvidencePacket(session, context, plan, toolTrace, userMessage, loopIntervention);
 
   const finalPayload = await draftEssayResponse(
     session,
@@ -1628,6 +1769,11 @@ async function runEssayAgentTurn(session, userMessage) {
   } else {
     session.draft_markdown = finalPayload.draft_markdown || session.draft_markdown;
     session.pending_draft_updates = [];
+    parseDraftSections(session.draft_markdown).forEach(({ heading, level }) => {
+      const key = normalizeSearchText(heading);
+      if (!session.section_ledger[key])
+        session.section_ledger[key] = { heading, level, turn_accepted: session.turn_count || 0 };
+    });
   }
   session.last_tool_trace = toolTrace;
   session.last_plan = plan;
@@ -1665,6 +1811,12 @@ async function resolveDraftProposal(session, proposalId, action) {
     const applied = applyProposalPatch(session.draft_markdown, proposal);
     session.draft_markdown = applied.draft;
     session.pending_draft_updates = [];
+    if (!session.section_ledger) session.section_ledger = {};
+    parseDraftSections(session.draft_markdown).forEach(({ heading, level }) => {
+      const key = normalizeSearchText(heading);
+      if (!session.section_ledger[key])
+        session.section_ledger[key] = { heading, level, turn_accepted: session.turn_count || 0 };
+    });
     session.memory = mergeMemory(session.memory, {
       recent_findings: [`Accepted draft update: ${proposal.title} (${applied.applied_as})`],
       next_actions: ['Review the newly applied draft carefully before requesting another revision.']
