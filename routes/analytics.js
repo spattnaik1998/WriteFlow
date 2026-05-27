@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
     // ── Book counts ──────────────────────────────────────────────────────────
     const allBooks   = books || [];
     const completed  = allBooks.filter(b => b.status === 'done' || b.status === 'completed');
-    const inProgress = allBooks.filter(b => !b.status || b.status === 'reading');
+    const inProgress = allBooks.filter(b => !b.status || b.status === 'reading' || b.status === 'to_read');
 
     // ── Words-per-day map from sessions (last 60 days) ───────────────────────
     const wordsByDay = {};

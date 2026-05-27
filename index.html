@@ -9674,10 +9674,10 @@ async function loadBooksFromAPI() {
     return;
   }
 
-  // Populate BOOKS array (deduplicate by id)
+  // Populate BOOKS array (deduplicate by id), preserving API's newest-first order
   data.forEach(b => {
     if (!BOOKS.find(x => x.id === b.id)) {
-      BOOKS.unshift({
+      BOOKS.push({
         id:          b.id,
         title:       b.title,
         author:      b.author || '',
@@ -9693,6 +9693,16 @@ async function loadBooksFromAPI() {
   selectedBook    = BOOKS[0].id;
   document.getElementById('barTitle').textContent  = BOOKS[0].title;
   document.getElementById('barAuthor').textContent = `— ${BOOKS[0].author}`;
+
+  // If no books are visible under the 'in_progress' filter (e.g. all completed),
+  // fall back to 'all' so the sidebar isn't blank.
+  const hasInProgress = BOOKS.some(b => b.status === 'reading' || b.status === 'to_read' || !b.status);
+  if (!hasInProgress) {
+    _libraryFilter = 'all';
+    document.getElementById('filterInProgress')?.classList.remove('active');
+    document.getElementById('filterAll')?.classList.add('active');
+  }
+
   renderBooks();
   loadBookContent(CURRENT_BOOK_ID);
 }
@@ -10634,7 +10644,6 @@ async function exploreAsEssayFromTension(collisionIdx) {
 // ═══════════════════════════════════════
 let _dailyReviewQueue = [];
 let _reviewIdx        = 0;
-let _reviewRevealed   = false;
 
 async function checkDailyReview() {
   const data = await api('GET', '/distill/review');
@@ -10675,7 +10684,6 @@ function renderReviewCard() {
 
   const idea = _dailyReviewQueue[_reviewIdx];
   if (progressEl) progressEl.textContent = `${_reviewIdx + 1} of ${_dailyReviewQueue.length}`;
-  _reviewRevealed = false;
 
   bodyEl.innerHTML = `
     <div>
