@@ -2376,70 +2376,252 @@ body::after {
 /* ═══════════════════════════════════════
    WRITE TAB
 ═══════════════════════════════════════ */
-.write-toolbar {
+/* ═══════════════════════════════════════
+   ARGUMENT STUDIO
+═══════════════════════════════════════ */
+.wr-studio {
   display: flex;
-  gap: 3px;
-  padding: 7px 10px;
+  flex-direction: column;
+  height: 100%;
+  gap: 0;
+}
+.wr-header {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px 12px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+.wr-thesis-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.wr-thesis-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--amber);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.wr-thesis-input {
+  flex: 1;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-1);
+  font-family: 'Playfair Display', serif;
+  font-size: 15px;
+  padding: 9px 14px;
+  outline: none;
+  transition: border-color var(--ease);
+}
+.wr-thesis-input:focus { border-color: var(--amber-dk); }
+.wr-thesis-input::placeholder { color: var(--text-4); font-style: italic; font-size: 13px; font-family: 'Inter', sans-serif; }
+.wr-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wr-word-count {
+  font-size: 11px;
+  color: var(--text-4);
+  font-variant-numeric: tabular-nums;
+  flex: 1;
+}
+.wr-timer-chip {
+  font-family: 'Playfair Display', serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--amber);
+  letter-spacing: -.5px;
+  font-variant-numeric: tabular-nums;
+  display: none;
+  margin-right: 4px;
+}
+.wr-timer-chip.visible { display: inline; }
+.wr-timer-chip.urgent { color: #e05a5a; }
+.wr-timer-chip.complete { color: var(--text-4); }
+.wr-body {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+/* Editor column */
+.wr-editor-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.wr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 8px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius) var(--radius) 0 0;
   border-bottom: none;
+  flex-shrink: 0;
+  flex-wrap: wrap;
 }
-.toolbar-btn {
+.wr-tb-btn {
   background: none;
   border: none;
   color: var(--text-3);
   cursor: pointer;
-  padding: 5px 9px;
-  border-radius: 5px;
+  padding: 5px 7px;
+  border-radius: 4px;
   font-family: 'Inter', sans-serif;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   transition: var(--ease);
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 3px;
+  min-width: 26px;
+  min-height: 26px;
+  line-height: 1;
 }
-.toolbar-btn:hover { color: var(--text-1); background: var(--border); }
-.toolbar-sep { width: 1px; height: 18px; background: var(--border); align-self: center; margin: 0 3px; }
-
-.write-area {
-  min-height: 320px;
+.wr-tb-btn:hover { color: var(--text-1); background: var(--border); }
+.wr-tb-sep { width: 1px; height: 16px; background: var(--border); margin: 0 3px; flex-shrink: 0; align-self: center; }
+.wr-canvas {
+  flex: 1;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 0 0 var(--radius) var(--radius);
   color: var(--text-1);
   font-family: 'Lora', serif;
   font-size: 15px;
-  line-height: 1.88;
-  padding: 24px 28px;
+  line-height: 1.9;
+  padding: 28px 36px;
   outline: none;
   caret-color: var(--amber);
-  transition: border-color var(--ease);
+  overflow-y: auto;
+  min-height: 0;
 }
-.write-area:focus { border-color: var(--amber-dk); }
-.write-area:empty::before {
-  content: 'Begin writing your synthesis here...';
+.wr-canvas:focus { border-color: var(--amber-dk); }
+.wr-canvas:empty::before {
+  content: attr(data-placeholder);
   color: var(--text-4);
   font-style: italic;
   pointer-events: none;
+  display: block;
 }
-.write-area h2 {
-  font-family: 'Playfair Display', serif;
-  font-size: 21px;
+.wr-canvas h1 { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--text-1); margin: 0 0 18px; line-height: 1.2; }
+.wr-canvas h2 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: var(--text-1); margin: 26px 0 10px; line-height: 1.3; }
+.wr-canvas h3 { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; margin: 22px 0 8px; }
+.wr-canvas p { margin-bottom: 14px; }
+.wr-canvas blockquote { border-left: 3px solid var(--amber-dk); padding-left: 16px; color: var(--text-3); font-style: italic; margin: 16px 0; }
+.wr-canvas ul, .wr-canvas ol { padding-left: 22px; margin-bottom: 14px; }
+.wr-canvas li { margin-bottom: 5px; }
+.wr-canvas hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+/* Context column */
+.wr-context-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.wr-panel-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-bottom: none;
+  padding: 5px 8px 0;
+  flex-shrink: 0;
+}
+.wr-panel-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-4);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-1);
-  margin-bottom: 13px;
-  line-height: 1.3;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 5px 10px 6px;
+  cursor: pointer;
+  transition: color var(--ease);
+  white-space: nowrap;
 }
-.write-area blockquote {
-  border-left: 3px solid var(--amber-dk);
-  padding-left: 15px;
-  color: var(--text-3);
+.wr-panel-tab:hover { color: var(--text-2); }
+.wr-panel-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+.wr-panel-body {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  overflow-y: auto;
+  min-height: 0;
+}
+.wr-panel-inner { padding: 14px; display: none; }
+.wr-panel-inner.active { display: block; }
+/* Critique panel */
+.wr-critique-intro {
+  font-size: 12px;
+  color: var(--text-4);
+  line-height: 1.6;
+  margin-bottom: 12px;
   font-style: italic;
-  margin: 16px 0;
 }
-.write-area p { margin-bottom: 12px; }
+.wr-advocate-btn {
+  width: 100%;
+  background: rgba(201,168,76,.08);
+  border: 1px solid rgba(201,168,76,.25);
+  border-radius: 7px;
+  color: var(--amber);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: var(--ease);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.wr-advocate-btn:hover { background: rgba(201,168,76,.16); }
+.wr-advocate-btn:disabled { opacity: .45; pointer-events: none; }
+/* Ideas panel */
+.wr-idea-card {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background: var(--bg-deep);
+  cursor: pointer;
+  transition: border-color var(--ease);
+}
+.wr-idea-card:hover { border-color: rgba(201,168,76,.4); }
+.wr-idea-card:last-child { margin-bottom: 0; }
+.wr-idea-title { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 3px; line-height: 1.35; }
+.wr-idea-body { font-size: 11px; color: var(--text-4); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.wr-panel-empty { font-size: 12px; color: var(--text-4); font-style: italic; text-align: center; padding: 28px 12px; line-height: 1.6; }
+/* Outline panel */
+.wr-outline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.wr-outline-item:last-child { border-bottom: none; }
+.wr-outline-item:hover .wr-outline-text { color: var(--amber); }
+.wr-outline-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.wr-outline-text { font-size: 12px; line-height: 1.4; color: var(--text-3); }
 
 /* ═══════════════════════════════════════
    FOCUS SESSION
@@ -2542,47 +2724,11 @@ body::after {
   gap: 14px;
   flex-wrap: wrap;
 }
-.post-session-msg {
-  font-size: 13px;
-  color: var(--text-3);
-  flex: 1;
-  font-style: italic;
-  min-width: 160px;
-}
-.post-session-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-/* Advocate analysis panel */
-.advocate-panel {
-  margin-top: 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.advocate-panel-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(201,168,76,.04);
-}
-.advocate-panel-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-1);
-}
-.advocate-panel-subtitle {
-  font-size: 11px;
-  color: var(--text-4);
-  margin-top: 3px;
-}
 .advocate-sections {
-  padding: 20px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
 }
 .advocate-section {
   border-left: 3px solid var(--border);
@@ -3451,6 +3597,16 @@ body::after {
   padding: 18px 28px 28px;
   display: block;
 }
+/* Argument Studio needs to fill and not outer-scroll — columns scroll individually */
+#pane-write.tab-pane {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 16px;
+}
+#pane-write.tab-pane.active { display: flex; }
+.wr-studio { flex: 1; min-height: 0; }
+.wr-body   { flex: 1; min-height: 0; }
 
 .wiki-layout {
   display: flex;
@@ -5795,82 +5951,98 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
       </div>
 
       <!-- WRITE TAB -->
-      <div class="tab-pane" id="pane-write">
+      <div class="tab-pane wr-studio" id="pane-write">
 
-        <!-- SESSION HEADER: idle setup or active bar -->
-        <div class="focus-session-header" id="focusSessionHeader">
-
-          <!-- Idle state: topic input + start -->
-          <div id="sessionSetup">
-            <div class="focus-hero-timer">30:00</div>
-            <p class="focus-subtitle">Set your argument. The clock will force clarity.</p>
-            <input type="text" id="sessionTopicInput" class="topic-input"
-                   placeholder="What will you argue today?" maxlength="120"
-                   onkeydown="if(event.key==='Enter') startFocusSession()" />
-            <button class="btn-amber focus-start-btn" onclick="startFocusSession()">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              Start 30-min Session
-            </button>
+        <!-- Header: Claim + meta controls -->
+        <div class="wr-header">
+          <div class="wr-thesis-row">
+            <span class="wr-thesis-label">Claim</span>
+            <input type="text" id="wrThesis" class="wr-thesis-input"
+                   placeholder="State your central argument in one sentence…"
+                   maxlength="200" oninput="_wrSyncTopic()" />
           </div>
-
-          <!-- Active/complete bar: topic chip + live timer -->
-          <div class="session-active-bar" id="sessionActiveBar" style="display:none">
-            <div class="session-topic-tag" id="sessionTopicTag"></div>
-            <div class="session-timer-live" id="sessionTimerLive">30:00</div>
-          </div>
-
-        </div>
-
-        <!-- WRITING AREA: revealed when session starts -->
-        <div id="focusWriteWrapper" style="display:none">
-          <div class="write-toolbar">
-            <button class="toolbar-btn" onclick="execFmt('bold')" title="Bold">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"/></svg>
-              Bold
+          <div class="wr-meta-row">
+            <span class="wr-word-count" id="wrWordCount">0 words</span>
+            <span class="wr-timer-chip" id="wrTimerChip">30:00</span>
+            <button class="btn-sec" style="font-size:11px;padding:5px 11px;display:flex;align-items:center;gap:5px" onclick="wrToggleTimer()" id="wrTimerBtn">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              Focus Timer
             </button>
-            <button class="toolbar-btn" onclick="execFmt('italic')" title="Italic">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="4" x2="10" y2="4"/><line x1="14" y1="20" x2="5" y2="20"/><line x1="15" y1="4" x2="9" y2="20"/></svg>
-              Italic
-            </button>
-            <div class="toolbar-sep"></div>
-            <button class="toolbar-btn" onclick="execFmt('heading')" title="Heading">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M4 6h7M4 18h7m7-12v12"/></svg>
-              Heading
-            </button>
-            <button class="toolbar-btn" onclick="execFmt('blockquote')" title="Quote">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>
-              Quote
-            </button>
-          </div>
-          <div class="write-area" id="focusArea" contenteditable="true">
+            <button class="btn-sec" style="font-size:11px;padding:5px 11px" onclick="exportFocusEssay()">Export</button>
+            <button class="btn-sec" style="font-size:11px;padding:5px 11px" onclick="wrReset()">Clear</button>
           </div>
         </div>
 
-        <!-- POST-SESSION CONTROLS: shown when timer ends -->
-        <div class="post-session-row" id="postSessionRow" style="display:none">
-          <div class="post-session-msg">Session complete. Time to stress-test your argument.</div>
-          <div class="post-session-btns">
-            <button class="btn-amber" id="advocateBtn" onclick="runDevilsAdvocate()" style="font-size:12px;padding:8px 16px">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              Devil's Advocate
-            </button>
-            <button class="btn-sec" onclick="exportFocusEssay()" style="font-size:12px;padding:8px 14px">Export</button>
-            <button class="btn-sec" onclick="resetFocusSession()" style="font-size:12px;padding:8px 14px">New Session</button>
-          </div>
-        </div>
+        <!-- Body: editor + context panel -->
+        <div class="wr-body">
 
-        <!-- ADVOCATE OUTPUT PANEL -->
-        <div class="advocate-panel" id="advocatePanel" style="display:none">
-          <div class="advocate-panel-header">
-            <div>
-              <div class="advocate-panel-title">Devil's Advocate Analysis</div>
-              <div class="advocate-panel-subtitle" id="advocatePanelTopic"></div>
+          <!-- Left: rich editor -->
+          <div class="wr-editor-col">
+            <div class="wr-toolbar">
+              <button class="wr-tb-btn" onclick="execFmt('bold')" title="Bold"><b>B</b></button>
+              <button class="wr-tb-btn" onclick="execFmt('italic')" title="Italic"><i style="font-style:italic">I</i></button>
+              <button class="wr-tb-btn" onclick="execFmt('underline')" title="Underline"><u>U</u></button>
+              <div class="wr-tb-sep"></div>
+              <button class="wr-tb-btn" onclick="execFmt('h1')" title="Title — main heading">H1</button>
+              <button class="wr-tb-btn" onclick="execFmt('h2')" title="Section heading">H2</button>
+              <button class="wr-tb-btn" onclick="execFmt('h3')" title="Sub-section label">H3</button>
+              <div class="wr-tb-sep"></div>
+              <button class="wr-tb-btn" onclick="execFmt('blockquote')" title="Evidence / quote">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/></svg>
+              </button>
+              <button class="wr-tb-btn" onclick="execFmt('insertUnorderedList')" title="Bullet list">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="6" x2="21" y2="6"/><line x1="9" y1="12" x2="21" y2="12"/><line x1="9" y1="18" x2="21" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+              </button>
+              <button class="wr-tb-btn" onclick="execFmt('insertOrderedList')" title="Numbered list">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4M4 10h2" stroke-linecap="round"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" stroke-linecap="round"/></svg>
+              </button>
+              <button class="wr-tb-btn" onclick="execFmt('hr')" title="Section divider" style="font-size:14px;font-weight:400;letter-spacing:-.5px">—</button>
+              <div class="wr-tb-sep"></div>
+              <button class="wr-tb-btn" onclick="document.execCommand('undo')" title="Undo">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+              </button>
+              <button class="wr-tb-btn" onclick="document.execCommand('redo')" title="Redo">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+              </button>
             </div>
-            <button class="btn-sec" onclick="resetFocusSession()" style="font-size:11px;padding:6px 12px">New Session</button>
+            <div class="wr-canvas" id="focusArea" contenteditable="true"
+                 data-placeholder="Begin writing your argument here. Use H1 for your title, H2 for sections, blockquote for evidence. The Outline panel builds automatically as you write.">
+            </div>
           </div>
-          <div id="advocateContent"></div>
-        </div>
 
+          <!-- Right: context panel -->
+          <div class="wr-context-col">
+            <div class="wr-panel-tabs">
+              <button class="wr-panel-tab active" id="wrTab-critique" onclick="wrSwitchPanel('critique')">Critique</button>
+              <button class="wr-panel-tab" id="wrTab-ideas" onclick="wrSwitchPanel('ideas')">Ideas</button>
+              <button class="wr-panel-tab" id="wrTab-outline" onclick="wrSwitchPanel('outline')">Outline</button>
+            </div>
+            <div class="wr-panel-body">
+              <!-- Critique -->
+              <div class="wr-panel-inner active" id="wrPanelCritique">
+                <p class="wr-critique-intro">Run Devil's Advocate to surface weaknesses, counterarguments, and stress tests against your claim.</p>
+                <button class="wr-advocate-btn" id="advocateBtn" onclick="runDevilsAdvocate()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  Stress-Test Argument
+                </button>
+                <div id="advocateContent"></div>
+              </div>
+              <!-- Ideas -->
+              <div class="wr-panel-inner" id="wrPanelIdeas">
+                <div id="wrIdeasList">
+                  <p class="wr-panel-empty">Select a book in the sidebar to load its idea cards here.</p>
+                </div>
+              </div>
+              <!-- Outline -->
+              <div class="wr-panel-inner" id="wrPanelOutline">
+                <div id="wrOutlineList">
+                  <p class="wr-panel-empty">Start writing with H1 / H2 / H3 headings and your outline will appear here.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
 
       <!-- ESSAY AGENT TAB -->
@@ -8869,113 +9041,199 @@ async function addBook() {
 }
 
 // ═══════════════════════════════════════
-// WRITE TOOLBAR
+// ARGUMENT STUDIO
 // ═══════════════════════════════════════
+
+// Toolbar — rich formatting commands
 function execFmt(cmd) {
   const area = document.getElementById('focusArea');
   area.focus();
-  if (cmd === 'heading') {
-    document.execCommand('formatBlock', false, 'h2');
-  } else if (cmd === 'blockquote') {
-    document.execCommand('formatBlock', false, 'blockquote');
-  } else {
-    document.execCommand(cmd);
-  }
+  if (cmd === 'h1')         { document.execCommand('formatBlock', false, 'h1'); }
+  else if (cmd === 'h2')    { document.execCommand('formatBlock', false, 'h2'); }
+  else if (cmd === 'h3')    { document.execCommand('formatBlock', false, 'h3'); }
+  else if (cmd === 'blockquote') { document.execCommand('formatBlock', false, 'blockquote'); }
+  else if (cmd === 'hr')    { document.execCommand('insertHorizontalRule'); }
+  else                      { document.execCommand(cmd); }
+  wrUpdateWordCount();
+  wrUpdateOutline();
 }
 
-// ═══════════════════════════════════════
-// WRITE TAB — FOCUS SESSION + DEVIL'S ADVOCATE
-// ═══════════════════════════════════════
+// Timer state
 let _focusTimerHandle  = null;
 let _focusSecondsLeft  = 30 * 60;
-let _sessionState      = 'idle';   // idle | running | complete | analysing | analysed
-let _sessionTopic      = '';
+let _timerRunning      = false;
+let _sessionTopic      = '';   // kept for advocate API compat
 
-function startFocusSession() {
-  const topicInput = document.getElementById('sessionTopicInput');
-  const topic = topicInput.value.trim();
-  if (!topic) {
-    topicInput.focus();
-    showToast('Enter a topic to argue about');
-    return;
-  }
-
-  _sessionTopic     = topic;
-  _focusSecondsLeft = 30 * 60;
-  _sessionState     = 'running';
-
-  document.getElementById('sessionSetup').style.display       = 'none';
-  document.getElementById('sessionActiveBar').style.display   = 'flex';
-  document.getElementById('sessionTopicTag').textContent      = topic;
-  document.getElementById('sessionTimerLive').textContent     = '30:00';
-  document.getElementById('sessionTimerLive').className       = 'session-timer-live';
-  document.getElementById('focusWriteWrapper').style.display  = '';
-  document.getElementById('focusArea').focus();
-
-  _focusTimerHandle = setInterval(_tickFocusTimer, 1000);
+function _wrSyncTopic() {
+  _sessionTopic = document.getElementById('wrThesis').value.trim();
 }
 
-function _tickFocusTimer() {
+function wrToggleTimer() {
+  const btn  = document.getElementById('wrTimerBtn');
+  const chip = document.getElementById('wrTimerChip');
+  if (!_timerRunning) {
+    // Start
+    _timerRunning     = true;
+    _focusSecondsLeft = 30 * 60;
+    chip.classList.add('visible');
+    chip.className    = 'wr-timer-chip visible';
+    chip.textContent  = '30:00';
+    btn.innerHTML     = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Stop';
+    _focusTimerHandle = setInterval(_wrTickTimer, 1000);
+    showToast('30-minute focus session started');
+  } else {
+    // Stop
+    clearInterval(_focusTimerHandle);
+    _focusTimerHandle = null;
+    _timerRunning     = false;
+    chip.className    = 'wr-timer-chip';
+    btn.innerHTML     = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Focus Timer';
+  }
+}
+
+function _wrTickTimer() {
   _focusSecondsLeft = Math.max(0, _focusSecondsLeft - 1);
   const mins  = Math.floor(_focusSecondsLeft / 60);
   const secs  = _focusSecondsLeft % 60;
   const label = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
-  const el    = document.getElementById('sessionTimerLive');
-  el.textContent = label;
+  const chip  = document.getElementById('wrTimerChip');
+  chip.textContent = label;
 
   if (_focusSecondsLeft > 0 && _focusSecondsLeft <= 300) {
-    el.classList.add('urgent');
+    chip.className = 'wr-timer-chip visible urgent';
   }
   if (_focusSecondsLeft === 0) {
     clearInterval(_focusTimerHandle);
     _focusTimerHandle = null;
-    _onFocusSessionComplete();
+    _timerRunning     = false;
+    chip.className    = 'wr-timer-chip visible complete';
+    const btn = document.getElementById('wrTimerBtn');
+    btn.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Focus Timer';
+    showToast("Time's up — stress-test your argument in the Critique panel");
   }
 }
 
-function _onFocusSessionComplete() {
-  _sessionState = 'complete';
-  const el = document.getElementById('sessionTimerLive');
-  el.textContent = '00:00';
-  el.classList.remove('urgent');
-  el.classList.add('complete');
-  document.getElementById('postSessionRow').style.display = 'flex';
-  showToast("Session complete — run Devil's Advocate to stress-test your argument");
+// Word count
+function wrUpdateWordCount() {
+  const area  = document.getElementById('focusArea');
+  const words = (area.innerText || '').trim().split(/\s+/).filter(w => w.length > 0).length;
+  const mins  = Math.ceil(words / 200);
+  document.getElementById('wrWordCount').textContent =
+    words === 0 ? '0 words' : `${words.toLocaleString()} word${words !== 1 ? 's' : ''} · ${mins} min read`;
 }
 
+// Outline: auto-build from H1/H2/H3 headings
+function wrUpdateOutline() {
+  const area     = document.getElementById('focusArea');
+  const headings = area.querySelectorAll('h1, h2, h3');
+  const container = document.getElementById('wrOutlineList');
+  if (!headings.length) {
+    container.innerHTML = '<p class="wr-panel-empty">Start writing with H1 / H2 / H3 headings and your outline will appear here.</p>';
+    return;
+  }
+  const depthMap = { H1: 1, H2: 2, H3: 3 };
+  const colorMap = { 1: 'var(--amber)', 2: 'var(--text-3)', 3: 'var(--text-4)' };
+  container.innerHTML = Array.from(headings).map(h => {
+    const depth = depthMap[h.tagName] || 2;
+    const text  = h.innerText.trim();
+    const indent = (depth - 1) * 12;
+    return `<div class="wr-outline-item" onclick="_wrScrollToHeading(this)" data-text="${text.replace(/"/g,'&quot;')}"
+              style="padding-left:${indent}px">
+      <span class="wr-outline-dot" style="background:${colorMap[depth]}"></span>
+      <span class="wr-outline-text" style="color:${colorMap[depth]};font-weight:${depth===1?'600':'400'}">${text}</span>
+    </div>`;
+  }).join('');
+}
+
+function _wrScrollToHeading(el) {
+  const text    = el.dataset.text;
+  const area    = document.getElementById('focusArea');
+  const headings = area.querySelectorAll('h1,h2,h3');
+  const target  = Array.from(headings).find(h => h.innerText.trim() === text);
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Ideas panel: load cards from current book
+async function wrLoadIdeas() {
+  const container = document.getElementById('wrIdeasList');
+  if (!CURRENT_BOOK_ID) {
+    container.innerHTML = '<p class="wr-panel-empty">Select a book in the sidebar to load its idea cards here.</p>';
+    return;
+  }
+  container.innerHTML = '<p class="wr-panel-empty" style="opacity:.6">Loading…</p>';
+
+  let ideas = [];
+  if (IS_LIVE_MODE) {
+    const data = await api('GET', `/distill?book_id=${CURRENT_BOOK_ID}`);
+    ideas = Array.isArray(data) ? data : [];
+  }
+
+  if (!ideas.length) {
+    container.innerHTML = '<p class="wr-panel-empty">No idea cards yet for this book. Distil some notes first.</p>';
+    return;
+  }
+
+  container.innerHTML = ideas.filter(c => c.chapter_name !== '_broad').slice(0, 40).map(idea => `
+    <div class="wr-idea-card" onclick="_wrInsertIdea(this)"
+         data-title="${(idea.title||'').replace(/"/g,'&quot;')}"
+         data-body="${(idea.body||'').replace(/"/g,'&quot;')}">
+      <div class="wr-idea-title">${idea.title || ''}</div>
+      <div class="wr-idea-body">${idea.body || ''}</div>
+    </div>`).join('');
+}
+
+function _wrInsertIdea(el) {
+  const title = el.dataset.title;
+  const body  = el.dataset.body;
+  const area  = document.getElementById('focusArea');
+  area.focus();
+  const quote = `<blockquote><strong>${title}</strong> — ${body}</blockquote><p></p>`;
+  document.execCommand('insertHTML', false, quote);
+  wrUpdateWordCount();
+  showToast('Idea inserted as a quote');
+}
+
+// Panel tab switching
+function wrSwitchPanel(name) {
+  ['critique','ideas','outline'].forEach(p => {
+    document.getElementById('wrPanel' + p.charAt(0).toUpperCase() + p.slice(1))
+            .classList.toggle('active', p === name);
+    document.getElementById('wrTab-' + p)
+            .classList.toggle('active', p === name);
+  });
+  if (name === 'ideas') wrLoadIdeas();
+  if (name === 'outline') wrUpdateOutline();
+}
+
+// Devil's Advocate — always available, no timer gate
 async function runDevilsAdvocate() {
   const area      = document.getElementById('focusArea');
   const essayText = area.innerText.trim();
   if (essayText.length < 50) {
-    showToast('Write more before running analysis');
+    showToast('Write more before running analysis (need at least 50 characters)');
     return;
   }
+  _wrSyncTopic();
+  const topic = _sessionTopic || 'the argument';
 
   const btn = document.getElementById('advocateBtn');
-  btn.style.opacity       = '0.5';
-  btn.style.pointerEvents = 'none';
-  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Analysing…';
-  _sessionState = 'analysing';
+  btn.disabled  = true;
+  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10"/></svg> Analysing…';
 
   let result;
   if (!IS_LIVE_MODE) {
-    result = _protoAdvocateResponse(_sessionTopic);
+    result = _protoAdvocateResponse(topic);
   } else {
-    result = await api('POST', '/advocate', { topic: _sessionTopic, essay_text: essayText });
+    result = await api('POST', '/advocate', { topic, essay_text: essayText });
   }
 
-  btn.style.opacity       = '';
-  btn.style.pointerEvents = '';
-  btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Devil\'s Advocate';
+  btn.disabled  = false;
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Stress-Test Argument';
 
   if (result) {
-    _sessionState = 'analysed';
-    document.getElementById('advocatePanelTopic').textContent = '"' + _sessionTopic + '"';
     _renderAdvocateOutput(result);
-    document.getElementById('advocatePanel').style.display = '';
-    document.getElementById('advocatePanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    wrSwitchPanel('critique');
   } else {
-    _sessionState = 'complete';
     showToast('Analysis failed — try again');
   }
 }
@@ -8989,43 +9247,31 @@ function _renderAdvocateOutput(data) {
     { key: 'alternative_view',  label: 'Alternative View',  cls: 'alternative',      list: false },
     { key: 'verdict',           label: 'Verdict',           cls: 'verdict',          list: false },
   ];
-
   const container = document.getElementById('advocateContent');
   container.innerHTML = '';
   const wrap = document.createElement('div');
   wrap.className = 'advocate-sections';
-
   sections.forEach(({ key, label, cls, list }) => {
     const val = data[key];
     if (!val || (Array.isArray(val) && val.length === 0)) return;
-
-    const sec = document.createElement('div');
+    const sec  = document.createElement('div');
     sec.className = 'advocate-section ' + cls;
-
-    const lbl = document.createElement('div');
+    const lbl  = document.createElement('div');
     lbl.className   = 'advocate-section-label';
     lbl.textContent = label;
-
     const body = document.createElement('div');
     body.className = 'advocate-section-body';
-
     if (list && Array.isArray(val)) {
       const ul = document.createElement('ul');
-      val.forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item;
-        ul.appendChild(li);
-      });
+      val.forEach(item => { const li = document.createElement('li'); li.textContent = item; ul.appendChild(li); });
       body.appendChild(ul);
     } else {
       body.textContent = typeof val === 'string' ? val : '';
     }
-
     sec.appendChild(lbl);
     sec.appendChild(body);
     wrap.appendChild(sec);
   });
-
   container.appendChild(wrap);
 }
 
@@ -9051,38 +9297,51 @@ function _protoAdvocateResponse(topic) {
   };
 }
 
-function resetFocusSession() {
-  if (_focusTimerHandle) {
-    clearInterval(_focusTimerHandle);
-    _focusTimerHandle = null;
-  }
-  _sessionState     = 'idle';
-  _sessionTopic     = '';
+function wrReset() {
+  if (_focusTimerHandle) { clearInterval(_focusTimerHandle); _focusTimerHandle = null; }
+  _timerRunning     = false;
   _focusSecondsLeft = 30 * 60;
-
-  document.getElementById('sessionSetup').style.display       = '';
-  document.getElementById('sessionActiveBar').style.display   = 'none';
-  document.getElementById('sessionTopicInput').value          = '';
-  document.getElementById('focusWriteWrapper').style.display  = 'none';
-  document.getElementById('postSessionRow').style.display     = 'none';
-  document.getElementById('advocatePanel').style.display      = 'none';
-  document.getElementById('advocateContent').innerHTML        = '';
-  document.getElementById('focusArea').innerHTML              = '';
-  const el = document.getElementById('sessionTimerLive');
-  el.textContent = '30:00';
-  el.className   = 'session-timer-live';
+  _sessionTopic     = '';
+  document.getElementById('wrThesis').value   = '';
+  document.getElementById('focusArea').innerHTML = '';
+  document.getElementById('advocateContent').innerHTML = '';
+  document.getElementById('wrWordCount').textContent  = '0 words';
+  document.getElementById('wrTimerChip').className    = 'wr-timer-chip';
+  document.getElementById('wrTimerChip').textContent  = '30:00';
+  document.getElementById('wrTimerBtn').innerHTML =
+    '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Focus Timer';
+  wrUpdateOutline();
 }
+
+// Alias so any old references still work
+function resetFocusSession() { wrReset(); }
 
 function exportFocusEssay() {
   const content = document.getElementById('focusArea').innerText.trim();
   if (!content) { showToast('Nothing to export'); return; }
-  const blob = new Blob(['# ' + _sessionTopic + '\n\n' + content], { type: 'text/markdown' });
+  const claim = document.getElementById('wrThesis').value.trim();
+  const header = claim ? `# ${claim}\n\n` : '';
+  const blob = new Blob([header + content], { type: 'text/markdown' });
   const a = document.createElement('a');
   a.href     = URL.createObjectURL(blob);
-  a.download = 'focus-session.md';
+  a.download = (claim || 'argument').replace(/[^a-z0-9]/gi, '_').toLowerCase().slice(0, 40) + '.md';
   a.click();
   showToast('Exported as Markdown');
 }
+
+// Wire up live input events when the tab is first shown
+(function _initWriteStudio() {
+  const area = document.getElementById('focusArea');
+  if (!area) return;
+  area.addEventListener('input', () => { wrUpdateWordCount(); wrUpdateOutline(); });
+  area.addEventListener('keydown', e => {
+    // Tab key: indent with 2 spaces instead of moving focus
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      document.execCommand('insertHTML', false, '&nbsp;&nbsp;');
+    }
+  });
+})();
 
 // ═══════════════════════════════════════
 // TOAST
