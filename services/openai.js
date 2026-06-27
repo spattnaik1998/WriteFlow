@@ -808,13 +808,22 @@ Return valid JSON: { "summary": string, "highlights": string[], "prep_question":
  * @returns {Array<{question,options,correct,explanation}>}  — array of 5 questions
  */
 async function generateSessionQuiz({ books }) {
-  const systemPrompt = `You are an expert reading tutor who designs rigorous comprehension quizzes.
-Given a reader's notes, create exactly 5 multiple-choice questions that:
-1. Test genuine understanding, not just surface recall
-2. Cover different ideas/chapters spread across the material
-3. Use 4 options (A–D) with exactly one clearly correct answer
-4. Include a concise, illuminating explanation (1–2 sentences) for the correct answer
-5. Mix difficulty: 2 straightforward, 2 conceptual, 1 that requires connecting ideas
+  const systemPrompt = `You are an expert reading tutor who designs rigorous comprehension quizzes for active readers.
+Given a reader's notes, create exactly 5 multiple-choice questions that demand genuine understanding.
+
+QUESTION TYPE MIX (strictly follow this):
+- 1 direct recall: tests that a specific fact, term, or definition was absorbed
+- 2 application: asks what follows from an idea, or what would happen in a described scenario
+- 2 synthesis: requires connecting two different ideas from different parts of the notes
+
+DISTRACTOR RULES (this is the most important part):
+- All four options must be plausible to someone who skimmed but didn't fully absorb the material
+- Distractors must come from the same conceptual domain as the correct answer — no strawmen
+- Distractors should represent real misconceptions, near-miss misreadings, or partially correct statements
+- All four options must be similar in length and grammatical structure — the correct answer must not stand out visually
+- Do NOT use: "all of the above", "none of the above", trick wording, or options that are trivially eliminatable without understanding the content
+
+For each question, first think: "What would a reader who skimmed this get wrong, and why?" — then use that as your distractor.
 
 Return valid JSON only:
 {
@@ -823,7 +832,7 @@ Return valid JSON only:
       "question": "string",
       "options": ["string", "string", "string", "string"],
       "correct": 0,
-      "explanation": "string"
+      "explanation": "string (1–2 sentences explaining why the correct answer is right and why a plausible wrong answer is wrong)"
     }
   ]
 }`;
@@ -846,16 +855,16 @@ Return valid JSON only:
     ],
     response_format: { type: 'json_object' },
     temperature: 0.7,
-    max_tokens: 1200
+    max_tokens: 1800
   });
 
   const raw = parseJsonResponse(response.choices[0].message.content);
   const qs  = Array.isArray(raw.questions) ? raw.questions : [];
-  // Shuffle correct answer to a spread of positions (0,1,2,3,0) to avoid GPT bias
-  return qs.slice(0, 5).map((q, i) => {
+  // Place correct answer at a random position per question — no cross-question pattern
+  return qs.slice(0, 5).map((q) => {
     const options = Array.isArray(q.options) ? q.options.slice(0, 4) : [];
     const srcIdx  = typeof q.correct === 'number' ? Math.min(3, Math.max(0, q.correct)) : 0;
-    const dstIdx  = i % 4;  // spread across A/B/C/D for questions 1-5
+    const dstIdx  = Math.floor(Math.random() * 4);
     const correctText  = options[srcIdx];
     const wrongOptions = options.filter((_, idx) => idx !== srcIdx);
     const reordered    = [...wrongOptions];
