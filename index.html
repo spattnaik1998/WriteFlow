@@ -9276,9 +9276,11 @@ function _endSessionBeacon() {
   const payload  = JSON.stringify({ activity, ended: true });
   // sendBeacon only supports POST; use fetch + keepalive so the PATCH
   // fires even as the page unloads and the server route matches correctly.
+  const beaconHeaders = { 'Content-Type': 'application/json' };
+  if (_authSession?.access_token) beaconHeaders['Authorization'] = `Bearer ${_authSession.access_token}`;
   fetch(`/api/sessions/${SESSION_ID}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: beaconHeaders,
     body: payload,
     keepalive: true
   });
@@ -9491,9 +9493,11 @@ async function _openQuizPanel() {
 
   let data = null;
   try {
+    const quizHeaders = { 'Content-Type': 'application/json' };
+    if (_authSession?.access_token) quizHeaders['Authorization'] = `Bearer ${_authSession.access_token}`;
     const res = await fetch(`${API_BASE}/sessions/${_quizSessionId}/quiz`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: quizHeaders,
       body: '{}',
       signal: AbortSignal.timeout(40000)
     });
