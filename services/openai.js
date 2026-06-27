@@ -1466,4 +1466,4 @@ Rules:
     .filter(c => c.idea_a?.bookTitle && c.idea_b?.bookTitle && c.idea_a.bookTitle !== c.idea_b.bookTitle);
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, lintWiki, generateInsightCollisions };
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, lintWiki, generateInsightCollisions, reconstructArgument };
