@@ -24,12 +24,27 @@ const synthesisRouter     = require('./routes/synthesis');
 const refineRouter        = require('./routes/refine');
 const wikiRouter          = require('./routes/wiki');
 const essayAgentRouter    = require('./routes/essayAgent');
+const { requireAuth }     = require('./middleware/auth');
 
 const app = express();
 
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
 app.use(express.static(path.join(__dirname)));
+
+// Health check + auth config — must stay unauthenticated. The frontend's
+// prototype-vs-live-mode detection depends on /api/health staying reachable
+// before login, and /api/auth/config hands the (public-safe) anon key to the
+// browser so it can initialise its own Supabase client for the OAuth flow.
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() });
+});
+app.get('/api/auth/config', (req, res) => {
+  res.json({ url: process.env.SUPABASE_URL, anonKey: process.env.SUPABASE_ANON_KEY });
+});
+
+// Everything else under /api requires a signed-in, allow-listed user.
+app.use('/api', requireAuth);
 
 // API routes
 app.use('/api/books',         booksRouter);
@@ -53,11 +68,6 @@ app.use('/api/synthesis',    synthesisRouter);
 app.use('/api/refine',       refineRouter);
 app.use('/api/wiki',         wikiRouter);
 app.use('/api/essay-agent',  essayAgentRouter);
-
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() });
-});
 
 // Serve frontend for all other routes
 app.get('*', (req, res) => {

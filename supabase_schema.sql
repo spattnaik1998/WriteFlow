@@ -186,19 +186,10 @@ create index if not exists sessions_ended_at_idx on sessions (ended_at desc null
 
 -- ===== MIGRATIONS (safe to re-run — all use IF NOT EXISTS) =====
 
--- !! CRITICAL: Disable RLS on all tables (app uses server-side Supabase anon key,
---    no auth yet — RLS with no policies blocks ALL reads and writes silently)
-alter table books         disable row level security;
-alter table notes         disable row level security;
-alter table ideas         disable row level security;
-alter table articles      disable row level security;
-alter table conversations disable row level security;
-alter table essays        disable row level security;
-alter table arguments     disable row level security;
-alter table concept_maps  disable row level security;
-alter table contradictions disable row level security;
-alter table user_profile  disable row level security;
-alter table sessions      disable row level security;
+-- RLS is enabled on every table (see the ENABLE ROW LEVEL SECURITY block further
+-- down). The backend connects with the Supabase service_role key (services/supabase.js),
+-- which bypasses RLS by design — access to this app is gated in the API layer instead
+-- (middleware/auth.js: Supabase OAuth + email allow-list), not at the DB layer.
 
 -- Books: add columns that may be missing in older deployments
 alter table books add column if not exists source_type  text    default 'book'    check (source_type in ('book','article','paper','blog'));
@@ -273,13 +264,26 @@ alter table ideas add column if not exists next_review_at      timestamptz;
 alter table ideas add column if not exists review_interval_days float    default 1;
 alter table ideas add column if not exists reflection_notes    jsonb     default '[]';
 
--- ===== ROW LEVEL SECURITY (enable when you add auth) =====
--- alter table books        enable row level security;
--- alter table notes        enable row level security;
--- alter table ideas        enable row level security;
--- alter table articles     enable row level security;
--- alter table conversations enable row level security;
--- alter table essays       enable row level security;
+-- ===== ROW LEVEL SECURITY =====
+-- Enabled with zero policies on every table: this is a deliberate deny-all for
+-- the anon/authenticated roles. Only the service_role key (used server-side by
+-- services/supabase.js) can read/write — anyone hitting the Supabase REST API
+-- directly with the anon key gets nothing. App-level access control (who may use
+-- the WriteFlow server itself) lives in middleware/auth.js instead.
+alter table books          enable row level security;
+alter table notes          enable row level security;
+alter table ideas          enable row level security;
+alter table articles       enable row level security;
+alter table conversations  enable row level security;
+alter table essays         enable row level security;
+alter table arguments      enable row level security;
+alter table concept_maps   enable row level security;
+alter table contradictions enable row level security;
+alter table user_profile   enable row level security;
+alter table sessions       enable row level security;
+alter table wiki_pages       enable row level security;
+alter table wiki_links       enable row level security;
+alter table wiki_ingest_log  enable row level security;
 
 -- Analytics: add reading goal column to user_profile
 alter table user_profile add column if not exists reading_goal_annual integer default 12;
@@ -324,6 +328,4 @@ create table if not exists wiki_ingest_log (
 create trigger wiki_pages_updated_at before update on wiki_pages
   for each row execute procedure set_updated_at();
 
-alter table wiki_pages      disable row level security;
-alter table wiki_links      disable row level security;
-alter table wiki_ingest_log disable row level security;
+-- RLS for these three tables is enabled in the block below alongside the rest.
