@@ -7851,7 +7851,7 @@ async function triggerGenerateBroadIdeas() {
   try {
     const res = await fetch(`${API_BASE}/distill/broad`, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: _authHeaders(),
       body:    JSON.stringify({ book_id: bookId }),
       signal:  AbortSignal.timeout(60000)
     });
@@ -8130,7 +8130,7 @@ function openRefineModal() {
 
   fetch('/api/refine', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: _authHeaders(),
     body: JSON.stringify({
       book_id: CURRENT_BOOK_ID,
       chapter_name: chapterName,
@@ -8279,7 +8279,7 @@ async function exportAllNotesPdf() {
   try {
     const response = await fetch('/api/export/notes-pdf', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: _authHeaders(),
       body: JSON.stringify({ book_id: CURRENT_BOOK_ID })
     });
 
@@ -8322,7 +8322,7 @@ async function exportIdeasPdf() {
   try {
     const response = await fetch('/api/export/ideas-pdf', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: _authHeaders(),
       body: JSON.stringify({ book_id: CURRENT_BOOK_ID })
     });
 
@@ -9692,6 +9692,12 @@ let BRAND_PROFILE = null; // loaded on init from /api/profile
 let supabaseClient = null;
 let _authSession   = null;
 
+function _authHeaders(extra = {}) {
+  const h = { 'Content-Type': 'application/json', ...extra };
+  if (_authSession?.access_token) h['Authorization'] = `Bearer ${_authSession.access_token}`;
+  return h;
+}
+
 async function api(method, path, body) {
   try {
     const headers = { 'Content-Type': 'application/json' };
@@ -9910,7 +9916,7 @@ async function generateConceptMap() {
     if (IS_LIVE_MODE) {
       const response = await fetch('/api/concepts/book', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: _authHeaders(),
         body: JSON.stringify({ book_id: bookId }),
         signal: AbortSignal.timeout(60000)
       });
@@ -12208,7 +12214,7 @@ function wikiRenderLinks(html) {
 async function wikiLoadPages() {
   const tree = document.getElementById('wikiTree');
   try {
-    const r = await fetch('/api/wiki/pages?limit=300');
+    const r = await fetch('/api/wiki/pages?limit=300', { headers: _authHeaders() });
     if (!r.ok) throw new Error('not ok');
     const { pages } = await r.json();
     _wikiPages   = pages || [];
@@ -12286,7 +12292,7 @@ async function wikiOpenPage(slug) {
   body.innerHTML = '<div style="color:var(--text-3);font-size:13px;padding:20px">Loading…</div>';
 
   try {
-    const r = await fetch(`/api/wiki/pages/${slug}`);
+    const r = await fetch(`/api/wiki/pages/${slug}`, { headers: _authHeaders() });
     if (!r.ok) throw new Error('not found');
     const page = await r.json();
 
@@ -12363,7 +12369,7 @@ async function wikiSaveEdit() {
   try {
     const r = await fetch(`/api/wiki/pages/${slug}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: _authHeaders(),
       body: JSON.stringify({ markdown_content, title })
     });
     if (!r.ok) throw new Error('Save failed');
@@ -12389,7 +12395,7 @@ async function wikiIngestChapter() {
   try {
     const r = await fetch('/api/wiki/ingest', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: _authHeaders(),
       body: JSON.stringify({ book_id: CURRENT_BOOK_ID, chapter_name: chapterName })
     });
     const data = await r.json();
@@ -12438,7 +12444,7 @@ async function wikiQuery() {
   try {
     const r = await fetch('/api/wiki/query', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: _authHeaders(),
       body: JSON.stringify({ question: q, persist: savePage })
     });
     const data = await r.json();
@@ -12477,7 +12483,7 @@ async function wikiBackfill() {
   progress.textContent   = 'Starting backfill…';
 
   try {
-    const r = await fetch('/api/wiki/ingest/backfill', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const r = await fetch('/api/wiki/ingest/backfill', { method: 'POST', headers: _authHeaders() });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Failed');
 
@@ -12513,7 +12519,7 @@ async function wikiLint() {
   lintEl.innerHTML = '<em>Running health check…</em>';
 
   try {
-    const r = await fetch('/api/wiki/lint', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+    const r = await fetch('/api/wiki/lint', { method: 'POST', headers: _authHeaders() });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Failed');
 
@@ -12544,7 +12550,7 @@ async function wikiLint() {
 // ── Activity log ─────────────────────────────────────────────────────────────
 async function wikiLoadLog() {
   try {
-    const r = await fetch('/api/wiki/log?limit=20');
+    const r = await fetch('/api/wiki/log?limit=20', { headers: _authHeaders() });
     if (!r.ok) return;
     const entries = await r.json();
     const logEl = document.getElementById('wikiLogList');
@@ -12592,7 +12598,7 @@ async function wikiRenderGraph() {
 
   let graph;
   try {
-    const r = await fetch('/api/wiki/graph');
+    const r = await fetch('/api/wiki/graph', { headers: _authHeaders() });
     if (!r.ok) return;
     graph = await r.json();
   } catch(_) { return; }
