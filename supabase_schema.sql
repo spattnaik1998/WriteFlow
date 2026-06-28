@@ -329,3 +329,40 @@ create trigger wiki_pages_updated_at before update on wiki_pages
   for each row execute procedure set_updated_at();
 
 -- RLS for these three tables is enabled in the block below alongside the rest.
+-- ===== LIVING IDEAS (MVP cognitive object layer) =====
+
+create table if not exists living_ideas (
+  id                   uuid primary key default gen_random_uuid(),
+  idea_id              uuid references ideas(id) on delete cascade,
+  book_id              uuid references books(id) on delete cascade,
+  chapter_name         text,
+  claim                text,
+  definition           text,
+  mechanism            text,
+  evidence             jsonb default '[]',
+  examples             jsonb default '[]',
+  boundary_conditions  jsonb default '[]',
+  counterarguments     jsonb default '[]',
+  open_questions       jsonb default '[]',
+  compressed_principle text,
+  source_fragments     jsonb default '[]',
+  connection_summary   text,
+  mastery              jsonb default '{}',
+  metadata             jsonb default '{}',
+  created_at           timestamptz default now(),
+  updated_at           timestamptz default now()
+);
+
+create index if not exists living_ideas_book_idx on living_ideas (book_id);
+create index if not exists living_ideas_idea_idx on living_ideas (idea_id);
+
+do $$ begin
+  if not exists (
+    select 1 from pg_trigger where tgname = 'living_ideas_updated_at'
+  ) then
+    create trigger living_ideas_updated_at before update on living_ideas
+      for each row execute procedure set_updated_at();
+  end if;
+end $$;
+
+alter table living_ideas enable row level security;

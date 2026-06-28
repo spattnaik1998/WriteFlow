@@ -25,6 +25,7 @@ const synthesisRouter     = require('./routes/synthesis');
 const refineRouter        = require('./routes/refine');
 const wikiRouter          = require('./routes/wiki');
 const essayAgentRouter    = require('./routes/essayAgent');
+const livingIdeasRouter   = require('./routes/livingIdeas');
 const { requireAuth }     = require('./middleware/auth');
 
 const app = express();
@@ -70,6 +71,7 @@ app.use('/api/synthesis',    synthesisRouter);
 app.use('/api/refine',       refineRouter);
 app.use('/api/wiki',         wikiRouter);
 app.use('/api/essay-agent',  essayAgentRouter);
+app.use('/api/living-ideas', livingIdeasRouter);
 
 // Serve frontend for all other routes
 app.get('*', (req, res) => {
