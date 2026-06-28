@@ -1103,6 +1103,186 @@ body::after {
   border-color: var(--amber);
   color: var(--amber);
 }
+.idea-inspect-btn {
+  background: var(--bg-dim);
+  border: 1px solid var(--border-hi);
+  border-radius: 5px;
+  color: var(--text-2);
+  font-family: 'Inter', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 9px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.idea-inspect-btn:hover {
+  background: rgba(120, 135, 160, .14);
+  border-color: rgba(120, 135, 160, .45);
+  color: var(--text-1);
+}
+.living-detail-modal {
+  width: min(920px, calc(100vw - 48px));
+  max-height: min(86vh, 860px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.living-detail-head {
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+.living-detail-head .modal-title { margin-bottom: 4px; }
+.living-detail-body {
+  overflow-y: auto;
+  padding: 20px 24px 22px;
+}
+.living-detail-actions {
+  padding: 14px 24px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: var(--bg-sidebar);
+}
+.living-detail-hero {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  background: var(--bg-card);
+  margin-bottom: 14px;
+}
+.living-detail-kicker {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--amber-dk);
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.living-detail-title {
+  font-size: 19px;
+  line-height: 1.25;
+  color: var(--text-1);
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+.living-detail-sub {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-3);
+  max-width: 620px;
+}
+.living-detail-mastery {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  border: 1px solid var(--amber-glow2);
+  border-radius: 999px;
+  color: var(--amber-dk);
+  background: var(--amber-glow);
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.living-detail-tags { margin-bottom: 14px; }
+.living-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.living-detail-grid section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  padding: 13px 14px;
+  min-width: 0;
+}
+.living-detail-grid section label,
+.living-detail-form label {
+  display: block;
+  color: var(--text-4);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 7px;
+}
+.living-detail-grid p {
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+}
+.living-detail-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.living-detail-pill {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-3);
+  background: var(--bg-dim);
+  padding: 5px 8px;
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+.living-detail-empty,
+.living-detail-notice {
+  color: var(--text-4);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.living-detail-notice {
+  border: 1px solid rgba(201,168,76,.25);
+  border-radius: 8px;
+  background: rgba(201,168,76,.08);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.living-detail-loading {
+  color: var(--text-4);
+  font-size: 13px;
+  padding: 36px 0;
+  text-align: center;
+}
+.living-detail-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.living-detail-form label { color: var(--text-3); }
+.living-detail-form textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-1);
+  padding: 10px 11px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+}
+@media (max-width: 760px) {
+  .living-detail-hero,
+  .living-detail-head { flex-direction: column; }
+  .living-detail-grid,
+  .living-detail-form { grid-template-columns: 1fr; }
+  .living-detail-modal { width: calc(100vw - 22px); }
+}
 .mastery-badge {
   display: inline-block;
   width: 8px; height: 8px;
@@ -6714,6 +6894,27 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
   </div>
 </div>
 
+<!-- Living Idea Detail Modal -->
+<div class="modal-overlay" id="livingIdeaModalOverlay" onclick="outsideLivingIdeaClose(event)">
+  <div class="modal living-detail-modal">
+    <div class="living-detail-head">
+      <div>
+        <div class="modal-title" id="livingIdeaModalTitle">Living Idea</div>
+        <div class="modal-sub" id="livingIdeaModalSub">Inspect the structure behind this insight.</div>
+      </div>
+      <button class="btn-ghost" onclick="closeLivingIdeaModal()">Close</button>
+    </div>
+    <div class="living-detail-body" id="livingIdeaModalBody">
+      <div class="living-detail-loading">Loading idea structure...</div>
+    </div>
+    <div class="living-detail-actions">
+      <button class="btn-sec" id="livingIdeaCancelEditBtn" onclick="renderLivingIdeaReadMode()" style="display:none">Cancel</button>
+      <button class="btn-amber" id="livingIdeaSaveBtn" onclick="saveLivingIdeaDetail()" style="display:none">Save</button>
+      <button class="btn-sec" id="livingIdeaEditBtn" onclick="startLivingIdeaEdit()">Edit Structure</button>
+    </div>
+  </div>
+</div>
+
 <!-- Tweet Modal -->
 <div class="modal-overlay" id="tweetModalOverlay" onclick="outsideTweetClose(event)">
   <div class="modal" style="width:520px">
@@ -6919,6 +7120,7 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="/livingIdeaViewModel.js"></script>
 <script>
 // ═══════════════════════════════════════
 // DATA
@@ -7818,6 +8020,10 @@ function buildIdeaCard(idea, idx) {
         <button class="idea-delete-no" onclick="cancelDeleteConfirm(this.closest('.idea-card'))">No</button>
       </div>
       <div class="idea-card-footer">
+        <button class="idea-inspect-btn" onclick="openIdeaDetail(this.closest('.idea-card'))">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/></svg>
+          Inspect
+        </button>
         <button class="idea-explore" onclick="exploreIdea('${safeTitle}')">
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14m-7-7l7 7-7 7"/></svg>
           Explore Further
@@ -7839,6 +8045,86 @@ function buildIdeaCard(idea, idx) {
     </div>
   `;
   return card;
+}
+
+let _activeLivingIdea = null;
+let _activeLivingIdeaCard = null;
+
+function cardPayloadFromIdeaCard(card) {
+  return {
+    ideaId: card?.dataset?.ideaId || '',
+    title: card?.dataset?.title || '',
+    body: card?.dataset?.body || '',
+    tags: (card?.dataset?.tags || '').split(',').map(t => t.trim()).filter(Boolean)
+  };
+}
+
+async function fetchLivingIdeaForCard(card) {
+  const cardData = cardPayloadFromIdeaCard(card);
+  if (!cardData.ideaId) return WriteFlowLivingIdeaView.fallbackFromIdeaCard(cardData);
+  const rows = await api('GET', `/living-ideas?idea_id=${encodeURIComponent(cardData.ideaId)}`);
+  if (Array.isArray(rows) && rows[0]) return rows[0];
+  return WriteFlowLivingIdeaView.fallbackFromIdeaCard(cardData);
+}
+
+async function openIdeaDetail(card) {
+  if (!card) return;
+  _activeLivingIdeaCard = card;
+  _activeLivingIdea = null;
+  document.getElementById('livingIdeaModalOverlay').classList.add('open');
+  document.getElementById('livingIdeaModalTitle').textContent = card.dataset.title || 'Living Idea';
+  document.getElementById('livingIdeaModalSub').textContent = 'Loading structured claim, evidence, boundaries, and mastery.';
+  document.getElementById('livingIdeaModalBody').innerHTML = '<div class="living-detail-loading">Loading idea structure...</div>';
+  document.getElementById('livingIdeaEditBtn').style.display = 'none';
+  document.getElementById('livingIdeaSaveBtn').style.display = 'none';
+  document.getElementById('livingIdeaCancelEditBtn').style.display = 'none';
+
+  _activeLivingIdea = await fetchLivingIdeaForCard(card);
+  renderLivingIdeaReadMode();
+}
+
+function renderLivingIdeaReadMode() {
+  if (!_activeLivingIdea || !_activeLivingIdeaCard) return;
+  const cardData = cardPayloadFromIdeaCard(_activeLivingIdeaCard);
+  const title = WriteFlowLivingIdeaView.fallbackFromIdeaCard(cardData).ideas.title;
+  document.getElementById('livingIdeaModalTitle').textContent = title;
+  document.getElementById('livingIdeaModalSub').textContent = _activeLivingIdea.isFallback
+    ? 'Legacy idea card. Create a fresh chapter distillation to make it fully editable.'
+    : 'Structured idea map for inspection and refinement.';
+  document.getElementById('livingIdeaModalBody').innerHTML = WriteFlowLivingIdeaView.renderReadOnly(_activeLivingIdea, cardData);
+  document.getElementById('livingIdeaEditBtn').style.display = _activeLivingIdea.id ? '' : 'none';
+  document.getElementById('livingIdeaSaveBtn').style.display = 'none';
+  document.getElementById('livingIdeaCancelEditBtn').style.display = 'none';
+}
+
+function startLivingIdeaEdit() {
+  if (!_activeLivingIdea?.id) { showToast('This idea does not have an editable structure yet'); return; }
+  document.getElementById('livingIdeaModalSub').textContent = 'Refine the idea structure without losing the original card.';
+  document.getElementById('livingIdeaModalBody').innerHTML = WriteFlowLivingIdeaView.renderEditForm(_activeLivingIdea);
+  document.getElementById('livingIdeaEditBtn').style.display = 'none';
+  document.getElementById('livingIdeaSaveBtn').style.display = '';
+  document.getElementById('livingIdeaCancelEditBtn').style.display = '';
+}
+
+async function saveLivingIdeaDetail() {
+  if (!_activeLivingIdea?.id) return;
+  const body = document.getElementById('livingIdeaModalBody');
+  const updates = WriteFlowLivingIdeaView.parseForm(body);
+  const saved = await api('PATCH', `/living-ideas/${_activeLivingIdea.id}`, updates);
+  if (!saved) { showToast('Could not save idea structure'); return; }
+  _activeLivingIdea = { ..._activeLivingIdea, ...saved };
+  renderLivingIdeaReadMode();
+  showToast('Idea structure saved');
+}
+
+function closeLivingIdeaModal() {
+  document.getElementById('livingIdeaModalOverlay').classList.remove('open');
+  _activeLivingIdea = null;
+  _activeLivingIdeaCard = null;
+}
+
+function outsideLivingIdeaClose(event) {
+  if (event.target.id === 'livingIdeaModalOverlay') closeLivingIdeaModal();
 }
 
 function editIdeaCard(card) {
@@ -10031,11 +10317,13 @@ async function loadBooksFromAPI() {
 
 // Real distill — calls OpenAI via backend
 async function distillIdeasFromAPI(bookId, chapterName, rawNotes) {
-  return await api('POST', '/distill', {
+  const result = await api('POST', '/living-ideas/distill', {
     book_id:      bookId,
     chapter_name: chapterName,
     raw_notes:    rawNotes
   });
+  if (result?.idea_cards) return { ...result, ideas: result.idea_cards };
+  return result;
 }
 
 // Real chat — calls OpenAI via backend

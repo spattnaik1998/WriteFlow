@@ -3,13 +3,6 @@ const express = require('express');
 const http = require('http');
 const path = require('path');
 
-function makeThenable(value) {
-  return {
-    then(resolve) {
-      return Promise.resolve(resolve(value));
-    }
-  };
-}
 
 function createQuery(table, state) {
   const query = {
@@ -47,7 +40,8 @@ function createQuery(table, state) {
     update(updates) {
       state.updates[table] = updates;
       return {
-        eq() {
+        eq(column, value) {
+          state.filters.push({ table, column, value });
           return {
             select() {
               return {
@@ -63,7 +57,8 @@ function createQuery(table, state) {
     delete() {
       state.deletes.push(table);
       return {
-        eq() {
+        eq(column, value) {
+          state.filters.push({ table, column, value });
           return Promise.resolve({ error: null });
         }
       };
@@ -207,9 +202,94 @@ async function testValidation() {
   });
 }
 
+async function testGetByIdeaIdReturnsLivingIdeaDetail() {
+  const state = {
+    book: null,
+    existingIdeas: [],
+    livingIdeasList: [{
+      id: 'living-1',
+      idea_id: 'idea-1',
+      claim: 'System 2 often rubber-stamps System 1.',
+      definition: 'A structured cognitive pattern.',
+      mechanism: 'Fluency reduces scrutiny.',
+      evidence: [{ text: 'WYSIATI narrows what is considered.', source: '' }],
+      examples: ['Halo effects'],
+      boundary_conditions: ['High-stakes review can interrupt it'],
+      counterarguments: ['Experts may detect fluency traps faster'],
+      open_questions: ['What makes scrutiny feel worthwhile?'],
+      compressed_principle: 'Fluency lowers verification pressure.',
+      connection_summary: 'Connects ease, judgment, and memory.',
+      mastery: { state: 'new', score: 0 },
+      ideas: { title: 'The Lazy Verifier', body: 'A public card.', tags: ['COGNITION'] }
+    }],
+    singleLivingIdea: null,
+    filters: [],
+    inserts: {},
+    updates: {},
+    deletes: []
+  };
+  const fakeSupabase = { from: table => createQuery(table, state) };
+  const fakeEngine = {
+    generateLivingIdeas: async () => ({ ideas: [] }),
+    livingIdeaToIdeaRow: () => ({}),
+    livingIdeaToDbRow: () => ({})
+  };
+
+  await withRoute({ fakeSupabase, fakeEngine }, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/living-ideas?idea_id=idea-1`);
+    const data = await response.json();
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(data.length, 1);
+    assert.strictEqual(data[0].claim, 'System 2 often rubber-stamps System 1.');
+    assert.deepStrictEqual(state.filters, [{ table: 'living_ideas', column: 'idea_id', value: 'idea-1' }]);
+  });
+}
+
+async function testPatchLivingIdeaDetailKeepsOnlySupportedFields() {
+  const state = {
+    book: null,
+    existingIdeas: [],
+    livingIdeasList: [],
+    singleLivingIdea: null,
+    filters: [],
+    inserts: {},
+    updates: {},
+    deletes: []
+  };
+  const fakeSupabase = { from: table => createQuery(table, state) };
+  const fakeEngine = {
+    generateLivingIdeas: async () => ({ ideas: [] }),
+    livingIdeaToIdeaRow: () => ({}),
+    livingIdeaToDbRow: () => ({})
+  };
+
+  await withRoute({ fakeSupabase, fakeEngine }, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/living-ideas/living-1`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        claim: 'Updated claim',
+        mechanism: 'Updated mechanism',
+        evidence: [{ text: 'Grounded quote', source: '' }],
+        unsupported_field: 'should not persist'
+      })
+    });
+    const data = await response.json();
+
+    assert.strictEqual(response.status, 200);
+    assert.strictEqual(data.id, 'living-1');
+    assert.strictEqual(data.claim, 'Updated claim');
+    assert.strictEqual(state.updates.living_ideas.unsupported_field, undefined);
+    assert.deepStrictEqual(state.updates.living_ideas.evidence, [{ text: 'Grounded quote', source: '' }]);
+    assert.deepStrictEqual(state.filters, [{ table: 'living_ideas', column: 'id', value: 'living-1' }]);
+  });
+}
 async function run() {
   await testDistillRoutePersistsIdeaCardsAndLivingIdeas();
   await testValidation();
+  await testGetByIdeaIdReturnsLivingIdeaDetail();
+  await testPatchLivingIdeaDetailKeepsOnlySupportedFields();
   console.log('livingIdeas route integration tests passed');
 }
 
