@@ -1,4 +1,5 @@
 const OpenAI = require('openai');
+const { ESSAY_QUALITY_SYSTEM_PROMPT, normalizeEssayProse } = require('./writingQuality');
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -1086,6 +1087,8 @@ async function generateCrossSynthesis({ book1, book2, notes1, notes2, ideas1, id
 
   const systemPrompt = `You are a cross-book synthesis essayist. Your task is to read notes and idea cards from two books a reader has completed, then write a deep, original synthesis essay in the exact style described below.
 
+${ESSAY_QUALITY_SYSTEM_PROMPT}
+
 STYLE MANDATE — model every formal choice on "The Dragon and Its Contradictions: Six Ideas at the Heart of China's Economic Transformation":
 
 1. Open with an INTRODUCTION section that:
@@ -1142,7 +1145,12 @@ OUTPUT FORMAT — return ONLY valid JSON:
   return {
     title:    raw.title    || 'Cross-Book Synthesis',
     subtitle: raw.subtitle || '',
-    sections: Array.isArray(raw.sections) ? raw.sections : []
+    sections: Array.isArray(raw.sections)
+      ? raw.sections.map(section => ({
+          ...section,
+          body: normalizeEssayProse(section.body || '', { allowHeadings: false })
+        }))
+      : []
   };
 }
 

@@ -2,6 +2,11 @@ const fs = require('fs/promises');
 const path = require('path');
 const supabase = require('./supabase');
 const { generateJson } = require('./llmClient');
+const {
+  ESSAY_QUALITY_SYSTEM_PROMPT,
+  normalizeEssayProse,
+  findEssayQualityIssues
+} = require('./writingQuality');
 
 const SESSION_DIR = path.join(process.cwd(), '.essay-agent', 'sessions');
 const MAX_TRANSCRIPT_ITEMS = 30;
@@ -793,17 +798,29 @@ function draftToSingleParagraph(text) {
 }
 
 function buildPendingProposal(rawProposal, session, evidencePacket) {
-  const afterMarkdown = typeof rawProposal?.after_markdown === 'string'
+  const rawAfterMarkdown = typeof rawProposal?.after_markdown === 'string'
     ? rawProposal.after_markdown.trim()
     : '';
+  const rawAfterExcerpt = typeof rawProposal?.after_excerpt === 'string'
+    ? rawProposal.after_excerpt.trim()
+    : '';
+  const requestedPatchMode = ['full_replace', 'append_paragraph'].includes(rawProposal.patch_mode)
+    ? rawProposal.patch_mode
+    : 'section_patch';
+  const paragraphPatch = requestedPatchMode === 'append_paragraph';
+  const afterMarkdown = normalizeEssayProse(rawAfterMarkdown, {
+    allowHeadings: !paragraphPatch,
+    paragraphMode: paragraphPatch
+  });
+  const afterExcerpt = normalizeEssayProse(rawAfterExcerpt || afterMarkdown, {
+    allowHeadings: !paragraphPatch,
+    paragraphMode: paragraphPatch
+  });
   if (!afterMarkdown || afterMarkdown === String(session.draft_markdown || '').trim()) {
     return null;
   }
 
   const hasDraft = Boolean(String(session.draft_markdown || '').trim());
-  const requestedPatchMode = ['full_replace', 'append_paragraph'].includes(rawProposal.patch_mode)
-    ? rawProposal.patch_mode
-    : 'section_patch';
 
   return {
     id: randomId(),
@@ -813,9 +830,10 @@ function buildPendingProposal(rawProposal, session, evidencePacket) {
     focus_section: clip(rawProposal.focus_section || 'Draft-wide suggestion', 120),
     patch_mode: hasDraft ? requestedPatchMode : 'append_paragraph',
     before_excerpt: String(rawProposal.before_excerpt || session.draft_markdown || '').trim(),
-    after_excerpt: String(rawProposal.after_excerpt || afterMarkdown || '').trim(),
+    after_excerpt: afterExcerpt,
     after_markdown: afterMarkdown,
     working_thesis: clip(rawProposal.working_thesis || evidencePacket?.working_thesis || '', 220),
+    quality_issues: findEssayQualityIssues(afterExcerpt, { allowBullets: false }),
     created_at: nowIso()
   };
 }
@@ -1560,6 +1578,8 @@ async function draftEssayResponse(session, context, plan, evidencePacket, toolTr
   const proposalMode = shouldUseProposalMode(session, plan, userMessage);
   const systemPrompt = `You are WriteFlow's essay drafting engine.
 
+${ESSAY_QUALITY_SYSTEM_PROMPT}
+
 Write like a sharp student writer producing a strong college paper: clear thesis, disciplined argument, coherent paragraph transitions, and real conceptual explanation.
 The purpose of the writing is to distill sophisticated concepts so the audience can actually understand them without diluting the ideas.
 Treat the user's notes as the governing source material and preserve their intellectual framing, distinctions, and implied causal logic.
@@ -1623,7 +1643,9 @@ Rules:
 - When proposing a section patch, "before_excerpt" must match text from the current draft and "after_excerpt" should be the minimally changed replacement.
 - Do not include headings inside a paragraph response.
 - Default to prose, not section headings.
-- Do not fabricate quotations.`;
+- Do not fabricate quotations.
+- If response_mode is not "outline", do not write the essay body as bullets, numbered lists, or fragments.
+- Ensure the final prose is copy-edited before placing it in JSON fields.`;
 
   const userPrompt = JSON.stringify({
     topic: session.topic,
@@ -1652,14 +1674,24 @@ Rules:
       maxTokens: 2600
     });
 
+    const rawDraftMarkdown = typeof llm.data?.draft_markdown === 'string'
+      ? llm.data.draft_markdown
+      : session.draft_markdown;
+    const shouldNormalizeDraft = !proposalMode && !['outline', 'critique'].includes(plan.response_mode);
+    const draftMarkdown = shouldNormalizeDraft
+      ? normalizeEssayProse(rawDraftMarkdown, {
+          allowHeadings: plan.response_mode !== 'paragraph',
+          paragraphMode: plan.response_mode === 'paragraph'
+        })
+      : rawDraftMarkdown;
+
     return {
       mode: llm.data?.mode || (proposalMode ? 'proposal_only' : 'direct_update'),
       assistant_message: llm.data?.assistant_message || 'I advanced the essay with a tighter synthesis pass.',
-      draft_markdown: typeof llm.data?.draft_markdown === 'string'
-        ? llm.data.draft_markdown
-        : session.draft_markdown,
+      draft_markdown: draftMarkdown,
       proposals: Array.isArray(llm.data?.proposals) ? llm.data.proposals : [],
       memory_patch: llm.data?.memory_patch || {},
+      quality_issues: shouldNormalizeDraft ? findEssayQualityIssues(draftMarkdown, { allowBullets: false }) : [],
       backend: llm.backend,
       model: llm.model,
       fallback_reason: llm.fallback_reason || ''
