@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createEssaySession, loadSession, runEssayAgentTurn, resolveDraftProposal, reviseDraftProposal } = require('../services/essayAgent');
+const { createEssaySession, loadSession, saveSession, runEssayAgentTurn, resolveDraftProposal, reviseDraftProposal } = require('../services/essayAgent');
 const { parseUploadedDocument } = require('../services/documentParser');
 const { listWritingBackends } = require('../services/llmClient');
 
@@ -170,6 +170,9 @@ router.post('/session/:id/message', async (req, res) => {
       plan: result.plan,
       evidence_packet: result.evidence_packet,
       tool_registry: result.session.tool_registry || {},
+      critique: result.critique || null,
+      loop_intervention_fired: result.loop_intervention_fired || false,
+      memory_compacted: result.memory_compacted || false,
       backend: result.backend,
       model: result.model,
       fallback_reason: result.fallback_reason
@@ -205,6 +208,67 @@ router.post('/session/:id/proposals/:proposalId', async (req, res) => {
     console.error('[essay-agent/proposals] resolve failed:', error.message);
     res.status(500).json({ error: error.message });
   }
+});
+
+// POST /session/:id/docs — attach supporting documents to an ACTIVE session so the harness
+// can integrate ancillary material (papers, PDFs, pasted text) mid-conversation.
+router.post('/session/:id/docs', async (req, res) => {
+  const { files = [], paste = null } = req.body || {};
+  let session;
+  try {
+    session = await loadSession(req.params.id);
+  } catch (err) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  const newDocs = [];
+
+  for (const file of files) {
+    try {
+      const doc = await parseUploadedDocument({ name: file.name, mimeType: file.mime_type, base64: file.base64 });
+      newDocs.push({
+        id: file.id || `doc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+        title: doc.title,
+        mime_type: doc.mime_type,
+        source: 'file upload',
+        content: doc.content
+      });
+    } catch (err) {
+      return res.status(422).json({ error: `Could not parse ${file.name}: ${err.message}` });
+    }
+  }
+
+  if (paste && String(paste.content || '').trim()) {
+    newDocs.push({
+      id: `doc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      title: String(paste.title || 'Pasted document').trim(),
+      mime_type: 'text/plain',
+      source: 'pasted text',
+      content: String(paste.content).slice(0, 30000)
+    });
+  }
+
+  if (!newDocs.length) return res.status(400).json({ error: 'No documents provided' });
+
+  session.uploaded_docs = [...(session.uploaded_docs || []), ...newDocs];
+
+  // Update memory so the planner knows about the new sources on the next turn.
+  const newTitles = newDocs.map(d => `Document: ${d.title}`);
+  const newFindings = newDocs.map(d => `New document added mid-session: "${d.title}"`);
+  session.memory = session.memory || {};
+  session.memory.source_ledger = [...new Set([...(session.memory.source_ledger || []), ...newTitles])].slice(0, 16);
+  session.memory.recent_findings = [...new Set([...(session.memory.recent_findings || []), ...newFindings])].slice(0, 8);
+
+  try {
+    await saveSession(session);
+  } catch (err) {
+    return res.status(500).json({ error: 'Failed to save session: ' + err.message });
+  }
+
+  res.json({
+    added: newDocs.map(d => ({ id: d.id, title: d.title, source: d.source, mime_type: d.mime_type })),
+    total_docs: session.uploaded_docs.length
+  });
 });
 
 module.exports = router;

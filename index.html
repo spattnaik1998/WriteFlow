@@ -6319,6 +6319,16 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
                 <div class="essay-panel-label" style="margin-top:14px">Open Questions</div>
                 <ul class="essay-memory-list" id="essayQuestionList"><li>None yet.</li></ul>
               </div>
+              <div class="essay-memory-card" id="essayCritiqueCard" style="display:none">
+                <div class="essay-panel-title">Harness Critique</div>
+                <div class="essay-panel-sub" id="essayCritiqueSummary"></div>
+                <div class="essay-panel-label" style="margin-top:14px">Weak Sections</div>
+                <ul class="essay-memory-list" id="essayCritiqueWeak"></ul>
+                <div class="essay-panel-label" style="margin-top:14px">Logical Gaps</div>
+                <ul class="essay-memory-list" id="essayCritiqueGaps"></ul>
+                <div class="essay-panel-label" style="margin-top:14px">Unsupported Claims</div>
+                <ul class="essay-memory-list" id="essayCritiqueUnsupported"></ul>
+              </div>
               <div class="essay-source-card">
                 <div class="essay-panel-title">Sources in Play</div>
                 <div class="essay-panel-sub">Selected books and attached docs available to the harness.</div>
@@ -6352,6 +6362,8 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
                 <button class="btn-sec btn-sm" onclick="essayQuickPrompt('Revise the current draft for tighter reasoning and stronger evidence.')">Revise Draft</button>
               </div>
               <div class="essay-composer">
+                <input type="file" id="essayMidSessionDocInput" accept=".pdf,.docx,.txt,.md" style="display:none" onchange="essayAttachDocToSession(this.files)">
+                <button class="btn-sec btn-sm" id="essayAttachDocBtn" type="button" title="Attach a document to this session" onclick="document.getElementById('essayMidSessionDocInput').click()">📎</button>
                 <input class="essay-input" id="essayMessageInput" type="text" placeholder="Ask the agent to draft, revise, inspect a source, or type /clear to reset memory…" onkeydown="if(event.key==='Enter')essaySendMessage()">
                 <button class="btn-amber" id="essaySendBtn" onclick="essaySendMessage()">Send</button>
               </div>
@@ -12342,6 +12354,49 @@ function essayRenderPillRow(elId, items, emptyText) {
     : `<span class="essay-chip">${escapeHtml(emptyText)}</span>`;
 }
 
+// Renders the structured outline with a status dot per section. Handles both the new
+// object shape ({heading, claim, status}) and legacy string items from older sessions.
+function essayRenderOutline(items) {
+  const el = document.getElementById('essayOutlineList');
+  if (!el) return;
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) {
+    el.innerHTML = '<li>No outline yet.</li>';
+    return;
+  }
+  const colors = { pending: '#6b6b6b', drafted: '#c9a84c', accepted: '#4c9a5a' };
+  el.innerHTML = list.map(raw => {
+    const item = (raw && typeof raw === 'object') ? raw : { heading: String(raw || ''), claim: '', status: 'pending' };
+    const status = ['pending', 'drafted', 'accepted'].includes(item.status) ? item.status : 'pending';
+    const dot = `<span title="${status}" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colors[status]};margin-right:8px;flex:0 0 auto"></span>`;
+    const claim = item.claim
+      ? `<div style="color:var(--text-3);font-size:0.85em;margin-left:16px">${escapeHtml(item.claim)}</div>`
+      : '';
+    return `<li style="display:block"><span style="display:flex;align-items:center">${dot}<span>${escapeHtml(item.heading || '')}</span></span>${claim}</li>`;
+  }).join('');
+}
+
+// Surfaces the self-critique pass produced by the harness after drafting turns.
+function essayRenderCritique(critique) {
+  const card = document.getElementById('essayCritiqueCard');
+  if (!card) return;
+  const hasContent = critique && (
+    (critique.critique_summary || '').trim() ||
+    (critique.weak_sections || []).length ||
+    (critique.logical_gaps || []).length ||
+    (critique.unsupported_claims || []).length
+  );
+  if (!hasContent) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+  document.getElementById('essayCritiqueSummary').textContent = critique.critique_summary || '';
+  essayRenderList('essayCritiqueWeak', critique.weak_sections, 'None flagged.');
+  essayRenderList('essayCritiqueGaps', critique.logical_gaps, 'None flagged.');
+  essayRenderList('essayCritiqueUnsupported', critique.unsupported_claims, 'None flagged.');
+}
+
 function essayRenderPlan(plan, evidencePacket) {
   _essayLastPlan = plan || null;
   _essayEvidencePacket = evidencePacket || null;
@@ -12487,7 +12542,7 @@ function essayRenderMemory(memory) {
   document.getElementById('essayThesisText').textContent = memory?.working_thesis || 'Start a session to generate a thesis.';
   document.getElementById('essayNarrativeArc').textContent = memory?.narrative_arc || 'No arc defined yet.';
   document.getElementById('essayPhaseBadge').textContent = String(memory?.phase || 'Planning').replace(/_/g, ' ');
-  essayRenderList('essayOutlineList', memory?.outline, 'No outline yet.');
+  essayRenderOutline(memory?.outline);
   essayRenderList('essayArgumentList', memory?.argument_map, 'No argument spine yet.');
   essayRenderPillRow('essayIntersectionPills', memory?.intersections, 'No intersections yet');
   essayRenderList('essayTensionList', memory?.tensions, 'No tensions mapped yet.');
@@ -12638,9 +12693,18 @@ async function essaySendMessage(messageOverride = '') {
   essayRenderTranscript();
   essayRenderDraft(data.draft_markdown || '');
   essayRenderMemory(data.memory || null);
+  essayRenderCritique(data.critique || null);
   essayRenderPlan(_essayLastPlan, _essayEvidencePacket);
   essayRenderToolTrace(_essayToolTrace);
   essayRenderPendingUpdates(_essayPendingUpdates);
+
+  if (data.loop_intervention_fired) {
+    essayAppendSystemNotice('Drafting with known gaps — the harness detected repeated tool calls and advanced to writing with the evidence already gathered.');
+  }
+
+  if (data.memory_compacted) {
+    essayAppendSystemNotice('Working memory compacted — overlapping findings were synthesized to keep the context sharp.');
+  }
 
   const newTools = (_essayToolTrace || []).filter(t => t.is_custom && t.created_new_tool);
   if (newTools.length > 0) {
@@ -12658,6 +12722,54 @@ async function essaySendMessage(messageOverride = '') {
 
 function essayQuickPrompt(message) {
   essaySendMessage(message);
+}
+
+async function essayAttachDocToSession(fileList) {
+  const file = fileList && fileList[0];
+  const inputEl = document.getElementById('essayMidSessionDocInput');
+  if (!file) return;
+  if (!_essaySessionId) {
+    showToast('Start an essay session before attaching documents');
+    if (inputEl) inputEl.value = '';
+    return;
+  }
+
+  showToast('Parsing document…');
+  let base64;
+  try {
+    base64 = await essayFileToBase64(file);
+  } catch (e) {
+    showToast(`Could not read ${file.name}`);
+    if (inputEl) inputEl.value = '';
+    return;
+  }
+
+  const data = await api('POST', `/essay-agent/session/${_essaySessionId}/docs`, {
+    files: [{ id: `doc-${Date.now().toString(36)}`, name: file.name, mime_type: file.type || '', base64 }]
+  });
+  if (inputEl) inputEl.value = '';
+
+  if (!data?.added?.length) {
+    showToast('Document upload failed');
+    return;
+  }
+
+  const doc = data.added[0];
+  _essayDocs.push({
+    id: doc.id,
+    title: doc.title,
+    source: doc.source || 'file upload',
+    mime_type: doc.mime_type || 'text/plain',
+    content: ''
+  });
+  essayRenderDocList();
+  essayRenderSourceList();
+  _essayTranscript.push({
+    role: 'assistant',
+    content: `📄 "${doc.title}" added to context. Mention it in your next message to have the harness integrate it.`
+  });
+  essayRenderTranscript();
+  showToast(`${doc.title} added to session`);
 }
 
 async function essayResolveProposal(proposalId, action) {

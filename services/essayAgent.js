@@ -8,6 +8,11 @@ const MAX_TRANSCRIPT_ITEMS = 30;
 const MAX_TOOL_STEPS = 5;
 const MAX_TOOL_CALLS_PER_PLAN = 3;
 const MAX_PENDING_PROPOSALS = 4;
+const CACHE_MAX = 20;
+const TRANSCRIPT_SUMMARY_TRIGGER = 40;       // summarize when un-summarized entries exceed this
+const TRANSCRIPT_KEEP_RECENT = 20;           // entries always kept verbatim in prompts
+const MEMORY_COMPACT_EVERY_N_TURNS = 6;      // periodic memory compaction cadence
+const MEMORY_COMPACT_CHAR_THRESHOLD = 8000;  // or when serialized memory exceeds this
 
 function nowIso() {
   return new Date().toISOString();
@@ -58,6 +63,72 @@ function matchesSlashCommand(input, command) {
 
 function dedupeList(list, limit = 8) {
   return [...new Set((Array.isArray(list) ? list : []).filter(Boolean))].slice(0, limit);
+}
+
+const OUTLINE_STATUS_RANK = { pending: 0, drafted: 1, accepted: 2 };
+
+function normalizeOutlineItem(item) {
+  if (typeof item === 'string') {
+    return { heading: item.trim(), claim: '', evidence_refs: [], status: 'pending' };
+  }
+  if (item && typeof item === 'object') {
+    return {
+      heading: String(item.heading || '').trim(),
+      claim: String(item.claim || '').trim(),
+      evidence_refs: Array.isArray(item.evidence_refs)
+        ? item.evidence_refs.filter(Boolean).map(String).slice(0, 6)
+        : [],
+      status: ['pending', 'drafted', 'accepted'].includes(item.status) ? item.status : 'pending'
+    };
+  }
+  return { heading: '', claim: '', evidence_refs: [], status: 'pending' };
+}
+
+function normalizeOutlineList(list, limit = 8) {
+  return (Array.isArray(list) ? list : [])
+    .map(normalizeOutlineItem)
+    .filter(item => item.heading)
+    .slice(0, limit);
+}
+
+// Merge two structured outlines by heading, preserving the most advanced status and any
+// claim/evidence detail that has been filled in over successive turns.
+function mergeOutline(existing = [], incoming = []) {
+  const byHeading = new Map();
+  [...(Array.isArray(existing) ? existing : []), ...(Array.isArray(incoming) ? incoming : [])]
+    .map(normalizeOutlineItem)
+    .filter(item => item.heading)
+    .forEach(item => {
+      const key = normalizeSearchText(item.heading);
+      const prev = byHeading.get(key);
+      if (prev) {
+        byHeading.set(key, {
+          heading: prev.heading,
+          claim: item.claim || prev.claim,
+          evidence_refs: dedupeList([...prev.evidence_refs, ...item.evidence_refs], 6),
+          status: OUTLINE_STATUS_RANK[item.status] >= OUTLINE_STATUS_RANK[prev.status] ? item.status : prev.status
+        });
+      } else {
+        byHeading.set(key, item);
+      }
+    });
+  return [...byHeading.values()].slice(0, 10);
+}
+
+// Promote outline item statuses to match what has landed in the section ledger, so the
+// planner and UI can see which outlined sections are now drafted or accepted.
+function syncOutlineStatusWithLedger(session, status = 'drafted') {
+  const memory = session.memory || {};
+  const outline = normalizeOutlineList(memory.outline, 10);
+  if (!outline.length) return;
+  const ledger = session.section_ledger || {};
+  session.memory.outline = outline.map(item => {
+    const drafted = ledger[normalizeSearchText(item.heading)];
+    if (drafted && OUTLINE_STATUS_RANK[status] > OUTLINE_STATUS_RANK[item.status]) {
+      return { ...item, status };
+    }
+    return item;
+  });
 }
 
 function sessionFile(id) {
@@ -161,6 +232,8 @@ async function createEssaySession({ topic, audience, tone, backend, model, bookI
       content: String(doc.content || '').slice(0, 30000)
     })),
     transcript: [],
+    transcript_summary: '',
+    transcript_summary_upto: 0,
     draft_markdown: '',
     memory: createInitialMemory({ topic, audience, tone, selectedBooks, uploadedDocs }),
     last_tool_trace: [],
@@ -170,7 +243,8 @@ async function createEssaySession({ topic, audience, tone, backend, model, bookI
     tool_registry: {},
     action_history: [],
     turn_count: 0,
-    section_ledger: {}
+    section_ledger: {},
+    evidence_cache: {}
   };
 
   await saveSession(session);
@@ -641,9 +715,16 @@ function mergeMemory(memory, patch = {}) {
   Object.entries(patch).forEach(([key, value]) => {
     if (value === undefined || value === null || value === '') return;
 
+    if (key === 'outline') {
+      merged.outline = mergeOutline(merged.outline, Array.isArray(value) ? value : [value]);
+      return;
+    }
+
     if (Array.isArray(value)) {
       if (Array.isArray(merged[key])) {
-        merged[key] = dedupeList([...merged[key], ...value], 10);
+        // Newest-wins: fresh items land first so re-asserted items refresh their position
+        // and items never re-mentioned decay off the tail.
+        merged[key] = dedupeList([...value, ...merged[key]], 10);
       } else {
         merged[key] = dedupeList(value, 10);
       }
@@ -660,12 +741,18 @@ function mergeMemory(memory, patch = {}) {
   return merged;
 }
 
-function compactTranscript(transcript = []) {
-  return transcript.slice(-MAX_TRANSCRIPT_ITEMS).map(entry => ({
+function compactTranscript(session) {
+  const transcript = (session && session.transcript) || [];
+  const upto = (session && session.transcript_summary_upto) || 0;
+  const recent = transcript.slice(Math.max(upto, transcript.length - MAX_TRANSCRIPT_ITEMS));
+  const mapped = recent.map(entry => ({
     role: entry.role,
     content: clip(entry.content, entry.role === 'tool' ? 1000 : entry.role === 'user' ? 900 : 700),
     name: entry.name || undefined
   }));
+  return session && session.transcript_summary
+    ? [{ role: 'system', content: `[Rolling summary of earlier session] ${clip(session.transcript_summary, 2000)}` }, ...mapped]
+    : mapped;
 }
 
 function compactToolTrace(toolTrace = []) {
@@ -763,6 +850,19 @@ function applyProposalPatch(currentDraft, proposal) {
 }
 
 async function executeTool({ tool, args }, context, session) {
+  const cacheKey = `${tool}::${normalizeSearchText(JSON.stringify(args || {}))}`;
+  if (session.evidence_cache && session.evidence_cache[cacheKey]) {
+    return { ...session.evidence_cache[cacheKey], _cache_hit: true };
+  }
+  const result = await _executeToolUncached({ tool, args }, context, session);
+  if (!session.evidence_cache) session.evidence_cache = {};
+  session.evidence_cache[cacheKey] = result;
+  const keys = Object.keys(session.evidence_cache);
+  if (keys.length > CACHE_MAX) delete session.evidence_cache[keys[0]];
+  return result;
+}
+
+async function _executeToolUncached({ tool, args }, context, session) {
   if (tool === 'search_library') {
     return searchLibrary(context, session, args.query || session.topic);
   }
@@ -998,6 +1098,8 @@ function clearSessionMemory(session) {
     uploadedDocs: session.uploaded_docs || []
   });
   session.transcript = [];
+  session.transcript_summary = '';
+  session.transcript_summary_upto = 0;
   session.last_tool_trace = [];
   session.last_plan = null;
   session.last_evidence_packet = null;
@@ -1006,6 +1108,7 @@ function clearSessionMemory(session) {
   session.action_history = [];
   session.turn_count = 0;
   session.section_ledger = {};
+  session.evidence_cache = {};
   return session;
 }
 
@@ -1113,10 +1216,13 @@ function synthesizeProposalFromEvidence(session, evidencePacket, plan) {
 
 function buildSpecificationAnchor(session) {
   const memory = session.memory || {};
-  const outline = Array.isArray(memory.outline) ? memory.outline.slice(0, 8) : [];
+  const outline = normalizeOutlineList(memory.outline, 8);
   const gapCount = Array.isArray(memory.evidence_gaps) ? memory.evidence_gaps.length : 0;
   const outlineText = outline.length
-    ? outline.map((item, i) => `  ${i + 1}. ${item}`).join('\n')
+    ? outline.map((item, i) => {
+        const claimText = item.claim ? `: "${item.claim}"` : '';
+        return `  ${i + 1}. [${item.status}] ${item.heading}${claimText}`;
+      }).join('\n')
     : '  (no outline yet)';
   return [
     '## ESSAY SPECIFICATION ANCHOR',
@@ -1176,10 +1282,10 @@ function buildProgressStatus(session) {
   const draft = String(session.draft_markdown || '');
   const wordCount = draft.split(/\s+/).filter(Boolean).length;
   const memory = session.memory || {};
-  const outline = Array.isArray(memory.outline) ? memory.outline : [];
+  const outline = normalizeOutlineList(memory.outline, 10);
   const gapCount = Array.isArray(memory.evidence_gaps) ? memory.evidence_gaps.length : 0;
   const ledger = session.section_ledger || {};
-  const coveredSections = outline.filter(item => ledger[normalizeSearchText(item)]).length;
+  const coveredSections = outline.filter(item => ledger[normalizeSearchText(item.heading)]).length;
   let status;
   if (turn <= 3 || !draft.trim()) status = 'BUILDING';
   else if (gapCount === 0) status = 'NEAR_COMPLETE';
@@ -1208,13 +1314,13 @@ function buildSectionLedgerSummary(session) {
   const ledger = session.section_ledger || {};
   const drafted = Object.values(ledger);
   const memory = session.memory || {};
-  const outline = Array.isArray(memory.outline) ? memory.outline : [];
-  const notDrafted = outline.filter(item => !ledger[normalizeSearchText(item)]);
+  const outline = normalizeOutlineList(memory.outline, 10);
+  const notDrafted = outline.filter(item => !ledger[normalizeSearchText(item.heading)]);
   const draftedLines = drafted.length
     ? drafted.map(s => `  - ${s.heading} (H${s.level}, turn ${s.turn_accepted})`).join('\n')
     : '  (none yet)';
   const missingLines = notDrafted.length
-    ? notDrafted.map(item => `  - ${item}`).join('\n')
+    ? notDrafted.map(item => `  - ${item.heading}${item.claim ? `: "${item.claim}"` : ''}`).join('\n')
     : '  (all outlined sections present)';
   return [
     '## SECTION LEDGER',
@@ -1291,7 +1397,7 @@ Rules:
     progress_status: buildProgressStatus(session),
     user_message: userMessage,
     current_draft: clip(session.draft_markdown, 5000),
-    transcript: compactTranscript(session.transcript)
+    transcript: compactTranscript(session)
   }, null, 2);
 
   try {
@@ -1377,7 +1483,7 @@ Return ONLY valid JSON:
 {
   "working_thesis": "string",
   "narrative_arc": "string",
-  "outline": ["string"],
+  "outline": [{"heading": "string", "claim": "one-sentence argument claim for this section", "evidence_refs": ["book / chapter / idea label the claim rests on"]}],
   "argument_map": ["string"],
   "intersections": ["string"],
   "tensions": ["string"],
@@ -1419,7 +1525,7 @@ Rules:
     return {
       working_thesis: clip(llm.data?.working_thesis || session.memory?.working_thesis || '', 360),
       narrative_arc: clip(llm.data?.narrative_arc || session.memory?.narrative_arc || '', 260),
-      outline: clipList(llm.data?.outline, 8, 220),
+      outline: normalizeOutlineList(llm.data?.outline),
       argument_map: clipList(llm.data?.argument_map, 8, 260),
       intersections: clipList(llm.data?.intersections, 8, 220),
       tensions: clipList(llm.data?.tensions, 8, 220),
@@ -1435,7 +1541,7 @@ Rules:
     return {
       working_thesis: session.memory?.working_thesis || '',
       narrative_arc: session.memory?.narrative_arc || '',
-      outline: clipList(session.memory?.outline, 8, 220),
+      outline: normalizeOutlineList(session.memory?.outline),
       argument_map: clipList(session.memory?.argument_map, 8, 260),
       intersections: [],
       tensions: [],
@@ -1563,7 +1669,7 @@ Rules:
       ? draftToSingleParagraph([
           evidencePacket.working_thesis || `The core argument about ${session.topic} is still consolidating.`,
           evidencePacket.argument_map?.[0] || '',
-          evidencePacket.intersections?.[0] || evidencePacket.outline?.[0] || ''
+          evidencePacket.intersections?.[0] || evidencePacket.outline?.[0]?.heading || ''
         ].filter(Boolean).join(' '))
       : (session.draft_markdown || [
           `# ${session.topic}`,
@@ -1572,7 +1678,7 @@ Rules:
           evidencePacket.working_thesis || 'A thesis is still forming.',
           '',
           '## Outline',
-          ...(Array.isArray(evidencePacket?.outline) && evidencePacket.outline.length ? evidencePacket.outline.map(item => `- ${item}`) : ['- Gather stronger evidence before drafting.']),
+          ...(Array.isArray(evidencePacket?.outline) && evidencePacket.outline.length ? evidencePacket.outline.map(item => `- ${item.heading || item}`) : ['- Gather stronger evidence before drafting.']),
           '',
           '## Open Questions',
           ...(Array.isArray(evidencePacket?.open_questions) && evidencePacket.open_questions.length ? evidencePacket.open_questions.map(item => `- ${item}`) : ['- Tighten the thesis with another pass.'])
@@ -1591,6 +1697,182 @@ Rules:
       model: session.model,
       fallback_reason: error.message
     };
+  }
+}
+
+async function critiqueDraftQuality(session, evidencePacket, draftMarkdown) {
+  const systemPrompt = `You are a rigorous academic editor reviewing a draft essay.
+Evaluate the draft against the working thesis and evidence packet.
+Return ONLY valid JSON:
+{
+  "weak_sections": ["section heading or opening phrase that is underargued"],
+  "unsupported_claims": ["claim made without grounding in the retrieved evidence"],
+  "logical_gaps": ["gap in reasoning: A is stated, but B does not follow"],
+  "critique_summary": "Two-sentence overall assessment"
+}
+Rules:
+- Be specific. Quote or closely paraphrase the problematic text.
+- Only flag real problems. Do not fabricate issues.
+- Keep each item under 180 characters.`;
+
+  const userPrompt = JSON.stringify({
+    topic: session.topic,
+    working_thesis: evidencePacket?.working_thesis || session.memory?.working_thesis || '',
+    argument_map: evidencePacket?.argument_map || [],
+    draft_markdown: String(draftMarkdown || '').slice(0, 6000)
+  }, null, 2);
+
+  try {
+    const llm = await generateJson({
+      backend: session.backend,
+      model: session.model || undefined,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.2,
+      maxTokens: 900
+    });
+    return {
+      weak_sections: clipList(llm.data?.weak_sections, 5, 180),
+      unsupported_claims: clipList(llm.data?.unsupported_claims, 5, 180),
+      logical_gaps: clipList(llm.data?.logical_gaps, 5, 180),
+      critique_summary: clip(llm.data?.critique_summary || '', 320)
+    };
+  } catch (_err) {
+    return null;
+  }
+}
+
+// Rolling transcript summarization. Folds older transcript entries into a cumulative summary
+// so long sessions keep early decisions/constraints in view instead of losing them to the
+// last-30 truncation window. session.transcript itself is never pruned (the UI renders it).
+async function summarizeTranscriptIfNeeded(session) {
+  const transcript = Array.isArray(session.transcript) ? session.transcript : [];
+  const upto = session.transcript_summary_upto || 0;
+  const unsummarized = transcript.length - upto;
+  if (unsummarized <= TRANSCRIPT_SUMMARY_TRIGGER) return null;
+
+  const cutoff = transcript.length - TRANSCRIPT_KEEP_RECENT;
+  if (cutoff <= upto) return null;
+
+  const toFold = transcript.slice(upto, cutoff).map(entry => ({
+    role: entry.role,
+    name: entry.name || undefined,
+    content: clip(entry.content, entry.role === 'tool' ? 500 : 700)
+  }));
+  if (!toFold.length) return null;
+
+  const systemPrompt = `You are the conversation memory engine for WriteFlow's essay harness.
+Fold the provided older conversation turns into the existing rolling summary so nothing
+important is lost when they scroll out of the model's recent-window.
+
+Preserve carefully:
+- user decisions and explicit constraints
+- proposals that were accepted or rejected, and the reason
+- directions the user explicitly abandoned or ruled out
+- requests that are still unresolved
+
+Compress tool chatter and retrieval noise aggressively; keep only what changes how the essay
+should be written. Produce a single cumulative summary (do not drop facts already in the
+previous summary unless they were superseded).
+
+Return ONLY valid JSON: { "summary": "string" }
+Keep the summary under 2000 characters.`;
+
+  const userPrompt = JSON.stringify({
+    previous_summary: session.transcript_summary || '',
+    older_turns_to_fold: toFold
+  }, null, 2);
+
+  try {
+    const llm = await generateJson({
+      backend: session.backend,
+      model: session.model || undefined,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.2,
+      maxTokens: 1200
+    });
+    const summary = typeof llm.data?.summary === 'string' ? llm.data.summary.trim() : '';
+    if (!summary) return null;
+    session.transcript_summary = clip(summary, 2000);
+    session.transcript_summary_upto = cutoff;
+    return session.transcript_summary;
+  } catch (_err) {
+    return null;
+  }
+}
+
+// Threshold-triggered memory compaction. Consolidates the volatile list fields of working
+// memory into sharper, deduplicated statements so the planner/drafter context stays crisp
+// over long sessions. Durable fields (thesis, arc, outline, spec) are never touched.
+async function compressSessionMemory(session) {
+  const memory = session.memory || {};
+  const compressibleKeys = [
+    'argument_map', 'intersections', 'tensions', 'evidence_gaps', 'open_questions',
+    'recent_findings', 'source_ledger', 'critique_notes', 'next_actions'
+  ];
+
+  const systemPrompt = `You are the working-memory consolidation engine for WriteFlow's essay harness.
+
+Consolidate ONLY these list fields: argument_map, intersections, tensions, evidence_gaps,
+open_questions, recent_findings, source_ledger, critique_notes, next_actions.
+
+Rules:
+- Merge overlapping or duplicate items into single, sharper statements.
+- Drop open_questions and evidence_gaps that the current draft or later findings have resolved.
+- Distill recent_findings into durable insights; fold enduring ones into argument_map where apt.
+- Preserve conceptual precision and the user's vocabulary; do not invent new claims.
+- NEVER alter, invent, or return: working_thesis, narrative_arc, outline, topic, audience,
+  tone, style_directives, revision_policy.
+
+Return ONLY valid JSON containing exactly these keys (arrays of concise strings):
+{
+  "argument_map": [], "intersections": [], "tensions": [], "evidence_gaps": [],
+  "open_questions": [], "recent_findings": [], "source_ledger": [], "critique_notes": [],
+  "next_actions": []
+}`;
+
+  const userPrompt = JSON.stringify({
+    working_thesis: memory.working_thesis || '',
+    current_draft_excerpt: clip(session.draft_markdown, 3000),
+    memory_lists: compressibleKeys.reduce((acc, key) => {
+      acc[key] = Array.isArray(memory[key]) ? memory[key] : [];
+      return acc;
+    }, {})
+  }, null, 2);
+
+  const beforeChars = JSON.stringify(memory).length;
+
+  try {
+    const llm = await generateJson({
+      backend: session.backend,
+      model: session.model || undefined,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.2,
+      maxTokens: 1400
+    });
+    const data = llm.data;
+    if (!data || typeof data !== 'object') return null;
+
+    let touched = false;
+    compressibleKeys.forEach(key => {
+      if (Array.isArray(data[key])) {
+        memory[key] = clipList(data[key], 10, 240);
+        touched = true;
+      }
+    });
+    if (!touched) return null;
+
+    const afterChars = JSON.stringify(memory).length;
+    memory.compaction_log = [
+      ...(Array.isArray(memory.compaction_log) ? memory.compaction_log : []),
+      { turn: session.turn_count, before_chars: beforeChars, after_chars: afterChars, at: nowIso() }
+    ].slice(-5);
+    session.memory = memory;
+    return memory.compaction_log[memory.compaction_log.length - 1];
+  } catch (_err) {
+    return null;
   }
 }
 
@@ -1622,12 +1904,32 @@ async function runEssayAgentTurn(session, userMessage) {
   if (!session.action_history) session.action_history = [];
   if (!session.section_ledger) session.section_ledger = {};
   if (!session.turn_count) session.turn_count = 0;
+  if (typeof session.transcript_summary !== 'string') session.transcript_summary = '';
+  if (typeof session.transcript_summary_upto !== 'number') session.transcript_summary_upto = 0;
   session.turn_count += 1;
+
+  // Fold older transcript entries into a rolling summary before planning so the planner sees
+  // a synthesized history instead of losing everything beyond the recent window. Non-fatal.
+  await summarizeTranscriptIfNeeded(session);
 
   const context = await fetchSessionContext(session);
   session.transcript.push({ role: 'user', content: userMessage, created_at: nowIso() });
 
   const plan = await planEssayTurn(session, context, userMessage);
+
+  // Pre-execution loop check: inspect the accumulated action_history (from prior turns)
+  // and, if the same tool+query has already fired repeatedly, skip retrieval entirely and
+  // force the harness to draft with the evidence it already has rather than looping again.
+  const earlyLoopCheck = detectLoopInActions(session, []);
+  let forceDraftDueToLoop = false;
+  if (earlyLoopCheck) {
+    forceDraftDueToLoop = true;
+    plan.tool_calls = [];
+    plan.response_mode = 'draft';
+    plan.draft_goal = 'Draft with acknowledged gaps. Do not retrieve more evidence. Explicitly name what evidence is missing and proceed to write the best possible draft with what has already been gathered.';
+    plan._forced_by_loop = true;
+  }
+
   const toolTrace = [];
   const usedTools = new Set();
 
@@ -1731,6 +2033,24 @@ async function runEssayAgentTurn(session, userMessage) {
     userMessage
   );
 
+  // Self-critique pass: once the essay has real content, run a dedicated LLM review of the
+  // draft against the working thesis to surface weak sections, unsupported claims, and
+  // logical gaps. Skipped during explicit critique turns to avoid recursive critiquing.
+  const shouldCritique = session.turn_count > 2
+    && ['draft', 'paragraph'].includes(plan.response_mode)
+    && String(finalPayload.draft_markdown || '').trim().length > 200;
+
+  const critique = shouldCritique
+    ? await critiqueDraftQuality(session, evidencePacket, finalPayload.draft_markdown)
+    : null;
+
+  if (critique) {
+    session.last_critique = critique;
+    session.memory = mergeMemory(session.memory, {
+      critique_notes: [...(critique.logical_gaps || []), ...(critique.unsupported_claims || [])]
+    });
+  }
+
   const pendingProposals = (finalPayload.proposals || [])
     .map(proposal => buildPendingProposal(proposal, session, evidencePacket))
     .filter(Boolean)
@@ -1785,6 +2105,7 @@ async function runEssayAgentTurn(session, userMessage) {
         revision_count: (existing?.revision_count || 0) + (existing ? 1 : 0)
       };
     });
+    syncOutlineStatusWithLedger(session, 'drafted');
   }
   session.last_tool_trace = toolTrace;
   session.last_plan = plan;
@@ -1794,6 +2115,18 @@ async function runEssayAgentTurn(session, userMessage) {
     content: finalPayload.assistant_message,
     created_at: nowIso()
   });
+
+  // Threshold-triggered memory compaction: on a cadence, or when working memory grows large,
+  // synthesize the volatile list fields into sharper statements. Non-fatal (no-op on failure).
+  const memoryChars = JSON.stringify(session.memory).length;
+  const shouldCompact =
+    (session.turn_count > 0 && session.turn_count % MEMORY_COMPACT_EVERY_N_TURNS === 0) ||
+    memoryChars > MEMORY_COMPACT_CHAR_THRESHOLD;
+  let memoryCompacted = false;
+  if (shouldCompact) {
+    memoryCompacted = Boolean(await compressSessionMemory(session));
+  }
+
   await saveSession(session);
 
   return {
@@ -1801,10 +2134,13 @@ async function runEssayAgentTurn(session, userMessage) {
     assistant_message: finalPayload.assistant_message,
     draft_markdown: session.draft_markdown,
     memory: session.memory,
+    memory_compacted: memoryCompacted,
     pending_draft_updates: session.pending_draft_updates || [],
     tool_trace: toolTrace,
     plan,
     evidence_packet: evidencePacket,
+    critique,
+    loop_intervention_fired: forceDraftDueToLoop,
     backend: finalPayload.backend,
     model: finalPayload.model,
     fallback_reason: [plan.fallback_reason, evidencePacket.fallback_reason, finalPayload.fallback_reason].filter(Boolean).join(' | ')
@@ -1833,6 +2169,7 @@ async function resolveDraftProposal(session, proposalId, action) {
         revision_count: (existing?.revision_count || 0) + (existing ? 1 : 0)
       };
     });
+    syncOutlineStatusWithLedger(session, 'accepted');
     session.memory = mergeMemory(session.memory, {
       recent_findings: [`Accepted draft update: ${proposal.title} (${applied.applied_as})`],
       next_actions: ['Review the newly applied draft carefully before requesting another revision.']
