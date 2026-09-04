@@ -203,8 +203,6 @@ alter table books add column if not exists finished_at  timestamptz;
 alter table notes add column if not exists chapter_order integer default 0;
 alter table notes add column if not exists completed boolean default false;
 
--- Session quiz cache
-alter table sessions add column if not exists quiz jsonb;
 
 -- Arguments table: add columns that may be missing in older deployments
 alter table arguments add column if not exists conclusions        jsonb default '[]';

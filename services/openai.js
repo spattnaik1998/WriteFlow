@@ -801,86 +801,6 @@ Return valid JSON: { "summary": string, "highlights": string[], "prep_question":
 }
 
 /**
- * Generate 5 multiple-choice quiz questions from session note content.
- *
- * Questions test genuine comprehension — not trivial recall — and span
- * the full range of books/chapters the user worked on.
- *
- * @param {{ books: Array<{title,author,chapters}> }} opts
- * @returns {Array<{question,options,correct,explanation}>}  — array of 5 questions
- */
-async function generateSessionQuiz({ books }) {
-  const systemPrompt = `You are an expert reading tutor who designs rigorous comprehension quizzes for active readers.
-Given a reader's notes, create exactly 5 multiple-choice questions that demand genuine understanding.
-
-QUESTION TYPE MIX (strictly follow this):
-- 1 direct recall: tests that a specific fact, term, or definition was absorbed
-- 2 application: asks what follows from an idea, or what would happen in a described scenario
-- 2 synthesis: requires connecting two different ideas from different parts of the notes
-
-DISTRACTOR RULES (this is the most important part):
-- All four options must be plausible to someone who skimmed but didn't fully absorb the material
-- Distractors must come from the same conceptual domain as the correct answer — no strawmen
-- Distractors should represent real misconceptions, near-miss misreadings, or partially correct statements
-- All four options must be similar in length and grammatical structure — the correct answer must not stand out visually
-- Do NOT use: "all of the above", "none of the above", trick wording, or options that are trivially eliminatable without understanding the content
-
-For each question, first think: "What would a reader who skimmed this get wrong, and why?" — then use that as your distractor.
-
-Return valid JSON only:
-{
-  "questions": [
-    {
-      "question": "string",
-      "options": ["string", "string", "string", "string"],
-      "correct": 0,
-      "explanation": "string (1–2 sentences explaining why the correct answer is right and why a plausible wrong answer is wrong)"
-    }
-  ]
-}`;
-
-  const booksBlock = books.map(b => {
-    const chapters = b.chapters
-      .filter(c => c.snippet)
-      .map(c => `  [${c.chapter_name}]:\n  ${c.snippet}`)
-      .join('\n\n');
-    return `"${b.title}"${b.author ? ` by ${b.author}` : ''}:\n${chapters}`;
-  }).join('\n\n---\n\n');
-
-  const userPrompt = `Here are the reader's notes from their last session:\n\n${booksBlock}\n\nGenerate 5 quiz questions.`;
-
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user',   content: userPrompt   }
-    ],
-    response_format: { type: 'json_object' },
-    temperature: 0.7,
-    max_tokens: 1800
-  });
-
-  const raw = parseJsonResponse(response.choices[0].message.content);
-  const qs  = Array.isArray(raw.questions) ? raw.questions : [];
-  // Place correct answer at a random position per question — no cross-question pattern
-  return qs.slice(0, 5).map((q) => {
-    const options = Array.isArray(q.options) ? q.options.slice(0, 4) : [];
-    const srcIdx  = typeof q.correct === 'number' ? Math.min(3, Math.max(0, q.correct)) : 0;
-    const dstIdx  = Math.floor(Math.random() * 4);
-    const correctText  = options[srcIdx];
-    const wrongOptions = options.filter((_, idx) => idx !== srcIdx);
-    const reordered    = [...wrongOptions];
-    reordered.splice(dstIdx, 0, correctText);
-    return {
-      question:    q.question    || '',
-      options:     reordered,
-      correct:     dstIdx,
-      explanation: q.explanation || ''
-    };
-  });
-}
-
-/**
  * Generate 5 broad, book-level ideas from all of a book's notes.
  * These are the intellectual backbone ideas that span the whole book —
  * not per-chapter summaries.
@@ -1478,4 +1398,4 @@ Rules:
     .filter(c => c.idea_a?.bookTitle && c.idea_b?.bookTitle && c.idea_a.bookTitle !== c.idea_b.bookTitle);
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateSessionQuiz, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, lintWiki, generateInsightCollisions, reconstructArgument };
+module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateThread, generateLinkedInPosts, repurposeThreadToLinkedIn, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, lintWiki, generateInsightCollisions, reconstructArgument };
