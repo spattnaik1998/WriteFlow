@@ -86,3 +86,5 @@ It operates strictly **within a single book’s chapter notes**.
   "optional_previous_chapter_context": "...",
   "optional_next_chapter_context": "..."
 }
+
+## Imported Claude Cowork project instructions

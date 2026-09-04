@@ -106,6 +106,7 @@ router.post('/session', async (req, res) => {
       last_tool_trace: session.last_tool_trace || [],
       last_plan: session.last_plan || null,
       last_evidence_packet: session.last_evidence_packet || null,
+      last_evaluation: session.last_evaluation || null,
       pending_draft_updates: session.pending_draft_updates || []
     });
   } catch (error) {
@@ -139,6 +140,7 @@ router.get('/session/:id', async (req, res) => {
       last_tool_trace: session.last_tool_trace || [],
       last_plan: session.last_plan || null,
       last_evidence_packet: session.last_evidence_packet || null,
+      last_evaluation: session.last_evaluation || null,
       pending_draft_updates: session.pending_draft_updates || []
     });
   } catch (error) {
@@ -171,6 +173,7 @@ router.post('/session/:id/message', async (req, res) => {
       evidence_packet: result.evidence_packet,
       tool_registry: result.session.tool_registry || {},
       critique: result.critique || null,
+      evaluation: result.evaluation || null,
       loop_intervention_fired: result.loop_intervention_fired || false,
       memory_compacted: result.memory_compacted || false,
       backend: result.backend,

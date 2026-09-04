@@ -2,7 +2,8 @@ const assert = require('assert');
 const {
   ESSAY_QUALITY_SYSTEM_PROMPT,
   normalizeEssayProse,
-  findEssayQualityIssues
+  findEssayQualityIssues,
+  normalizeEvaluationReport
 } = require('../services/writingQuality');
 
 function testPromptContainsCoreContract() {
@@ -31,10 +32,33 @@ function testQualityIssuesCatchListAndUnfinishedSentence() {
   assert.ok(issues.some(issue => /terminal punctuation/i.test(issue)));
 }
 
+function testNormalizeEvaluationReportAppliesRubricGate() {
+  const report = normalizeEvaluationReport({
+    passed: true,
+    scores: {
+      synthesis_depth: 4.2,
+      evidence_grounding: 3.2,
+      paragraph_flow: 4,
+      grammar_polish: 5
+    },
+    strengths: ['The draft has a clear argumentative spine.'],
+    revision_priorities: ['Tie the second paragraph back to the source evidence.']
+  }, {
+    draftText: 'This is a clean paragraph, but it needs one more grounded example.',
+    threshold: 3.5,
+    evaluatedAt: '2026-07-05T00:00:00.000Z'
+  });
+
+  assert.strictEqual(report.passed, false);
+  assert.strictEqual(report.scores.evidence_grounding, 3.2);
+  assert.ok(report.blocking_issues.some(issue => /evidence grounding/i.test(issue)));
+  assert.strictEqual(report.evaluated_at, '2026-07-05T00:00:00.000Z');
+}
 function run() {
   testPromptContainsCoreContract();
   testNormalizeEssayProseConvertsListsIntoParagraphs();
   testQualityIssuesCatchListAndUnfinishedSentence();
+  testNormalizeEvaluationReportAppliesRubricGate();
   console.log('writingQuality tests passed');
 }
 

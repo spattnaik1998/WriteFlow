@@ -4,8 +4,10 @@ const supabase = require('./supabase');
 const { generateJson } = require('./llmClient');
 const {
   ESSAY_QUALITY_SYSTEM_PROMPT,
+  EVALUATION_SCORE_KEYS,
   normalizeEssayProse,
-  findEssayQualityIssues
+  findEssayQualityIssues,
+  normalizeEvaluationReport
 } = require('./writingQuality');
 
 const SESSION_DIR = path.join(process.cwd(), '.essay-agent', 'sessions');
@@ -182,6 +184,7 @@ function createInitialMemory({ topic, audience, tone, selectedBooks, uploadedDoc
     tensions: [],
     evidence_gaps: [],
     open_questions: [],
+    evaluation_notes: [],
     style_directives: crossBook
       ? [
           'Do not summarize each book separately.',
@@ -244,6 +247,7 @@ async function createEssaySession({ topic, audience, tone, backend, model, bookI
     last_tool_trace: [],
     last_plan: null,
     last_evidence_packet: null,
+    last_evaluation: null,
     pending_draft_updates: [],
     tool_registry: {},
     action_history: [],
@@ -1121,6 +1125,7 @@ function clearSessionMemory(session) {
   session.last_tool_trace = [];
   session.last_plan = null;
   session.last_evidence_packet = null;
+  session.last_evaluation = null;
   session.pending_draft_updates = [];
   session.tool_registry = {};
   session.action_history = [];
@@ -1774,6 +1779,108 @@ Rules:
   }
 }
 
+function buildEvaluationTarget(finalPayload, effectiveProposals, session) {
+  if (finalPayload?.mode === 'proposal_only') {
+    const proposal = Array.isArray(effectiveProposals) ? effectiveProposals[0] : null;
+    const proposedText = proposal?.after_markdown || proposal?.after_excerpt || '';
+    return {
+      mode: 'proposal',
+      draft_text: proposedText,
+      focus: proposal?.focus_section || 'Pending proposal'
+    };
+  }
+
+  return {
+    mode: 'direct_update',
+    draft_text: finalPayload?.draft_markdown || session.draft_markdown || '',
+    focus: 'Draft workspace'
+  };
+}
+
+async function evaluateDraftQuality(session, evidencePacket, plan, target) {
+  const draftText = String(target?.draft_text || '').trim();
+  if (!draftText || draftText.length < 120 || plan.response_mode === 'outline') return null;
+
+  // Compute the deterministic quality scan once; it is fed to the prompt AND reused by
+  // normalizeEvaluationReport so the (potentially large) draft is not regex-scanned twice.
+  const deterministicIssues = findEssayQualityIssues(draftText, { allowBullets: false });
+
+  const systemPrompt = `You are WriteFlow's evaluator pass: a strict but useful quality gate for essay drafts.
+
+Evaluate the draft against the evidence packet and WriteFlow writing contract. This is not a rewrite task. Score the draft and identify the smallest set of revisions needed before the prose should be accepted.
+
+${ESSAY_QUALITY_SYSTEM_PROMPT}
+
+Return ONLY valid JSON:
+{
+  "passed": true,
+  "threshold": 3.5,
+  "scores": {
+    "synthesis_depth": 0,
+    "evidence_grounding": 0,
+    "paragraph_flow": 0,
+    "grammar_polish": 0,
+    "overall": 0
+  },
+  "strengths": ["specific strength in the draft"],
+  "blocking_issues": ["specific issue that should block acceptance"],
+  "revision_priorities": ["concrete revision instruction"],
+  "summary": "One or two sentences explaining the verdict."
+}
+
+Rubric:
+- synthesis_depth: rewards cross-source tension, emergent claims, and non-obvious conceptual framing.
+- evidence_grounding: rewards claims that are traceable to retrieved notes, ideas, documents, or tool results.
+- paragraph_flow: rewards claim-led paragraphs, transitions, and argumentative progression.
+- grammar_polish: rewards complete sentences, clean punctuation, and absence of bullet-list residue.
+
+Rules:
+- Use 0-5 scores, where 3.5 is the minimum acceptable gate.
+- Set passed to false if any score is below threshold or if there are blocking issues.
+- Do not invent source requirements that are not implied by the essay goal.
+- Keep blocking_issues and revision_priorities concrete and actionable.`;
+
+  const userPrompt = JSON.stringify({
+    topic: session.topic,
+    target_mode: target.mode,
+    target_focus: target.focus,
+    reasoning_mode: plan.reasoning_mode,
+    response_mode: plan.response_mode,
+    working_thesis: evidencePacket?.working_thesis || session.memory?.working_thesis || '',
+    argument_map: evidencePacket?.argument_map || [],
+    intersections: evidencePacket?.intersections || [],
+    tensions: evidencePacket?.tensions || [],
+    evidence_ledgers: evidencePacket?.evidence_ledgers || [],
+    evidence_gaps: evidencePacket?.evidence_gaps || [],
+    deterministic_quality_issues: deterministicIssues,
+    draft_markdown: draftText.slice(0, 7000)
+  }, null, 2);
+
+  try {
+    const llm = await generateJson({
+      backend: session.backend,
+      model: session.model || undefined,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.15,
+      maxTokens: 1100
+    });
+    return {
+      ...normalizeEvaluationReport(llm.data, { draftText, deterministicIssues, threshold: 3.5, evaluatedAt: nowIso() }),
+      target_mode: target.mode,
+      target_focus: target.focus,
+      score_keys: EVALUATION_SCORE_KEYS,
+      backend: llm.backend,
+      model: llm.model,
+      fallback_reason: llm.fallback_reason || ''
+    };
+  } catch (_error) {
+    // Match the sibling passes (critique / summarize / compact): a transient LLM failure
+    // returns null and leaves state untouched, rather than fabricating a 0/5 "failed"
+    // verdict that would pollute session.last_evaluation and the planner's memory.
+    return null;
+  }
+}
 // Rolling transcript summarization. Folds older transcript entries into a cumulative summary
 // so long sessions keep early decisions/constraints in view instead of losing them to the
 // last-30 truncation window. session.transcript itself is never pruned (the UI renders it).
@@ -1841,13 +1948,13 @@ async function compressSessionMemory(session) {
   const memory = session.memory || {};
   const compressibleKeys = [
     'argument_map', 'intersections', 'tensions', 'evidence_gaps', 'open_questions',
-    'recent_findings', 'source_ledger', 'critique_notes', 'next_actions'
+    'recent_findings', 'source_ledger', 'critique_notes', 'evaluation_notes', 'next_actions'
   ];
 
   const systemPrompt = `You are the working-memory consolidation engine for WriteFlow's essay harness.
 
 Consolidate ONLY these list fields: argument_map, intersections, tensions, evidence_gaps,
-open_questions, recent_findings, source_ledger, critique_notes, next_actions.
+open_questions, recent_findings, source_ledger, critique_notes, evaluation_notes, next_actions.
 
 Rules:
 - Merge overlapping or duplicate items into single, sharper statements.
@@ -1861,7 +1968,7 @@ Return ONLY valid JSON containing exactly these keys (arrays of concise strings)
 {
   "argument_map": [], "intersections": [], "tensions": [], "evidence_gaps": [],
   "open_questions": [], "recent_findings": [], "source_ledger": [], "critique_notes": [],
-  "next_actions": []
+  "evaluation_notes": [], "next_actions": []
 }`;
 
   const userPrompt = JSON.stringify({
@@ -1926,6 +2033,7 @@ async function runEssayAgentTurn(session, userMessage) {
       tool_trace: [],
       plan: null,
       evidence_packet: null,
+      evaluation: null,
       backend: session.backend,
       model: session.model,
       fallback_reason: ''
@@ -2065,24 +2173,6 @@ async function runEssayAgentTurn(session, userMessage) {
     userMessage
   );
 
-  // Self-critique pass: once the essay has real content, run a dedicated LLM review of the
-  // draft against the working thesis to surface weak sections, unsupported claims, and
-  // logical gaps. Skipped during explicit critique turns to avoid recursive critiquing.
-  const shouldCritique = session.turn_count > 2
-    && ['draft', 'paragraph'].includes(plan.response_mode)
-    && String(finalPayload.draft_markdown || '').trim().length > 200;
-
-  const critique = shouldCritique
-    ? await critiqueDraftQuality(session, evidencePacket, finalPayload.draft_markdown)
-    : null;
-
-  if (critique) {
-    session.last_critique = critique;
-    session.memory = mergeMemory(session.memory, {
-      critique_notes: [...(critique.logical_gaps || []), ...(critique.unsupported_claims || [])]
-    });
-  }
-
   const pendingProposals = (finalPayload.proposals || [])
     .map(proposal => buildPendingProposal(proposal, session, evidencePacket))
     .filter(Boolean)
@@ -2092,6 +2182,33 @@ async function runEssayAgentTurn(session, userMessage) {
       || synthesizeProposalFromEvidence(session, evidencePacket, plan))
     : null;
   const effectiveProposals = fallbackProposal ? [fallbackProposal] : pendingProposals;
+  const evaluationTarget = buildEvaluationTarget(finalPayload, effectiveProposals, session);
+
+  // Quality review: once the essay has real content, run two complementary LLM passes on the
+  // draft — critique (weak sections / logical gaps) and the scored evaluator gate. They share
+  // one gate so they always grade the same turns, and run in parallel since neither depends on
+  // the other's output. Skipped on explicit critique turns to avoid recursive critiquing.
+  const shouldReview = session.turn_count > 2
+    && ['draft', 'paragraph'].includes(plan.response_mode)
+    && String(finalPayload.draft_markdown || '').trim().length > 200;
+
+  const [critique, evaluation] = shouldReview
+    ? await Promise.all([
+        critiqueDraftQuality(session, evidencePacket, finalPayload.draft_markdown),
+        evaluateDraftQuality(session, evidencePacket, plan, evaluationTarget)
+      ])
+    : [null, null];
+
+  if (critique) {
+    session.last_critique = critique;
+    session.memory = mergeMemory(session.memory, {
+      critique_notes: [...(critique.logical_gaps || []), ...(critique.unsupported_claims || [])]
+    });
+  }
+
+  if (evaluation) {
+    session.last_evaluation = evaluation;
+  }
 
   session.memory = mergeMemory(session.memory, {
     ...plan.memory_patch,
@@ -2108,7 +2225,13 @@ async function runEssayAgentTurn(session, userMessage) {
     source_ledger: evidencePacket.evidence_ledgers,
     evidence_gaps: evidencePacket.evidence_gaps,
     open_questions: evidencePacket.open_questions,
-    next_actions: evidencePacket.recommended_sections,
+    evaluation_notes: evaluation
+      ? [
+          `Evaluator ${evaluation.passed ? 'passed' : 'flagged'} ${evaluation.target_mode} at ${evaluation.scores.overall}/5 overall.`,
+          ...clipList(evaluation.blocking_issues, 3, 180),
+          ...clipList(evaluation.revision_priorities, 2, 180)
+        ]
+      : [],
     recent_findings: [
       ...clipList(finalPayload.memory_patch?.recent_findings, 6, 220),
       ...toolTrace.map(item => {
@@ -2172,6 +2295,7 @@ async function runEssayAgentTurn(session, userMessage) {
     plan,
     evidence_packet: evidencePacket,
     critique,
+    evaluation,
     loop_intervention_fired: forceDraftDueToLoop,
     backend: finalPayload.backend,
     model: finalPayload.model,

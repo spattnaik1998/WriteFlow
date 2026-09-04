@@ -49,6 +49,121 @@ function stripCodeFence(text) {
   return raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
 }
 
+// Extract the first complete top-level JSON object from a response that may carry prose
+// before or after it. Scans with string/escape awareness so braces inside strings — or a
+// stray '}' in trailing prose — do not confuse the boundary. If the object never closes
+// (truncated mid-generation) the remainder from the first '{' is returned for repair.
+function extractJsonCandidate(text) {
+  const raw = stripCodeFence(text);
+  const start = raw.indexOf('{');
+  if (start === -1) return raw;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < raw.length; i += 1) {
+    const ch = raw[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{' || ch === '[') depth += 1;
+    else if (ch === '}' || ch === ']') {
+      depth -= 1;
+      if (depth === 0) return raw.slice(start, i + 1);
+    }
+  }
+  return raw.slice(start);
+}
+
+// Deterministically close a JSON payload: drop a lone trailing backslash left mid-escape,
+// terminate an open string, then close every open bracket in the correct order.
+function closeOpenStructures(raw) {
+  const stack = [];
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < raw.length; i += 1) {
+    const ch = raw[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === '{' || ch === '[') stack.push(ch);
+    else if (ch === '}' || ch === ']') stack.pop();
+  }
+
+  let out = raw;
+  if (inString) {
+    if (escaped) out = out.slice(0, -1); // drop the dangling backslash (truncated mid-escape)
+    out += '"';
+  }
+  while (stack.length) {
+    out += stack.pop() === '{' ? '}' : ']';
+  }
+  return out;
+}
+
+// Drop the last "atom" from a JSON fragment: a complete trailing string (back to and
+// including its opening quote) or a trailing bare-token run (a partial number / true /
+// false / null). Used to walk back past a value that cannot be closed cleanly.
+function dropTrailingAtom(s) {
+  if (!s) return '';
+  if (s[s.length - 1] === '"') {
+    let j = s.length - 2;
+    while (j >= 0) {
+      if (s[j] === '"') {
+        let backslashes = 0;
+        let k = j - 1;
+        while (k >= 0 && s[k] === '\\') { backslashes += 1; k -= 1; }
+        if (backslashes % 2 === 0) break; // unescaped quote = opening quote
+      }
+      j -= 1;
+    }
+    return s.slice(0, Math.max(0, j));
+  }
+  const bare = s.match(/[^{}[\],:\s"]+$/);
+  if (bare) return s.slice(0, bare.index);
+  return s.slice(0, -1);
+}
+
+// Best-effort recovery for JSON truncated mid-generation (the usual failure when a model
+// hits its max_tokens ceiling). Repeatedly: trim dangling separators, close open structures,
+// and try to parse; if that still fails, drop the last atom and retry. Bounded by the input
+// length so it always terminates.
+function repairTruncatedJson(candidate) {
+  let raw = String(candidate || '');
+  for (let guard = 0; guard < 500 && raw.length; guard += 1) {
+    const trimmed = raw.replace(/[,:\s]+$/, '');
+    if (!trimmed) break;
+    const closed = closeOpenStructures(trimmed);
+    try {
+      JSON.parse(closed);
+      return closed;
+    } catch (_err) {
+      const shorter = dropTrailingAtom(trimmed);
+      if (shorter.length >= trimmed.length) break;
+      raw = shorter;
+    }
+  }
+  return closeOpenStructures(raw.replace(/[,:\s]+$/, ''));
+}
+
+// Parse model JSON tolerantly: strip prose/fences, then repair truncation if needed.
+function parseJsonLoose(content) {
+  const candidate = extractJsonCandidate(content);
+  try {
+    return { data: JSON.parse(candidate), repaired: false };
+  } catch (_err) {
+    const repaired = repairTruncatedJson(candidate);
+    return { data: JSON.parse(repaired), repaired: true };
+  }
+}
+
 function ollamaBaseUrl() {
   return (process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434').replace(/\/$/, '');
 }
@@ -346,9 +461,11 @@ async function generateText(opts) {
 async function generateJson(opts) {
   const result = await generateText({ ...opts, json: true });
   try {
+    const { data, repaired } = parseJsonLoose(result.content);
     return {
       ...result,
-      data: JSON.parse(stripCodeFence(result.content))
+      data,
+      json_repaired: repaired || undefined
     };
   } catch (parseErr) {
     throw new Error(`JSON parse failed: ${parseErr.message}. Raw (first 200 chars): ${String(result.content || '').slice(0, 200)}`);
@@ -359,5 +476,6 @@ module.exports = {
   generateText,
   generateJson,
   stripCodeFence,
+  parseJsonLoose,
   listWritingBackends
 };

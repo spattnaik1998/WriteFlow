@@ -105,8 +105,70 @@ function findEssayQualityIssues(text, options = {}) {
   return issues;
 }
 
+const EVALUATION_SCORE_KEYS = [
+  'synthesis_depth',
+  'evidence_grounding',
+  'paragraph_flow',
+  'grammar_polish'
+];
+
+function normalizeScore(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Math.min(5, Math.round(parsed * 10) / 10));
+}
+
+function normalizeIssueList(list, limit = 6) {
+  return (Array.isArray(list) ? list : [])
+    .filter(Boolean)
+    .map(item => String(item).replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function normalizeEvaluationReport(raw = {}, options = {}) {
+  // Reuse the caller's deterministic scan when provided so the draft is not regex-scanned
+  // twice; only recompute when the caller did not already do it.
+  const deterministicIssues = Array.isArray(options.deterministicIssues)
+    ? options.deterministicIssues
+    : findEssayQualityIssues(options.draftText || '', { allowBullets: Boolean(options.allowBullets) });
+  // A threshold of 0 is legitimate ("accept anything"); do not let `|| default` swallow it.
+  const threshold = normalizeScore(options.threshold ?? raw.threshold ?? 3.5);
+  const scores = EVALUATION_SCORE_KEYS.reduce((acc, key) => {
+    acc[key] = normalizeScore(raw.scores?.[key] ?? raw[key]);
+    return acc;
+  }, {});
+  scores.overall = normalizeScore(
+    raw.scores?.overall ??
+    raw.overall ??
+    (EVALUATION_SCORE_KEYS.reduce((sum, key) => sum + scores[key], 0) / EVALUATION_SCORE_KEYS.length)
+  );
+
+  const rubricIssues = normalizeIssueList(raw.blocking_issues || raw.issues, 8);
+  const failedScores = EVALUATION_SCORE_KEYS
+    .filter(key => scores[key] < threshold)
+    .map(key => `${key.replace(/_/g, ' ')} scored ${scores[key]}/5, below the ${threshold}/5 gate.`);
+  const blockingIssues = normalizeIssueList([...deterministicIssues, ...rubricIssues, ...failedScores], 10);
+
+  // The model may veto-fail its own draft, but can never grant a pass that the mechanical
+  // gate (no blocking issues, overall at/above threshold) would otherwise deny.
+  const passed = raw.passed !== false && !blockingIssues.length && scores.overall >= threshold;
+
+  return {
+    passed,
+    threshold,
+    scores,
+    blocking_issues: blockingIssues,
+    revision_priorities: normalizeIssueList(raw.revision_priorities, 6),
+    strengths: normalizeIssueList(raw.strengths, 5),
+    summary: String(raw.summary || '').replace(/\s+/g, ' ').trim().slice(0, 420),
+    evaluated_at: options.evaluatedAt || new Date().toISOString()
+  };
+}
 module.exports = {
   ESSAY_QUALITY_SYSTEM_PROMPT,
+  EVALUATION_SCORE_KEYS,
   normalizeEssayProse,
-  findEssayQualityIssues
+  findEssayQualityIssues,
+  normalizeEvaluationReport
 };
