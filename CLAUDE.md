@@ -10,7 +10,14 @@ npm start            # run server (node server.js)
 npm run dev          # run with auto-reload via nodemon
 npm test             # run all test files sequentially
 node tests/writingQuality.test.js    # run a single test file
+
+npm run backup           # snapshot every Supabase table to backups/ (read-only)
+npm run check:duplicates # report notes whose text appears under two books (read-only)
+npm run dev:sandbox      # create the dev book to test against; -- --remove deletes it
 ```
+
+There is no undo at the database layer — the service-role key bypasses RLS and several
+routes cascade-delete. **Run `npm run backup` before anything that writes to Supabase.**
 
 Tests are plain `node:assert` scripts with no test framework — each file defines `testXxx()` functions and calls them at the bottom, throwing on failure. `npm test` chains them with `&&`, so a new test file does nothing until it's added to the `test` script in `package.json`. No linter is configured.
 

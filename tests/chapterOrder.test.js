@@ -61,13 +61,34 @@ function testExplicitChapterOrderWins() {
   assert.deepStrictEqual(ordered, ['Chapter 2: Skills', 'Chapter 9: The Spread', 'Kindle Highlights']);
 }
 
-function testZeroIsAnHonouredChapterOrderNotAMissingOne() {
-  // Number.isFinite(0) is true but `0 || fallback` is not — a real 0 must sort first.
+function testZeroMeansUnsetBecauseThatIsTheColumnDefault() {
+  // `chapter_order integer default 0` (supabase_schema.sql:26, 203) and nothing in the app
+  // ever sets it, so every note written since that column was added arrives as 0. Treating
+  // 0 as a real position ties every new chapter at 0 and orders them by creation time —
+  // the shuffled export this module exists to prevent.
   const ordered = names([
-    { chapter_name: 'Chapter 5: Later', chapter_order: null },
-    { chapter_name: 'Explicitly first', chapter_order: 0 }
+    { chapter_name: 'Chapter 10: Late chapter', chapter_order: 0, created_at: '2026-09-04T23:17:05.113Z' },
+    { chapter_name: 'Introduction', chapter_order: 0, created_at: '2026-09-04T23:17:05.189Z' },
+    { chapter_name: 'Chapter 2: Images', chapter_order: 0, created_at: '2026-09-04T23:17:05.340Z' },
+    { chapter_name: 'Chapter 1', chapter_order: 0, created_at: '2026-09-04T23:17:05.418Z' },
+    { chapter_name: 'Conclusion', chapter_order: 0, created_at: '2026-09-04T23:17:05.481Z' }
   ]);
-  assert.deepStrictEqual(ordered, ['Explicitly first', 'Chapter 5: Later']);
+  assert.deepStrictEqual(ordered, [
+    'Introduction',
+    'Chapter 1',
+    'Chapter 2: Images',
+    'Chapter 10: Late chapter',
+    'Conclusion'
+  ]);
+}
+
+function testARealChapterOrderStillOutranksTheNameEvenWhenOthersAreZero() {
+  const ordered = names([
+    { chapter_name: 'Chapter 9: The Spread', chapter_order: 0 },
+    { chapter_name: 'Kindle Highlights', chapter_order: 999 },
+    { chapter_name: 'Chapter 2: Skills', chapter_order: 0 }
+  ]);
+  assert.deepStrictEqual(ordered, ['Chapter 2: Skills', 'Chapter 9: The Spread', 'Kindle Highlights']);
 }
 
 function testFrontAndBackMatterBracketTheNumberedChapters() {
@@ -147,7 +168,8 @@ testParsesChapterNumbersFromRealNames();
 testChapterNumberIsNotStolenFromProseInTheTitle();
 testSortsTheRealBookIntoSequentialOrder();
 testExplicitChapterOrderWins();
-testZeroIsAnHonouredChapterOrderNotAMissingOne();
+testZeroMeansUnsetBecauseThatIsTheColumnDefault();
+testARealChapterOrderStillOutranksTheNameEvenWhenOthersAreZero();
 testFrontAndBackMatterBracketTheNumberedChapters();
 testChapterMerelyMentioningASectionWordIsNotTreatedAsBackMatter();
 testUnnumberedChaptersSitBetweenNumberedAndBackMatter();

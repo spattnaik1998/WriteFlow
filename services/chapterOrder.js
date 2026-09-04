@@ -51,7 +51,16 @@ function chapterSortKey(note) {
   const explicit = note?.chapter_order;
 
   // Only a real number counts — null/undefined/'' must fall through to name parsing.
-  if (explicit !== null && explicit !== undefined && explicit !== '' && Number.isFinite(Number(explicit))) {
+  //
+  // 0 falls through too, and that is not the `0 || fallback` bug it looks like: the column
+  // is declared `chapter_order integer default 0`, and nothing in the app ever sets it (the
+  // editor posts only book_id/chapter_name/content; only the Kindle import writes a value,
+  // 999). So every note created since the column was added arrives as 0, meaning "unset".
+  // Honouring it would tie every new chapter at position 0 and sort them by creation time,
+  // ahead of the front matter — which is the shuffled export this module exists to fix.
+  const isSet = explicit !== null && explicit !== undefined && explicit !== '' &&
+    Number.isFinite(Number(explicit)) && Number(explicit) !== 0;
+  if (isSet) {
     return { bucket: BUCKET.NUMBERED, number: Number(explicit) };
   }
 

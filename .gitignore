@@ -7,3 +7,6 @@ Thumbs.db
 # Runtime state — never belongs in the repo
 .essay-agent/
 .ollama-runtime/
+
+# Database snapshots — the full text of every note. Local only, never pushed.
+backups/
