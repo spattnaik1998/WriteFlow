@@ -40,9 +40,11 @@ function sourceFiles() {
   return files;
 }
 
-// A read of note content that is NOT immediately wrapped in noteToPlainText(...).
-// Matches n.content / note.content / notes.content, the shapes used across the routes.
-const RAW_READ = /(?<!noteToPlainText\()\b(?:n|note|notes)\??\.content\b/;
+// A read of note content that is NOT immediately wrapped in a text extractor.
+// noteToPlainText is the one for prompts; noteText (services/noteDuplicates.js) is the
+// same parse used for comparing notes to each other. Matches n.content / note.content /
+// notes.content, the shapes used across the routes.
+const RAW_READ = /(?<!noteToPlainText\()(?<!noteText\()\b(?:n|note|notes)\??\.content\b/;
 
 function testNoRouteFeedsStoredHtmlStraightToAModel() {
   const offenders = [];

@@ -2,6 +2,7 @@ const assert = require('assert');
 const {
   noteText,
   findCrossBookDuplicates,
+  findContainedNotes,
   splitOriginalFromCopies
 } = require('../services/noteDuplicates');
 
@@ -88,6 +89,64 @@ function testHandlesEmptyAndMissingInput() {
   assert.deepStrictEqual(findCrossBookDuplicates(undefined), []);
 }
 
+// ── findContainedNotes: the leak often copied a prefix, not the whole chapter ────────
+
+const HOME = LONG + ' It then continues for a long while with material that only ever ' +
+  'existed in the chapter the notes actually belong to, which is what makes the shorter ' +
+  'row safe to delete.';
+
+function testFindsACopyWhoseTextSurvivesInALongerNoteElsewhere() {
+  const found = findContainedNotes([
+    { id: 'home', book_id: 'software', chapter_name: 'Chapter 1', content: `<div>${HOME}</div>` },
+    { id: 'misfiled', book_id: 'economics', chapter_name: 'Introduction', content: `<p>${LONG}</p>` }
+  ]);
+
+  assert.strictEqual(found.length, 1);
+  assert.strictEqual(found[0].note.id, 'misfiled');
+  assert.deepStrictEqual(found[0].containers.map(c => c.id), ['home']);
+}
+
+function testContainmentIgnoresHtmlDifferences() {
+  const found = findContainedNotes([
+    { id: 'home', book_id: 'b1', chapter_name: 'C', content: `<div>${HOME}</div>` },
+    { id: 'copy', book_id: 'b2', chapter_name: 'C', content: `<p>${LONG}</p><div><img src="data:image/png;base64,iVBORw0KGgo="></div>` }
+  ]);
+  assert.deepStrictEqual(found.map(f => f.note.id), ['copy']);
+}
+
+function testContainmentWithinOneBookIsNotFlagged() {
+  // Notes building on each other inside a book are normal writing, not a leak.
+  const found = findContainedNotes([
+    { id: 'a', book_id: 'same', chapter_name: 'C1', content: `<div>${HOME}</div>` },
+    { id: 'b', book_id: 'same', chapter_name: 'C2', content: `<div>${LONG}</div>` }
+  ]);
+  assert.deepStrictEqual(found, []);
+}
+
+function testExactDuplicatesAreNotReportedAsContained() {
+  // Equal length is an exact duplicate; findCrossBookDuplicates owns that case because
+  // it knows which of the two to keep. Containment must stay strict.
+  const found = findContainedNotes([
+    { id: 'a', book_id: 'b1', chapter_name: 'C', content: `<div>${LONG}</div>` },
+    { id: 'b', book_id: 'b2', chapter_name: 'C', content: `<div>${LONG}</div>` }
+  ]);
+  assert.deepStrictEqual(found, []);
+}
+
+function testShortNotesAreNotSweptUpByContainment() {
+  const found = findContainedNotes([
+    { id: 'home', book_id: 'b1', chapter_name: 'C', content: `<div>${HOME}</div>` },
+    { id: 'tiny', book_id: 'b2', chapter_name: 'C', content: '<div>Tocqueville</div>' }
+  ]);
+  assert.deepStrictEqual(found, []);
+}
+
+function testContainmentHandlesEmptyAndMissingInput() {
+  assert.deepStrictEqual(findContainedNotes([]), []);
+  assert.deepStrictEqual(findContainedNotes(null), []);
+  assert.deepStrictEqual(findContainedNotes(undefined), []);
+}
+
 testTextIsComparedWithoutItsHtmlWrappers();
 testImagesDoNotAffectIdentity();
 testFindsTheCrossBookLeak();
@@ -97,5 +156,12 @@ testEmptyNotesAreIgnored();
 testTheOldestRowIsTheOneKept();
 testGroupsAreOrderedByHowMuchTextIsAtStake();
 testHandlesEmptyAndMissingInput();
+
+testFindsACopyWhoseTextSurvivesInALongerNoteElsewhere();
+testContainmentIgnoresHtmlDifferences();
+testContainmentWithinOneBookIsNotFlagged();
+testExactDuplicatesAreNotReportedAsContained();
+testShortNotesAreNotSweptUpByContainment();
+testContainmentHandlesEmptyAndMissingInput();
 
 console.log('noteDuplicates tests passed');

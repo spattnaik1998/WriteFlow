@@ -75,9 +75,49 @@ function splitOriginalFromCopies(group) {
   return { original, copies };
 }
 
+/**
+ * Notes whose entire text also appears inside a longer note under a *different* book.
+ *
+ * The leak copied whatever the editor was holding, which was not always the finished
+ * chapter — so a copy is often a prefix of the real note rather than a byte-identical
+ * twin, and exact matching misses it. Containment catches those, and it carries the
+ * property that makes deletion safe: every character of the copy still exists somewhere
+ * else, so removing it loses no writing.
+ *
+ * Strict containment only — an equal-length match is an exact duplicate and belongs to
+ * findCrossBookDuplicates, which knows how to pick which copy to keep.
+ */
+function findContainedNotes(notes, { minChars = 40 } = {}) {
+  const withText = (notes || [])
+    .map(note => ({ note, text: noteText(note?.content).replace(/\s+/g, ' ').trim() }))
+    .filter(entry => entry.text.length >= minChars);
+
+  const contained = [];
+
+  for (const entry of withText) {
+    const containers = withText.filter(other =>
+      other.note.id !== entry.note.id &&
+      other.note.book_id !== entry.note.book_id &&
+      other.text.length > entry.text.length &&
+      other.text.includes(entry.text)
+    );
+    if (containers.length) {
+      contained.push({
+        note: entry.note,
+        chars: entry.text.length,
+        text: entry.text,
+        containers: containers.map(c => c.note)
+      });
+    }
+  }
+
+  return contained.sort((a, b) => b.chars - a.chars);
+}
+
 module.exports = {
   noteText,
   fingerprint,
   findCrossBookDuplicates,
+  findContainedNotes,
   splitOriginalFromCopies
 };
