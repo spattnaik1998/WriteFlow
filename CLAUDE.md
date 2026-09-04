@@ -14,6 +14,19 @@ node tests/writingQuality.test.js    # run a single test file
 
 Tests are plain `node:assert` scripts with no test framework — each file defines `testXxx()` functions and calls them at the bottom, throwing on failure. `npm test` chains them with `&&`, so a new test file does nothing until it's added to the `test` script in `package.json`. No linter is configured.
 
+### Two checkouts: development and writing
+
+The repo is checked out twice via `git worktree`, so the owner can keep writing notes while a branch is being edited:
+
+| Path | Branch | Port | Purpose |
+|---|---|---|---|
+| `WriteFlow/` | `master` | 3100 | where changes are made |
+| `WriteFlow-local/` | `stable` | 3000 | the app the owner actually writes in |
+
+Ports are pinned in each checkout's own `.env` (untracked), so both run at once and the writing copy's URL never moves. **Port 3000 is the owner's live writing session — never kill a server on it, and start dev servers from `WriteFlow/`.** `stable` advances only by an explicit merge from `master`.
+
+Both checkouts share one Supabase project, so notes, books and ideas are the *same data* in both. This is deliberate. It also means a change that writes to the database is not sandboxed by the branch — treat destructive DB work as production work regardless of which checkout it runs from.
+
 ## Architecture
 
 WriteFlow is a single-user book-note distillation and essay-writing app. Users dump rough notes per chapter, LLMs distil them into idea cards, and an agentic essay harness turns the accumulated library into synthesis essays.
