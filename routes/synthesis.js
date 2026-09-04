@@ -2,6 +2,7 @@ const express  = require('express');
 const router   = express.Router();
 const supabase = require('../services/supabase');
 const { generateCrossSynthesis } = require('../services/openai');
+const { noteToPlainText } = require('../services/noteHtml');
 
 const COMPLETED = ['completed', 'done'];
 

@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { htmlToBlocks, plainTextToBlocks } = require('../services/noteHtml');
+const { htmlToBlocks, plainTextToBlocks, noteToPlainText } = require('../services/noteHtml');
 
 // Smallest valid 1x1 PNG — the shape a pasted screenshot takes once the browser has
 // serialised it into the contenteditable.
@@ -121,6 +121,62 @@ function testEmptyInputProducesNoBlocks() {
   assert.deepStrictEqual(htmlToBlocks('<div></div><br><div>   </div>'), []);
 }
 
+// ── noteToPlainText: what every LLM prompt, excerpt and word count now uses ──────────
+
+const SCREENSHOT = 'data:image/png;base64,' + 'iVBORw0KGgoAAAANSUhEUg'.repeat(4000);
+
+function testPromptTextNeverCarriesBase64() {
+  // The whole point: an image's payload is billed, unreadable to a text prompt, and
+  // crowds the real notes out of any prompt with a character budget.
+  const html = `<div>Before the graph.</div><div><img src="${SCREENSHOT}" alt="Revenue"></div><div>After it.</div>`;
+  const text = noteToPlainText(html);
+
+  assert.ok(!text.includes('base64'), 'no data URI may survive');
+  assert.ok(!text.includes('iVBORw0KGgo'), 'no payload may survive');
+  assert.ok(text.length < 200, `expected a short summary, got ${text.length} chars`);
+  assert.strictEqual(text, ['Before the graph.', '[image: Revenue]', 'After it.'].join('\n'));
+}
+
+function testImagesLeaveAMarkerSoTheModelKnowsOneWasThere() {
+  assert.strictEqual(noteToPlainText('<div><img src="data:image/png;base64,iVBORw0KGgo="></div>'), '[image]');
+  assert.strictEqual(
+    noteToPlainText('<div><img src="data:image/png;base64,iVBORw0KGgo=" alt="Chart 3"></div>'),
+    '[image: Chart 3]'
+  );
+  assert.strictEqual(noteToPlainText('<div>Text</div><div><img src="x.png"></div>', { imageMarker: false }), 'Text');
+}
+
+function testMarkupIsStrippedButStructureSurvives() {
+  const text = noteToPlainText(
+    '<h2>Argument</h2><div>The <b>core</b> claim.</div><ul><li>First</li><li>Second</li></ul>'
+  );
+  assert.strictEqual(text, ['Argument', 'The core claim.', '- First', '- Second'].join('\n'));
+}
+
+function testEntitiesAreReadableInPrompts() {
+  assert.strictEqual(noteToPlainText('<div>Ideas&nbsp;&amp;&nbsp;consequences &mdash; both</div>'),
+    'Ideas & consequences — both');
+}
+
+function testAnImageOnlyNoteIsNotMistakenForAnEmptyOne() {
+  // Callers filter on the returned text; a chapter that is only a screenshot should
+  // still register as having content.
+  assert.ok(noteToPlainText(`<div><img src="${SCREENSHOT}"></div>`).trim().length > 0);
+}
+
+function testEmptyAndMissingContentProduceEmptyText() {
+  assert.strictEqual(noteToPlainText(''), '');
+  assert.strictEqual(noteToPlainText(null), '');
+  assert.strictEqual(noteToPlainText(undefined), '');
+  assert.strictEqual(noteToPlainText('<div></div><br>'), '');
+}
+
+function testLegacyPlainTextNotesSurviveUnchanged() {
+  // Older notes were stored as plain text, not HTML — they must pass through intact.
+  assert.strictEqual(noteToPlainText('A plain sentence about well-being.'),
+    'A plain sentence about well-being.');
+}
+
 testPastedImageBecomesAnImageBlock();
 testBase64NeverLeaksIntoTextBlocks();
 testDivAndBrSplitLinesIntoSeparateBlocks();
@@ -134,5 +190,13 @@ testPlainTextNotesKeepHyphenatedWords();
 testPlainTextBulletsAreDetectedAtLineStartOnly();
 testLegacyPlainTextNotesRouteThroughTheTextPath();
 testEmptyInputProducesNoBlocks();
+
+testPromptTextNeverCarriesBase64();
+testImagesLeaveAMarkerSoTheModelKnowsOneWasThere();
+testMarkupIsStrippedButStructureSurvives();
+testEntitiesAreReadableInPrompts();
+testAnImageOnlyNoteIsNotMistakenForAnEmptyOne();
+testEmptyAndMissingContentProduceEmptyText();
+testLegacyPlainTextNotesSurviveUnchanged();
 
 console.log('noteHtml tests passed');

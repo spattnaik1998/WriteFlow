@@ -2,6 +2,7 @@ const express  = require('express');
 const router   = express.Router();
 const supabase = require('../services/supabase');
 const { chatWithPartner, suggestWriting } = require('../services/openai');
+const { noteToPlainText } = require('../services/noteHtml');
 
 // POST /api/chat — send a message to the AI reading partner
 router.post('/', async (req, res) => {
@@ -50,9 +51,13 @@ router.post('/', async (req, res) => {
     return 0;
   });
 
+  // Notes are stored as contenteditable HTML. Send the model the text, not the markup:
+  // the base64 of a single pasted screenshot would consume this whole budget and push
+  // the actual notes out of the prompt.
   const allNotes = sortedNotes
-    .filter(n => n.content && n.content.trim())
-    .map(n => `[${n.chapter_name || 'Notes'}]\n${n.content.trim()}`)
+    .map(n => ({ chapter: n.chapter_name || 'Notes', text: noteToPlainText(n.content) }))
+    .filter(n => n.text.trim())
+    .map(n => `[${n.chapter}]\n${n.text}`)
     .join('\n\n---\n\n')
     .slice(0, 4000); // generous budget — GPT-4o handles long context well
 

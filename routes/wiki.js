@@ -3,6 +3,7 @@ const router   = express.Router();
 const supabase = require('../services/supabase');
 const { ingestSourceToWiki, queryWiki, lintWiki } = require('../services/openai');
 const { parseLinks, diffLinkSet } = require('../services/wikiLinks');
+const { noteToPlainText } = require('../services/noteHtml');
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 
@@ -205,7 +206,7 @@ router.post('/ingest', async (req, res) => {
     bookTitle:   book.title,
     author:      book.author || '',
     chapterName: chapter_name,
-    rawNotes:    notes.content,
+    rawNotes:    noteToPlainText(notes.content),
     ideas:       ideas || []
   };
 
@@ -297,7 +298,7 @@ router.post('/ingest/book', async (req, res) => {
 
         const source = {
           bookTitle: book.title, author: book.author || '',
-          chapterName: chapter_name, rawNotes: notes.content, ideas: ideas || []
+          chapterName: chapter_name, rawNotes: noteToPlainText(notes.content), ideas: ideas || []
         };
         const wikiIndex = (allPages || []).map(p => ({
           slug: p.slug, title: p.title, type: p.page_type, digest: (p.markdown_content || '').slice(0, 300)
@@ -367,7 +368,7 @@ router.post('/ingest/backfill', async (req, res) => {
 
           const source = {
             bookTitle: bookFull.title, author: bookFull.author || '',
-            chapterName: chapter_name, rawNotes: notes.content, ideas: ideas || []
+            chapterName: chapter_name, rawNotes: noteToPlainText(notes.content), ideas: ideas || []
           };
           const wikiIndex = (allPages || []).map(p => ({
             slug: p.slug, title: p.title, type: p.page_type, digest: (p.markdown_content || '').slice(0, 300)

@@ -2,6 +2,7 @@ const express  = require('express');
 const router   = express.Router();
 const supabase = require('../services/supabase');
 const { refineChapterNotes } = require('../services/openai');
+const { noteToPlainText } = require('../services/noteHtml');
 
 // POST /api/refine
 // Body: { book_id, chapter_name, notes }
@@ -28,10 +29,14 @@ router.post('/', async (req, res) => {
   const bookTitle = book?.title || 'Unknown Book';
 
   // Build prev / next chapter context for the agent
-  const chapters = (allNotes || []).filter(n => n.content?.trim());
+  // Text, not stored HTML: a 600-character slice of a note that opens with a pasted
+  // screenshot is 600 characters of base64 and no context at all.
+  const chapters = (allNotes || [])
+    .map(n => ({ chapter_name: n.chapter_name, text: noteToPlainText(n.content) }))
+    .filter(n => n.text.trim());
   const idx = chapters.findIndex(n => n.chapter_name === chapter_name);
-  const prevContext = idx > 0          ? chapters[idx - 1].content.slice(0, 600) : null;
-  const nextContext = idx < chapters.length - 1 ? chapters[idx + 1].content.slice(0, 600) : null;
+  const prevContext = idx > 0          ? chapters[idx - 1].text.slice(0, 600) : null;
+  const nextContext = idx !== -1 && idx < chapters.length - 1 ? chapters[idx + 1].text.slice(0, 600) : null;
 
   try {
     const result = await refineChapterNotes({

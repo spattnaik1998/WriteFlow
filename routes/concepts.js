@@ -2,6 +2,7 @@ const express  = require('express');
 const router   = express.Router();
 const supabase = require('../services/supabase');
 const { generateConceptMap } = require('../services/openai');
+const { noteToPlainText } = require('../services/noteHtml');
 
 // POST /api/concepts/map — extract concept structure from notes
 router.post('/map', async (req, res) => {
@@ -94,9 +95,11 @@ router.post('/book', async (req, res) => {
 
   if (bookErr || !book) return res.status(404).json({ error: 'Book not found' });
 
+  // Text, not stored HTML — see noteToPlainText.
   const allNotes = (notes || [])
-    .filter(n => n.content?.trim())
-    .map(n => `[${n.chapter_name || 'Chapter'}]:\n${n.content}`)
+    .map(n => ({ chapter: n.chapter_name || 'Chapter', text: noteToPlainText(n.content) }))
+    .filter(n => n.text.trim())
+    .map(n => `[${n.chapter}]:\n${n.text}`)
     .join('\n\n');
 
   if (!allNotes) return res.status(400).json({ error: 'No notes to map — add some notes first' });

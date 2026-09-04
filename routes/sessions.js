@@ -17,6 +17,7 @@ const express = require('express');
 const router  = express.Router();
 const supabase = require('../services/supabase');
 const { generateSessionRecap, generateSessionQuiz } = require('../services/openai');
+const { noteToPlainText } = require('../services/noteHtml');
 
 // ── Start a session ───────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
@@ -117,8 +118,9 @@ router.post('/:id/recap', async (req, res) => {
     bookMap[entry.book_id].chapters.push({
       chapter_name: entry.chapter_name,
       word_count:   entry.word_count || 0,
-      // Limit each snippet to 600 chars to keep the prompt tight
-      snippet:      (note?.content || '').slice(0, 600)
+      // Limit each snippet to 600 chars to keep the prompt tight. Text, not stored
+      // HTML — 600 chars of a screenshot's base64 would say nothing about the chapter.
+      snippet:      noteToPlainText(note?.content).slice(0, 600)
     });
   }
 
@@ -170,7 +172,7 @@ router.post('/:id/quiz', async (req, res) => {
     bookMap[entry.book_id].chapters.push({
       chapter_name: entry.chapter_name,
       word_count:   entry.word_count || 0,
-      snippet:      (note?.content || '').slice(0, 800)   // slightly more context for quiz
+      snippet:      noteToPlainText(note?.content).slice(0, 800)   // slightly more context for quiz
     });
   }
 

@@ -1,6 +1,7 @@
 const express  = require('express');
 const router   = express.Router();
 const supabase = require('../services/supabase');
+const { noteToPlainText } = require('../services/noteHtml');
 
 // GET /api/analytics — aggregated reading & writing stats
 router.get('/', async (req, res) => {
@@ -73,8 +74,10 @@ router.get('/', async (req, res) => {
     const wordsByBook = {};
     (allNotes || []).forEach(n => {
       if (!wordsByBook[n.book_id]) wordsByBook[n.book_id] = 0;
+      // Count words in the prose, not in the markup: splitting stored HTML on
+      // whitespace counts every tag as a word and a pasted screenshot as thousands.
       wordsByBook[n.book_id] +=
-        (n.content || '').trim().split(/\s+/).filter(Boolean).length;
+        noteToPlainText(n.content).trim().split(/\s+/).filter(Boolean).length;
     });
 
     const booksWithProgress = inProgress.slice(0, 5).map(b => ({

@@ -1,5 +1,6 @@
 const OpenAI = require('openai');
 const { ESSAY_QUALITY_SYSTEM_PROMPT, normalizeEssayProse } = require('./writingQuality');
+const { noteToPlainText } = require('./noteHtml');
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -1069,9 +1070,12 @@ Rules:
 async function generateCrossSynthesis({ book1, book2, notes1, notes2, ideas1, ideas2 }) {
   // Build compact text representations of each book's knowledge
   const formatBook = (book, notes, ideas) => {
+    // Text, not stored HTML — base64 from a pasted image would fill this 4000-char cap
+    // and leave no room for the notes themselves.
     const notesText = (notes || [])
-      .filter(n => n.content && n.content.trim().length > 20)
-      .map(n => `[${n.chapter_name}]\n${n.content.trim()}`)
+      .map(n => ({ chapter: n.chapter_name, text: noteToPlainText(n.content) }))
+      .filter(n => n.text.trim().length > 20)
+      .map(n => `[${n.chapter}]\n${n.text}`)
       .join('\n\n')
       .slice(0, 4000); // cap to avoid context overflow
 

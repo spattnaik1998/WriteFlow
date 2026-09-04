@@ -197,7 +197,41 @@ function htmlToBlocks(input) {
   return blocks;
 }
 
+/**
+ * A stored note as readable text, for anything that is not a PDF: LLM prompts, relevance
+ * scoring, excerpts, word counts.
+ *
+ * Passing the stored HTML straight to a model sends it the markup and — far worse — the
+ * full base64 payload of every pasted screenshot. A single image-heavy chapter runs to
+ * hundreds of thousands of tokens of base64, which is billed, which crowds the real notes
+ * out of any prompt with a character budget, and which the model cannot read anyway: an
+ * image only reaches a model through the vision API, never as text in a prompt.
+ *
+ * Images become a short marker so the model still knows one was there, and keeps the alt
+ * text when the editor captured any.
+ */
+function noteToPlainText(html, { imageMarker = true } = {}) {
+  const parts = [];
+
+  for (const block of htmlToBlocks(html)) {
+    if (block.type === 'image') {
+      if (!imageMarker) continue;
+      const alt = String(block.alt || '').trim();
+      parts.push(alt ? `[image: ${alt}]` : '[image]');
+      continue;
+    }
+    if (block.type === 'rule') continue;
+
+    const text = String(block.text || '').trim();
+    if (!text) continue;
+    parts.push(block.type === 'bullet' ? `- ${text}` : text);
+  }
+
+  return parts.join('\n');
+}
+
 module.exports = {
   htmlToBlocks,
-  plainTextToBlocks
+  plainTextToBlocks,
+  noteToPlainText
 };

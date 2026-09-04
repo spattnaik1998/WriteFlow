@@ -2,6 +2,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const supabase = require('./supabase');
 const { generateJson } = require('./llmClient');
+const { noteToPlainText } = require('./noteHtml');
 const {
   ESSAY_QUALITY_SYSTEM_PROMPT,
   EVALUATION_SCORE_KEYS,
@@ -300,9 +301,12 @@ async function fetchSessionContext(session) {
     const notesByBook = {};
     const ideasByBook = {};
     const articlesByBook = {};
+    // Convert once, here: every downstream use (relevance scoring, excerpts, the
+    // evidence packet) reads note.content, and stored HTML would put markup and
+    // base64 image payloads into both the search index and the model's prompts.
     (notes || []).forEach(note => {
       if (!notesByBook[note.book_id]) notesByBook[note.book_id] = [];
-      notesByBook[note.book_id].push(note);
+      notesByBook[note.book_id].push({ ...note, content: noteToPlainText(note.content) });
     });
     (ideas || []).forEach(idea => {
       if (!ideasByBook[idea.book_id]) ideasByBook[idea.book_id] = [];

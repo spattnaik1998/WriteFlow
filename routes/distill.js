@@ -2,6 +2,7 @@ const express  = require('express');
 const router   = express.Router();
 const supabase = require('../services/supabase');
 const { distillNotes, generateBroadIdeas } = require('../services/openai');
+const { noteToPlainText } = require('../services/noteHtml');
 
 // SM-2 simplified spaced repetition helpers
 function sm2NextInterval(currentInterval, rating) {
@@ -107,9 +108,12 @@ router.post('/broad', async (req, res) => {
     .eq('book_id', book_id)
     .order('chapter_order', { ascending: true });
 
+  // Every chapter of the book goes into this prompt with no length cap, so stored HTML
+  // here is the single most expensive place base64 images could reach the model.
   const allNotes = (notes || [])
-    .filter(n => n.content?.trim())
-    .map(n => `[${n.chapter_name || 'Chapter'}]:\n${n.content}`)
+    .map(n => ({ chapter: n.chapter_name || 'Chapter', text: noteToPlainText(n.content) }))
+    .filter(n => n.text.trim())
+    .map(n => `[${n.chapter}]:\n${n.text}`)
     .join('\n\n');
 
   let ideas;

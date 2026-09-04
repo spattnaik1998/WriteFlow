@@ -8688,6 +8688,21 @@ function _applyRefinedNotes() {
   const refined = document.getElementById('refineRefinedText').value.trim();
   if (!refined) return;
   const ta = document.getElementById('mainNotes');
+
+  // Refine round-trips the chapter as plain text (openRefineModal sends .innerText), so
+  // applying it replaces the chapter's HTML wholesale — and any pasted screenshot or
+  // graph in it is gone, auto-saved over within 1.5s, with no undo. Warn before that
+  // happens rather than silently discarding images the user pasted.
+  const imageCount = (ta.innerHTML.match(/<img\b/gi) || []).length;
+  if (imageCount > 0) {
+    const ok = window.confirm(
+      `This chapter has ${imageCount} image${imageCount === 1 ? '' : 's'}. ` +
+      `Refine works on text only, so applying it will remove ${imageCount === 1 ? 'it' : 'them'} permanently.\n\n` +
+      `Apply anyway?`
+    );
+    if (!ok) return;
+  }
+
   ta.innerText = refined;
   // trigger state sync + debounced backend save
   onNotesInput();
