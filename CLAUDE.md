@@ -118,6 +118,6 @@ OPENAI_MODEL / ANTHROPIC_MODEL
 
 ## Git / deployment rules
 
-- **Only commit files required to run the app in production:** `server.js`, `index.html`, `package.json`, `package-lock.json`, `routes/*.js`, `services/*.js`, `middleware/*.js`, `tests/*.js`, `supabase_schema.sql`, `.env.example`, `CLAUDE.md`. Never commit personal documents (`.docx`, `.pdf`, `.png`), planning files (`FEATURE_ROADMAP.md`, `IMPLEMENTATION_SUMMARY.md`, `RESUME_HERE.md`, `SETUP_GUIDE.md`, `HANDOVER.md`, `MASTERMIND_*.md`, `SKILL.md`), or runtime state (`.essay-agent/`, `.ollama-runtime/`, `*.log`).
+- **Only commit files required to run the app in production, plus the repo's own tooling:** `server.js`, `index.html`, `package.json`, `package-lock.json`, `routes/*.js`, `services/*.js`, `middleware/*.js`, `scripts/*.js`, `tests/*.js`, `supabase_schema.sql`, `.env.example`, `CLAUDE.md`, `.claude/skills/**`. Not `.claude/settings*.json` — those are per-machine. Never commit personal documents (`.docx`, `.pdf`, `.png`), planning files (`FEATURE_ROADMAP.md`, `IMPLEMENTATION_SUMMARY.md`, `RESUME_HERE.md`, `SETUP_GUIDE.md`, `HANDOVER.md`, `MASTERMIND_*.md`, `SKILL.md`), or runtime state (`.essay-agent/`, `.ollama-runtime/`, `*.log`).
 - **Never create README or documentation files** after building a feature unless explicitly asked.
 - Push to `origin master` after each confirmed feature completion.
