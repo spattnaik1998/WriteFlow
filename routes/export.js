@@ -1,65 +1,180 @@
 const express = require('express');
 const router = express.Router();
 const PDFDocument = require('pdfkit');
+const axios = require('axios');
 const supabase = require('../services/supabase');
+const { htmlToBlocks } = require('../services/noteHtml');
+const { sortNotesByChapter, sortChapterNames } = require('../services/chapterOrder');
 
-// Helper to parse notes by delimiter and format as points
-function parseNotePoints(text) {
-  if (!text) return [];
+// Real margins, rather than `margin: 0` plus manual positioning: pdfkit uses them to
+// decide where a paragraph breaks across pages, so with a zero bottom margin long notes
+// flow straight over the footer and off the sheet.
+const MARGINS = { top: 60, bottom: 70, left: 60, right: 60 };
+const REMOTE_IMAGE_TIMEOUT_MS = 5000;
+const MAX_REMOTE_IMAGE_BYTES = 8 * 1024 * 1024;
 
-  // Split by common delimiters: '-', '•', '*', or newlines followed by '-'
-  const points = text
-    .split(/[-•*]\s*|\n\s*[-•*]\s*/)
-    .map(p => p.trim())
-    .filter(p => p && p.length > 3);
-
-  return points;
+// Pasted screenshots arrive as data: URIs, but notes pasted off a web page can carry
+// <img src="https://...">. Resolve those up front so a slow or dead host fails while the
+// response is still a plain JSON error, not half a PDF.
+async function resolveRemoteImages(blocks) {
+  for (const block of blocks) {
+    if (block.type !== 'image' || block.data || !block.url) continue;
+    try {
+      const response = await axios.get(block.url, {
+        responseType: 'arraybuffer',
+        timeout: REMOTE_IMAGE_TIMEOUT_MS,
+        maxContentLength: MAX_REMOTE_IMAGE_BYTES,
+        maxRedirects: 3
+      });
+      block.data = Buffer.from(response.data);
+      block.mime = String(response.headers['content-type'] || '').split(';')[0].toLowerCase();
+    } catch (error) {
+      block.error = `Linked image could not be downloaded (${error.message})`;
+    }
+  }
+  return blocks;
 }
 
-// Helper to add a point with proper formatting and spacing
-function addBulletPoint(doc, text, options = {}) {
-  const pageHeight = doc.page.height;
-  const currentY = doc.y;
-  const bottomMargin = 60;
+function layoutFor(doc, top) {
+  return {
+    left: MARGINS.left,
+    width: doc.page.width - MARGINS.left - MARGINS.right,
+    top,
+    bottom: doc.page.height - MARGINS.bottom
+  };
+}
 
-  // If we're too close to the bottom, add a new page
-  if (currentY + 50 > pageHeight - bottomMargin) {
+// Usable height of a *fresh* page — the ceiling for scaling an image, and the cap on how
+// much room it is worth demanding before a block starts.
+function pageCapacity(layout) {
+  return layout.bottom - MARGINS.top;
+}
+
+function ensureRoom(doc, layout, needed) {
+  if (doc.y + Math.min(needed, pageCapacity(layout)) > layout.bottom) {
     doc.addPage();
-    doc.fontSize(options.fontSize || 11).font('Helvetica');
-    addHeader(doc);
+    doc.y = MARGINS.top;
+  }
+}
+
+function renderImagePlaceholder(doc, layout, message) {
+  ensureRoom(doc, layout, 46);
+  const top = doc.y;
+  doc.roundedRect(layout.left, top, layout.width, 38, 4).fill('#f7f7f7');
+  doc.roundedRect(layout.left, top, layout.width, 38, 4)
+    .strokeColor('#e0e0e0').lineWidth(0.5).stroke();
+  doc.fontSize(9).font('Helvetica-Oblique').fillColor('#999999');
+  doc.text(message, layout.left + 12, top + 14, {
+    width: layout.width - 24,
+    lineBreak: false,
+    ellipsis: true
+  });
+  doc.y = top + 48;
+}
+
+function renderImageBlock(doc, block, layout) {
+  const caption = String(block.alt || '').trim();
+
+  if (block.data && block.data.length) {
+    // openImage parses the header only — it validates the format and hands back the pixel
+    // dimensions needed to scale and paginate before anything is written to the page.
+    let image = null;
+    try {
+      image = doc.openImage(block.data);
+    } catch (_error) {
+      image = null;
+    }
+
+    if (image && image.width && image.height) {
+      const scale = Math.min(layout.width / image.width, pageCapacity(layout) / image.height, 1);
+      const width = image.width * scale;
+      const height = image.height * scale;
+
+      ensureRoom(doc, layout, height + 8);
+      const top = doc.y;
+      try {
+        doc.image(image, layout.left, top, { width, height });
+        doc.rect(layout.left, top, width, height)
+          .strokeColor('#e0e0e0').lineWidth(0.5).stroke();
+        doc.y = top + height + 6;
+        if (caption) {
+          doc.fontSize(9).font('Helvetica-Oblique').fillColor('#888888');
+          doc.text(caption, layout.left, doc.y, { width: layout.width });
+        }
+        doc.moveDown(0.6);
+        return;
+      } catch (error) {
+        // Formats pdfkit opens but cannot embed (interlaced PNG, exotic bit depths).
+        doc.y = top;
+        renderImagePlaceholder(doc, layout, `Image could not be embedded (${error.message})`);
+        return;
+      }
+    }
   }
 
-  const bulletSize = 3;
-  const bulletX = 60;
-  const textX = 80;
-  const maxWidth = doc.page.width - 100;
-
-  // Draw bullet
-  doc.fillColor('#2c5aa0');
-  doc.circle(bulletX + 2, doc.y + 6, bulletSize);
-  doc.fill();
-
-  // Add text
-  doc.fontSize(options.fontSize || 11).font('Helvetica').fillColor('#1a1a1a');
-  doc.text(text, textX, doc.y, {
-    width: maxWidth,
-    align: 'left',
-    lineGap: 3
-  });
-
-  // Add spacing after point
-  doc.moveDown(0.4);
+  renderImagePlaceholder(
+    doc,
+    layout,
+    block.error ||
+      `Image omitted — ${block.mime || 'this format'} cannot be embedded (PDF export supports PNG and JPEG)`
+  );
 }
 
-// Helper to add chapter header
-function addHeader(doc) {
-  doc.fontSize(9).fillColor('#999999').font('Helvetica');
-  const pageNum = doc.bufferedPageRange().count;
-  doc.text(
-    `Page ${pageNum}`,
-    60,
-    doc.page.height - 35
-  );
+function renderNoteBlocks(doc, blocks, layout) {
+  blocks.forEach(block => {
+    if (block.type === 'image') {
+      renderImageBlock(doc, block, layout);
+      return;
+    }
+
+    if (block.type === 'rule') {
+      ensureRoom(doc, layout, 16);
+      doc.strokeColor('#e0e0e0').lineWidth(0.5);
+      doc.moveTo(layout.left, doc.y + 6).lineTo(layout.left + layout.width, doc.y + 6).stroke();
+      doc.y += 16;
+      return;
+    }
+
+    if (block.type === 'heading') {
+      doc.fontSize(block.level <= 2 ? 15 : 13).font('Helvetica-Bold').fillColor('#2c5aa0');
+      ensureRoom(doc, layout, doc.heightOfString(block.text, { width: layout.width }) + 10);
+      doc.text(block.text, layout.left, doc.y, { width: layout.width });
+      doc.moveDown(0.35);
+      return;
+    }
+
+    if (block.type === 'quote') {
+      doc.fontSize(11).font('Helvetica-Oblique').fillColor('#555555');
+      const textWidth = layout.width - 18;
+      ensureRoom(doc, layout, doc.heightOfString(block.text, { width: textWidth, lineGap: 3 }) + 8);
+      const top = doc.y;
+      doc.text(block.text, layout.left + 18, top, { width: textWidth, lineGap: 3 });
+      // Skip the rule if the quote flowed onto a new page — top no longer sits above doc.y.
+      if (doc.y > top) {
+        doc.strokeColor('#c9a84c').lineWidth(2);
+        doc.moveTo(layout.left + 4, top).lineTo(layout.left + 4, doc.y).stroke();
+      }
+      doc.moveDown(0.5);
+      return;
+    }
+
+    if (block.type === 'bullet') {
+      doc.fontSize(11).font('Helvetica').fillColor('#1a1a1a');
+      const textWidth = layout.width - 20;
+      ensureRoom(doc, layout, doc.heightOfString(block.text, { width: textWidth, lineGap: 3 }) + 6);
+      const top = doc.y;
+      doc.circle(layout.left + 4, top + 5, 2).fill('#2c5aa0');
+      doc.fillColor('#1a1a1a');
+      doc.text(block.text, layout.left + 20, top, { width: textWidth, lineGap: 3 });
+      doc.moveDown(0.35);
+      return;
+    }
+
+    doc.fontSize(11).font('Helvetica').fillColor('#1a1a1a');
+    ensureRoom(doc, layout, doc.heightOfString(block.text, { width: layout.width, lineGap: 3 }));
+    doc.text(block.text, layout.left, doc.y, { width: layout.width, align: 'left', lineGap: 3 });
+    doc.moveDown(0.5);
+  });
 }
 
 // POST /api/export/notes-pdf — generate PDF of all notes for a book
@@ -79,8 +194,10 @@ router.post('/notes-pdf', async (req, res) => {
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    // Fetch all notes for the book
-    const { data: notesData, error: notesError } = await supabase
+    // Fetch all notes for the book. chapter_order is NULL on every row in practice — the
+    // editor never posts it — so this ORDER BY is only a stable starting point; reading
+    // order is settled by sortNotesByChapter below.
+    const { data: rawNotes, error: notesError } = await supabase
       .from('notes')
       .select('*')
       .eq('book_id', book_id)
@@ -90,10 +207,22 @@ router.post('/notes-pdf', async (req, res) => {
       return res.status(500).json({ error: notesError.message });
     }
 
+    const notesData = sortNotesByChapter(rawNotes);
+
+    // Notes are stored as contenteditable HTML, so parse each one into blocks and resolve
+    // any linked images BEFORE the response stream opens — once doc.pipe(res) runs the
+    // status code is committed and a failed fetch can no longer be reported as JSON.
+    const blocksByNote = new Map();
+    for (const note of notesData || []) {
+      const blocks = htmlToBlocks(note.content);
+      await resolveRemoteImages(blocks);
+      blocksByNote.set(note.id, blocks);
+    }
+
     // Create PDF document
     const doc = new PDFDocument({
       size: 'A4',
-      margin: 0,
+      margins: { ...MARGINS },
       bufferPages: true
     });
 
@@ -140,49 +269,46 @@ router.post('/notes-pdf', async (req, res) => {
     // CONTENT PAGES
     // ═══════════════════════════════════════
     if (notesData && notesData.length > 0) {
-      notesData.forEach((note, chapterIndex) => {
+      notesData.forEach(note => {
         // Add new page for each chapter
         doc.addPage();
 
-        // Chapter header with background
+        // Chapter header with background. Shrink the title until it fits the band rather
+        // than letting a long chapter name wrap out of it.
         doc.rect(0, 0, pageWidth, 50).fill('#f5f5f5');
-        doc.fontSize(24).font('Helvetica-Bold').fillColor('#2c5aa0');
-        doc.text(note.chapter_name, 60, 12, { width: pageWidth - 120 });
+        const chapterName = note.chapter_name || 'Untitled chapter';
+        doc.font('Helvetica-Bold');
+        let titleSize = 22;
+        while (titleSize > 12 && doc.fontSize(titleSize).widthOfString(chapterName) > pageWidth - 120) {
+          titleSize -= 1;
+        }
+        doc.fontSize(titleSize).fillColor('#2c5aa0');
+        doc.text(chapterName, 60, (50 - titleSize) / 2, {
+          width: pageWidth - 120,
+          lineBreak: false,
+          ellipsis: true
+        });
 
         // Separator line
         doc.strokeColor('#d0d0d0').lineWidth(1);
         doc.moveTo(60, 50).lineTo(pageWidth - 60, 50).stroke();
 
         // Chapter metadata
-        doc.moveDown(3.5);
         doc.fontSize(9).font('Helvetica').fillColor('#888888');
         const updatedDate = note.updated_at
           ? new Date(note.updated_at).toLocaleDateString()
           : 'N/A';
-        doc.text(`Last updated: ${updatedDate}`);
+        doc.text(`Last updated: ${updatedDate}`, 60, 62, { width: pageWidth - 120 });
 
-        doc.moveDown(1);
+        const layout = layoutFor(doc, 88);
+        doc.y = layout.top;
 
-        // Parse and display points
-        const points = parseNotePoints(note.content);
-
-        if (points.length > 0) {
-          doc.fontSize(11).font('Helvetica').fillColor('#1a1a1a');
-
-          points.forEach((point, pointIndex) => {
-            addBulletPoint(doc, point, { fontSize: 11 });
-          });
-        } else if (note.content && note.content.trim()) {
-          // If no delimiter found, display as is with better formatting
-          doc.fontSize(11).font('Helvetica').fillColor('#1a1a1a');
-          doc.text(note.content, 60, doc.y, {
-            width: doc.page.width - 120,
-            align: 'left',
-            lineGap: 4
-          });
+        const blocks = blocksByNote.get(note.id) || [];
+        if (blocks.length > 0) {
+          renderNoteBlocks(doc, blocks, layout);
         } else {
-          doc.fontSize(11).font('Helvetica').fillColor('#999999').font('Helvetica-Oblique');
-          doc.text('No notes recorded for this chapter.', 60, doc.y);
+          doc.fontSize(11).font('Helvetica-Oblique').fillColor('#999999');
+          doc.text('No notes recorded for this chapter.', layout.left, doc.y, { width: layout.width });
         }
       });
     } else {
@@ -199,6 +325,10 @@ router.post('/notes-pdf', async (req, res) => {
     for (let i = 0; i < totalPages; i++) {
       doc.switchToPage(i);
 
+      // The footer deliberately sits below the text margin. Drop that margin first, or
+      // pdfkit treats writing there as an overflow and appends a blank page.
+      doc.page.margins.bottom = 0;
+
       // Footer separator line
       doc.strokeColor('#e0e0e0').lineWidth(0.5);
       doc.moveTo(60, pageHeight - 50).lineTo(pageWidth - 60, pageHeight - 50).stroke();
@@ -209,13 +339,16 @@ router.post('/notes-pdf', async (req, res) => {
         `${i > 0 ? bookData.title + ' • ' : ''}Page ${i + 1} of ${totalPages}`,
         60,
         pageHeight - 40,
-        { width: pageWidth - 120, align: 'center' }
+        { width: pageWidth - 120, align: 'center', lineBreak: false }
       );
     }
 
     doc.end();
   } catch (error) {
     console.error('PDF generation error:', error);
+    // Once the PDF stream is open the status line is already sent; all that is left is to
+    // stop writing rather than crash on "headers already sent".
+    if (res.headersSent) return res.end();
     res.status(500).json({ error: 'Failed to generate PDF', details: error.message });
   }
 });
@@ -271,19 +404,16 @@ router.post('/ideas-pdf', async (req, res) => {
     doc.text(`Compiled: ${today}`, 60, doc.y);
     doc.text(`Total cards: ${ideasData ? ideasData.length : 0}`, 60, doc.y + 16);
 
-    // ── Group ideas by chapter_name ─────────────────────────────────────────
-    const chapters = [];
+    // ── Group ideas by chapter_name, then put the groups in reading order ───
     const chapterMap = {};
     if (ideasData) {
       ideasData.forEach(idea => {
         const ch = idea.chapter_name || 'General';
-        if (!chapterMap[ch]) {
-          chapterMap[ch] = [];
-          chapters.push(ch);
-        }
+        if (!chapterMap[ch]) chapterMap[ch] = [];
         chapterMap[ch].push(idea);
       });
     }
+    const chapters = sortChapterNames(Object.keys(chapterMap));
 
     // ── Content pages ───────────────────────────────────────────────────────
     const LEFT = 60;

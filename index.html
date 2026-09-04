@@ -6329,6 +6329,19 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
                 <div class="essay-panel-label" style="margin-top:14px">Unsupported Claims</div>
                 <ul class="essay-memory-list" id="essayCritiqueUnsupported"></ul>
               </div>
+              <div class="essay-memory-card" id="essayEvaluationCard" style="display:none">
+                <div class="essay-phase-row">
+                  <div class="essay-panel-title">Quality Evaluation</div>
+                  <div class="essay-phase-badge" id="essayEvalVerdict">—</div>
+                </div>
+                <div class="essay-panel-sub" id="essayEvalSummary"></div>
+                <div class="essay-panel-label" style="margin-top:14px">Scores</div>
+                <div class="essay-pill-row" id="essayEvalScores"></div>
+                <div class="essay-panel-label" style="margin-top:14px">Blocking Issues</div>
+                <ul class="essay-memory-list" id="essayEvalBlocking"></ul>
+                <div class="essay-panel-label" style="margin-top:14px">Revision Priorities</div>
+                <ul class="essay-memory-list" id="essayEvalPriorities"></ul>
+              </div>
               <div class="essay-source-card">
                 <div class="essay-panel-title">Sources in Play</div>
                 <div class="essay-panel-sub">Selected books and attached docs available to the harness.</div>
@@ -7152,6 +7165,28 @@ let chapterIds       = {};    // { bookId: { chapterName: noteId } } — tracks 
 let chapterCompleted = {};    // { bookId: { chapterName: bool } }
 let currentChapterId = null; // name of the active chapter
 let _saveTimer      = null;  // debounce handle for notes auto-save
+
+// ── Editor provenance — which book/chapter the editor's DOM actually holds ──────
+// selectedBook / CURRENT_BOOK_ID / currentChapterId all advance the instant a book is
+// clicked, but the editor keeps showing the PREVIOUS book's text until loadBookContent()
+// finishes its network round-trip. Attributing a save to those globals during that window
+// writes the old book's notes into the newly selected book — the cross-book leak. These
+// two are set only when content is actually put into the editor, and every note save is
+// attributed to them instead.
+let _editorBookId   = null;
+let _editorChapter  = null;
+
+/** Put html into the notes editor and record which book/chapter it came from. */
+function setEditorContent(bookId, chapterName, html) {
+  document.getElementById('mainNotes').innerHTML = html || '';
+  _editorBookId  = bookId || null;
+  _editorChapter = chapterName || null;
+}
+
+/** Blank the editor and detach it from any book, so nothing can be saved out of it. */
+function clearEditorContent() {
+  setEditorContent(null, null, '');
+}
 let _searchTimer    = null;  // debounce handle for sidebar search
 let _postLoadAction = null;  // { tab, chapter } applied after loadBookContent resolves
 let _currentFlow    = null;  // last rendered flow data (for SVG resize)
@@ -7262,7 +7297,7 @@ function loadProtoContent(bookId) {
 
   // Activate the default chapter
   currentChapterId = proto.activeChapter;
-  document.getElementById('mainNotes').innerHTML = proto.activeNotes;
+  setEditorContent(selectedBook, proto.activeChapter, proto.activeNotes);
   chapterSelect.value = proto.activeChapter;
   renderAccordion();
 
@@ -7277,20 +7312,21 @@ function loadProtoContent(bookId) {
 // ═══════════════════════════════════════
 
 function saveCurrentChapter() {
-  if (!selectedBook || !currentChapterId) return;
-  if (!chapterNotes[selectedBook]) chapterNotes[selectedBook] = {};
-  chapterNotes[selectedBook][currentChapterId] = document.getElementById('mainNotes').innerHTML;
+  // Attribute to the book the editor's content actually came from, never to whatever
+  // book happens to be selected right now.
+  if (!_editorBookId || !_editorChapter) return;
+  if (!chapterNotes[_editorBookId]) chapterNotes[_editorBookId] = {};
+  chapterNotes[_editorBookId][_editorChapter] = document.getElementById('mainNotes').innerHTML;
 }
 
 function switchChapter(name) {
   saveCurrentChapter();
   currentChapterId = name;
-  const editor = document.getElementById('mainNotes');
-  editor.innerHTML = chapterNotes[selectedBook]?.[name] ?? '';
+  setEditorContent(selectedBook, name, chapterNotes[selectedBook]?.[name] ?? '');
   document.getElementById('chapterSelect').value = name;
   renderAccordion();
   updateChapterDoneBtn();
-  editor.focus();
+  document.getElementById('mainNotes').focus();
 }
 
 function renderAccordion() {
@@ -7348,6 +7384,9 @@ async function toggleChapterDone() {
 
 function addChapter() {
   if (!selectedBook) return;
+  // The editor is detached while a book is still loading. Creating a chapter then would
+  // stamp it with whatever the editor happens to be holding, so make the user wait.
+  if (!_editorBookId) { showToast('Still loading this book — try again in a moment'); return; }
   const existing = Object.keys(chapterNotes[selectedBook] || {});
   const defaultName = `Chapter ${existing.length + 1}`;
   const name = window.prompt('New chapter name:', defaultName);
@@ -7441,7 +7480,7 @@ function deleteChapter(chapterName, noteId, event) {
       switchChapter(remaining[0]);
     } else {
       currentChapterId = null;
-      document.getElementById('mainNotes').innerHTML = '';
+      clearEditorContent();
     }
   }
 
@@ -7455,16 +7494,19 @@ function deleteChapter(chapterName, noteId, event) {
 }
 
 function onNotesInput() {
-  if (!selectedBook || !currentChapterId) return;
+  // Guard on editor provenance, not on the selected book: while a book switch is loading
+  // the editor is detached (_editorBookId === null) and its content must not be saved
+  // anywhere — that is exactly the window in which notes leaked between books.
+  if (!_editorBookId || !_editorChapter) return;
   const el = document.getElementById('mainNotes');
   const content = el.innerHTML;
   const contentText = el.innerText || '';
-  if (!chapterNotes[selectedBook]) chapterNotes[selectedBook] = {};
-  chapterNotes[selectedBook][currentChapterId] = content;
+  if (!chapterNotes[_editorBookId]) chapterNotes[_editorBookId] = {};
+  chapterNotes[_editorBookId][_editorChapter] = content;
   // Live-update word count and preview in the accordion
   const wc = contentText.trim().split(/\s+/).filter(Boolean).length;
   const activeItem = [...document.querySelectorAll('.accordion-item')].find(el =>
-    el.querySelector('.acc-title')?.textContent === currentChapterId
+    el.querySelector('.acc-title')?.textContent === _editorChapter
   );
   if (activeItem) {
     const meta = activeItem.querySelector('.acc-meta');
@@ -7473,11 +7515,11 @@ function onNotesInput() {
     if (preview) preview.innerHTML = content || '';
   }
   // Debounced save to backend (live mode only).
-  // Capture book/chapter NOW so a mid-flight book switch can't redirect the save.
-  if (CURRENT_BOOK_ID) {
+  // Capture the EDITOR's book/chapter so a mid-flight book switch can't redirect the save.
+  if (IS_LIVE_MODE && _editorBookId) {
     clearTimeout(_saveTimer);
-    const _bookId   = CURRENT_BOOK_ID;
-    const _chapter  = currentChapterId;
+    const _bookId   = _editorBookId;
+    const _chapter  = _editorChapter;
     _saveTimer = setTimeout(async () => {
       await api('POST', '/notes', { book_id: _bookId, chapter_name: _chapter, content });
       // Only show indicator if the user is still on this book
@@ -7549,12 +7591,15 @@ function selectBook(id) {
   // Save current chapter before switching
   saveCurrentChapter();
 
-  // Force-flush the current chapter to API before switching
-  if (CURRENT_BOOK_ID && currentChapterId && chapterNotes[CURRENT_BOOK_ID]?.[currentChapterId] !== undefined) {
+  // Force-flush the editor's chapter to the API before switching. Keyed off editor
+  // provenance rather than CURRENT_BOOK_ID/currentChapterId so the flush can never be
+  // attributed to the book being switched TO, whatever order these globals move in.
+  if (IS_LIVE_MODE && _editorBookId && _editorChapter &&
+      chapterNotes[_editorBookId]?.[_editorChapter] !== undefined) {
     api('POST', '/notes', {
-      book_id: CURRENT_BOOK_ID,
-      chapter_name: currentChapterId,
-      content: chapterNotes[CURRENT_BOOK_ID][currentChapterId]
+      book_id: _editorBookId,
+      chapter_name: _editorChapter,
+      content: chapterNotes[_editorBookId][_editorChapter]
     });
   }
 
@@ -7565,8 +7610,9 @@ function selectBook(id) {
   document.getElementById('barAuthor').textContent = `— ${b.author}`;
 
   // ── Wipe all content panes immediately so stale content from the
-  //    previous book never bleeds into the new one while the API loads ──
-  document.getElementById('mainNotes').innerHTML = '';
+  //    previous book never bleeds into the new one while the API loads. Detaching the
+  //    editor (clearEditorContent) is what stops a save landing under the new book ──
+  clearEditorContent();
   document.getElementById('chapterSelect').innerHTML = '';
   document.querySelector('.accordion').innerHTML = '';
   document.getElementById('ideasGrid').innerHTML =
@@ -7632,7 +7678,7 @@ function deleteBook(bookId, event) {
       currentChapterId = null;
       document.getElementById('barTitle').textContent = 'No books';
       document.getElementById('barAuthor').textContent = '';
-      document.getElementById('mainNotes').innerHTML = '';
+      clearEditorContent();
       document.querySelector('.accordion').innerHTML = '';
       document.getElementById('chapterSelect').innerHTML = '';
     }
@@ -7742,7 +7788,7 @@ async function loadBookContent(bookId) {
     chapterSelect.innerHTML  = '<option value="Chapter 1">Chapter 1</option>';
     chapterSelect.onchange   = () => switchChapter(chapterSelect.value);
     currentChapterId         = 'Chapter 1';
-    mainNotes.innerHTML      = '';
+    setEditorContent(bookId, 'Chapter 1', '');
     renderAccordion();
   }
 
@@ -11637,7 +11683,7 @@ function startLiveApp() {
   document.getElementById('ideasGrid').innerHTML = '';
   document.getElementById('chapterSelect').innerHTML = '';
   document.querySelector('.accordion').innerHTML = '';
-  document.getElementById('mainNotes').innerHTML = '';
+  clearEditorContent();
   document.getElementById('barTitle').textContent = 'Select a book';
   document.getElementById('barAuthor').textContent = '';
 
@@ -12397,6 +12443,38 @@ function essayRenderCritique(critique) {
   essayRenderList('essayCritiqueUnsupported', critique.unsupported_claims, 'None flagged.');
 }
 
+function essayRenderEvaluation(evaluation) {
+  const card = document.getElementById('essayEvaluationCard');
+  if (!card) return;
+  if (!evaluation || !evaluation.scores) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = 'block';
+
+  const verdict = document.getElementById('essayEvalVerdict');
+  verdict.textContent = evaluation.passed ? 'Passed' : 'Needs work';
+  verdict.style.color = evaluation.passed ? '#4c9a5a' : '#c98a4c';
+
+  document.getElementById('essayEvalSummary').textContent = evaluation.summary || '';
+
+  const keys = evaluation.score_keys || ['synthesis_depth', 'evidence_grounding', 'paragraph_flow', 'grammar_polish'];
+  const scores = evaluation.scores || {};
+  const threshold = typeof evaluation.threshold === 'number' ? evaluation.threshold : 3.5;
+  const pills = [
+    ...keys.map(key => ({ label: key.replace(/_/g, ' '), value: scores[key] })),
+    { label: 'overall', value: scores.overall }
+  ].map(({ label, value }) => {
+    const v = typeof value === 'number' ? value : 0;
+    const below = v < threshold;
+    return `<span class="essay-chip" style="${below ? 'color:#c98a4c' : ''}">${escapeHtml(label)}: ${v}/5</span>`;
+  }).join('');
+  document.getElementById('essayEvalScores').innerHTML = pills;
+
+  essayRenderList('essayEvalBlocking', evaluation.blocking_issues, 'None flagged.');
+  essayRenderList('essayEvalPriorities', evaluation.revision_priorities, 'None suggested.');
+}
+
 function essayRenderPlan(plan, evidencePacket) {
   _essayLastPlan = plan || null;
   _essayEvidencePacket = evidencePacket || null;
@@ -12694,6 +12772,7 @@ async function essaySendMessage(messageOverride = '') {
   essayRenderDraft(data.draft_markdown || '');
   essayRenderMemory(data.memory || null);
   essayRenderCritique(data.critique || null);
+  essayRenderEvaluation(data.evaluation || null);
   essayRenderPlan(_essayLastPlan, _essayEvidencePacket);
   essayRenderToolTrace(_essayToolTrace);
   essayRenderPendingUpdates(_essayPendingUpdates);

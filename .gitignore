@@ -3,3 +3,7 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+# Runtime state — never belongs in the repo
+.essay-agent/
+.ollama-runtime/
