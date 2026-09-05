@@ -4200,6 +4200,29 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 }
 .tweet-char { font-size: 11px; color: var(--text-4); }
 .tweet-char.warn { color: #e88; }
+.tweet-controls { display: flex; gap: 8px; align-items: center; margin: 14px 0 10px; }
+.tweet-controls .synthesis-dropdown { flex: 1; }
+.tweet-meta { font-size: 11px; color: var(--text-4); margin-bottom: 10px; min-height: 14px; }
+.tweet-warning {
+  font-size: 11px;
+  line-height: 1.5;
+  color: #e0a050;
+  background: rgba(224,160,80,.08);
+  border: 1px solid rgba(224,160,80,.25);
+  border-radius: 8px;
+  padding: 9px 11px;
+  margin-bottom: 10px;
+}
+.tweet-angle {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--amber);
+  margin-bottom: 7px;
+}
+.tweet-text { white-space: pre-wrap; line-height: 1.62; }
+.tweet-list { max-height: 52vh; overflow-y: auto; }
 .tweet-copy {
   font-size: 11px;
   padding: 4px 10px;
@@ -6362,9 +6385,19 @@ a.wiki-link--red { color: #c06040; text-decoration-style: dotted; cursor: pointe
 
 <!-- Tweet Modal -->
 <div class="modal-overlay" id="tweetModalOverlay" onclick="outsideTweetClose(event)">
-  <div class="modal" style="width:520px">
+  <div class="modal" style="width:640px">
     <div class="modal-title">Tweet These Ideas</div>
-    <div class="modal-sub" id="tweetModalSub">Generating tweet-ready insights from your notes…</div>
+    <div class="modal-sub" id="tweetModalSub">Pick a book. Posts are drawn from all of its notes.</div>
+
+    <div class="tweet-controls">
+      <select class="synthesis-dropdown" id="tweetBookSelect" onchange="tweetBookChanged()">
+        <option value="">Choose a book…</option>
+      </select>
+      <button class="btn-amber btn-sm" id="tweetGenerateBtn" onclick="generateTweetPosts()">Generate</button>
+    </div>
+    <div class="tweet-meta" id="tweetMeta"></div>
+    <div class="tweet-warning" id="tweetWarning" style="display:none"></div>
+
     <div id="tweetList" class="tweet-list"></div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeTweetModal()">Close</button>
@@ -8082,68 +8115,141 @@ function _applyRefinedNotes() {
 }
 
 // ═══════════════════════════════════════
-// TWEET MODAL
+// TWEET IDEAS
 // ═══════════════════════════════════════
+// Posts are drawn from a whole book, not the chapter in the editor, so the modal opens
+// on a book picker rather than generating immediately. Earlier posts for the chosen book
+// are sent back to the model as angles to avoid, which is why re-running on the same book
+// gives different arguments instead of the same three.
+
+let _tweetPosts = [];
+
 function openTweetModal() {
-  const notes = document.getElementById('mainNotes').innerText.trim();
-  if (!notes) { showToast('Write some notes first'); return; }
-
   const overlay = document.getElementById('tweetModalOverlay');
+  const select  = document.getElementById('tweetBookSelect');
   const list    = document.getElementById('tweetList');
-  const sub     = document.getElementById('tweetModalSub');
 
-  list.innerHTML = '<div class="tweet-loading"><div class="tweet-spinner"></div>Generating tweet-ready insights…</div>';
-  sub.textContent = 'Generating tweet-ready insights from your notes…';
+  list.innerHTML = '';
+  document.getElementById('tweetMeta').textContent = '';
+  document.getElementById('tweetWarning').style.display = 'none';
+  document.getElementById('tweetModalSub').textContent =
+    'Pick a book. Posts are drawn from all of its notes.';
+
+  const books = (BOOKS || []).filter(b => b.id);
+  select.innerHTML = '<option value="">Choose a book…</option>' +
+    books.map(b =>
+      `<option value="${b.id}"${b.id === CURRENT_BOOK_ID ? ' selected' : ''}>` +
+      `${escHtml(b.title)}${b.author ? ' — ' + escHtml(b.author) : ''}</option>`
+    ).join('');
+
   overlay.classList.add('open');
+  tweetBookChanged();
+}
 
-  const doGenerate = async () => {
-    let tweets = null;
+/** Show how many posts already exist for the selected book before anything is generated. */
+async function tweetBookChanged() {
+  const bookId = document.getElementById('tweetBookSelect').value;
+  const meta   = document.getElementById('tweetMeta');
+  const btn    = document.getElementById('tweetGenerateBtn');
 
-    if (CURRENT_BOOK_ID) {
-      const chapterName = document.getElementById('chapterSelect').value;
-      const result = await api('POST', '/tweets', {
-        book_id:       CURRENT_BOOK_ID,
-        chapter_name:  chapterName,
-        content:       notes,
-        brand_profile: BRAND_PROFILE
-      });
-      tweets = result?.tweets || null;
+  document.getElementById('tweetList').innerHTML = '';
+  document.getElementById('tweetWarning').style.display = 'none';
+  btn.disabled = !bookId;
+
+  if (!bookId) { meta.textContent = ''; return; }
+
+  if (!IS_LIVE_MODE) { meta.textContent = 'Prototype mode — sample posts.'; return; }
+
+  meta.textContent = 'Checking history…';
+  const result = await api('GET', `/tweets?book_id=${encodeURIComponent(bookId)}`);
+  const count = result?.posts?.length || 0;
+  meta.textContent = count
+    ? `${count} post${count === 1 ? '' : 's'} already generated from this book. New ones will take a different angle.`
+    : 'Nothing generated from this book yet.';
+}
+
+async function generateTweetPosts() {
+  const bookId = document.getElementById('tweetBookSelect').value;
+  if (!bookId) { showToast('Choose a book first'); return; }
+
+  const list = document.getElementById('tweetList');
+  const meta = document.getElementById('tweetMeta');
+  const btn  = document.getElementById('tweetGenerateBtn');
+  const warn = document.getElementById('tweetWarning');
+
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  warn.style.display = 'none';
+  meta.textContent = '';
+  list.innerHTML = '<div class="tweet-loading"><div class="tweet-spinner"></div>Reading the whole book…</div>';
+
+  let data = null;
+  if (IS_LIVE_MODE) {
+    data = await api('POST', '/tweets', { book_id: bookId, brand_profile: BRAND_PROFILE });
+  }
+
+  if (!data) {
+    // Prototype fallback, and the path taken when the request fails — api() returns null.
+    data = {
+      posts: PROTOTYPE_TWEET_POSTS,
+      total_words: PROTOTYPE_TWEET_POSTS.reduce((s, p) => s + p.word_count, 0),
+      target_words: { min: 500, max: 1000 },
+      chapters_used: 0,
+      avoided_previous: 0
+    };
+    if (IS_LIVE_MODE) {
+      warn.textContent = 'Generation failed, showing sample posts. Check the server log.';
+      warn.style.display = '';
     }
+  }
 
-    if (!tweets) {
-      // Prototype fallback
-      tweets = [
-        `Most people think slow thinking is safe. Kahneman shows the opposite: System 2 is lazy, not careful. It mostly endorses whatever System 1 hands it without scrutiny.`,
-        `The bat-and-ball problem isn't a trick — it's a window into how you think. If your gut said 10 cents, System 1 handed you a fluent lie and System 2 signed off without checking.`,
-        `WYSIATI: What You See Is All There Is. Your brain builds the most coherent story it can from whatever's in front of it — and never notices what's missing.`
-      ];
-    }
+  _tweetPosts = data.posts || [];
+  btn.disabled = false;
+  btn.textContent = 'Regenerate';
 
-    sub.textContent = `${tweets.length} tweet${tweets.length !== 1 ? 's' : ''} ready to copy`;
-    list.innerHTML = tweets.map((t, i) => {
-      const len  = t.length;
-      const warn = len > 260 ? ' warn' : '';
-      return `
-        <div class="tweet-item">
-          <div>${escHtml(t)}</div>
-          <div class="tweet-footer">
-            <span class="tweet-char${warn}">${len}/280</span>
-            <button class="tweet-copy" onclick="copyTweet(this, ${i})">Copy</button>
-          </div>
-        </div>`;
-    }).join('');
+  if (data.warning) {
+    warn.textContent = data.warning;
+    warn.style.display = '';
+  }
 
-    // Store tweets on the list for copying
-    list._tweets = tweets;
-  };
+  const target = data.target_words || { min: 500, max: 1000 };
+  const total  = data.total_words || 0;
+  const parts  = [
+    `${_tweetPosts.length} posts`,
+    `${total} words`,
+    data.chapters_used ? `drawn from ${data.chapters_used} chapters` : null,
+    data.avoided_previous ? `avoided ${data.avoided_previous} earlier posts` : null
+  ].filter(Boolean);
+  meta.textContent = parts.join(" · ");
 
-  doGenerate();
+  // A short batch is usually the notes, not the model: the contract forbids inventing
+  // material to pad, so say which it was rather than showing a bare number under target.
+  if (total < target.min && data.source_words !== undefined) {
+    const shortNote = data.source_words < 1200
+      ? `Came in at ${total} words, under the ${target.min}–${target.max} target. This book has `
+        + `only ${data.source_words} words of notes, and the model is not allowed to invent `
+        + `material to reach the target. Add more notes for longer posts.`
+      : `Came in at ${total} words, under the ${target.min}–${target.max} target. Regenerate for another pass.`;
+    warn.textContent = warn.textContent ? warn.textContent + " " + shortNote : shortNote;
+    warn.style.display = "";
+  }
+
+  document.getElementById('tweetModalSub').textContent =
+    data.book ? `${data.book.title}${data.book.author ? ' — ' + data.book.author : ''}` : 'Ready to copy';
+
+  list.innerHTML = _tweetPosts.map((p, i) => `
+    <div class="tweet-item">
+      ${p.angle ? `<div class="tweet-angle">${escHtml(p.angle)}</div>` : ''}
+      <div class="tweet-text">${escHtml(p.text)}</div>
+      <div class="tweet-footer">
+        <span class="tweet-char">${p.word_count || 0} words</span>
+        <button class="tweet-copy" onclick="copyTweet(this, ${i})">Copy</button>
+      </div>
+    </div>`).join('');
 }
 
 function copyTweet(btn, idx) {
-  const list   = document.getElementById('tweetList');
-  const tweets = list._tweets || [];
-  const text   = tweets[idx];
+  const text = _tweetPosts[idx]?.text;
   if (!text) return;
   navigator.clipboard.writeText(text).then(() => {
     btn.textContent = 'Copied!';
@@ -9822,6 +9928,24 @@ function generatePrototypeConceptMap(chapterName, rawNotes) {
 }
 
 // Sample prototype concept map (when backend is not available)
+// Sample long-form posts for prototype mode, and the fallback when a live request fails.
+const PROTOTYPE_TWEET_POSTS = [
+  {
+    angle: 'System 2 endorses rather than checks',
+    word_count: 92,
+    text: `Kahneman gave the bat-and-ball problem to students at Princeton, MIT and Harvard. More than half got it wrong. These are people selected for exactly the kind of deliberate reasoning the question rewards, and the answer they gave was the one their intuition handed them first.
+
+The usual reading is that people are lazy. Kahneman's is narrower and worse. System 2 was engaged the whole time. It read the answer, found nothing obviously wrong with it, and signed off. Checking is a separate operation from thinking, and it rarely runs.`
+  },
+  {
+    angle: 'WYSIATI makes coherence feel like evidence',
+    word_count: 84,
+    text: `What You See Is All There Is explains why a thin story often feels more convincing than a thick one. Your mind builds the most coherent account it can from whatever is in front of it, then rates its confidence on how well that account hangs together, not on how much of the picture is missing.
+
+So the less you know, the easier coherence becomes. Confidence peaks where information is thinnest. That is the part worth carrying out of the book.`
+  }
+];
+
 const PROTOTYPE_CONCEPT_MAP = {
   id: 'proto-1',
   chapter_name: 'Chapter 1 — Two Systems',

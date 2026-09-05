@@ -1,5 +1,12 @@
 const OpenAI = require('openai');
 const { ESSAY_QUALITY_SYSTEM_PROMPT, normalizeEssayProse } = require('./writingQuality');
+const { NO_AI_SLOP_CONTRACT, findSlop, describeSlop, wordCount } = require('./noAiSlop');
+
+// Long-form posts for an X account with no character limit: the target is a total word
+// count across the batch, not a per-post character cap.
+const TWEET_TARGET_WORDS = { min: 500, max: 1000 };
+const TWEET_POST_COUNT_MIN = 4;
+const TWEET_POST_COUNT_MAX = 6;
 const { noteToPlainText } = require('./noteHtml');
 
 const openai = process.env.OPENAI_API_KEY
@@ -252,31 +259,74 @@ function buildVoiceBlock(brandProfile) {
 }
 
 /**
- * Generate 3-5 tweet-ready insights from a chapter's notes.
- * Returns an array of tweet strings (each under 280 chars).
+ * Turn a whole book's notes into long-form posts.
+ *
+ * Three things make this different from a "summarise the chapter" call:
+ *
+ * 1. The source is the entire book — every chapter's notes plus every distilled idea —
+ *    not the chapter open in the editor. An argument worth posting usually spans
+ *    chapters, and the model cannot find it if it only sees one.
+ * 2. The output is long-form. The user posts from an X account with no 280-character
+ *    limit, so the target is TARGET_WORDS_MIN..TARGET_WORDS_MAX words across 4-6 posts
+ *    rather than a handful of one-liners.
+ * 3. Previously generated posts are passed back in. Without them the model re-finds the
+ *    same two or three most obvious arguments in a book every time it is run.
+ *
+ * Output passes the no-AI-slop mechanical gate before it is returned. The contract in the
+ * prompt is not enough on its own — models emit "It's not X, it's Y" while being told not
+ * to — so findSlop runs over the result and a second pass repairs whatever it catches.
  */
-async function generateTweets({ bookTitle, author, chapterName, notesContent, ideas = [], brandProfile = null }) {
+async function generateTweets({
+  bookTitle,
+  author,
+  bookNotes = [],
+  ideas = [],
+  previousPosts = [],
+  brandProfile = null,
+  targetWords = null
+}) {
   const voiceBlock = buildVoiceBlock(brandProfile);
-  const systemPrompt = `You are an expert at distilling book insights into high-signal, shareable tweets. Each tweet must:
-- Be under 280 characters
-- Lead with a sharp, counterintuitive or thought-provoking insight
-- Feel like it was written by a smart person, not a marketer
-- NOT use hashtags or @mentions
-- Stand completely alone as a compelling thought
+
+  const minWords = targetWords?.min || TWEET_TARGET_WORDS.min;
+  const maxWords = targetWords?.max || TWEET_TARGET_WORDS.max;
+
+  const systemPrompt = `You write long-form posts for X, drawn from one reader's own notes on a book.
+
+${NO_AI_SLOP_CONTRACT}
+
+What to write
+- ${TWEET_POST_COUNT_MIN} to ${TWEET_POST_COUNT_MAX} standalone posts, ${minWords} to ${maxWords} words in total across all of them. Individual posts run roughly 80 to 250 words. There is no character limit.
+- Each post makes one argument and stands alone. A reader who has not read the book, and has not seen the other posts, should still get something out of it.
+- Build each post from the book as a whole. Connect what one chapter claims to what another shows. A post that only restates a single chapter is a weaker post.
+- Ground every post in the reader's actual notes: the author's specific claims, the evidence and examples they recorded, the numbers they wrote down. Do not import facts from outside the notes.
+- Where the notes contain the reader's own reaction, disagreement or connection to something else, that is the most valuable material. Use it.
+- Give each post a distinct angle. Do not write five variations on the same argument.
 ${voiceBlock}
-Return ONLY valid JSON: { "tweets": ["tweet1", "tweet2", ...] } — exactly 3 to 5 tweets.`;
+Return ONLY valid JSON: { "posts": [{ "angle": string, "text": string }] } where "angle" is a five-to-ten-word label for the argument the post makes, used later to avoid repeating it.`;
 
-  const userPrompt = `Book: "${bookTitle}" by ${author}
-Chapter: ${chapterName || 'Key Insights'}
+  const notesBlock = (bookNotes || [])
+    .filter(n => n.text && n.text.trim())
+    .map(n => `## ${n.chapter_name || 'Notes'}\n${n.text.trim()}`)
+    .join('\n\n');
 
-Notes:
+  const ideasBlock = (ideas || []).length
+    ? `\nIdeas the reader has already distilled from this book:\n${ideas.map(i => `- ${i.title}: ${(i.body || '').slice(0, 200)}`).join('\n')}\n`
+    : '';
+
+  const historyBlock = (previousPosts || []).length
+    ? `\nPosts already generated from this book. Do not repeat these arguments, and do not write a near-variant of one. Find something else in the notes:\n${
+        previousPosts.map((p, i) => `${i + 1}. [${p.angle || 'no angle recorded'}] ${(p.content || '').slice(0, 220)}`).join('\n')
+      }\n`
+    : '';
+
+  const userPrompt = `Book: "${bookTitle}"${author ? ` by ${author}` : ''}
+
+The reader's notes, chapter by chapter:
 """
-${(notesContent || '').slice(0, 2000)}
+${notesBlock || '(no notes recorded)'}
 """
-
-${ideas.length ? `Already distilled ideas for context:\n${ideas.map(i => `• ${i.title}: ${i.body ? i.body.slice(0, 100) : ''}`).join('\n')}` : ''}
-
-Generate 3-5 high-signal tweets derived from these notes.`;
+${ideasBlock}${historyBlock}
+Write ${TWEET_POST_COUNT_MIN} to ${TWEET_POST_COUNT_MAX} posts totalling ${minWords} to ${maxWords} words.`;
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o',
@@ -285,12 +335,72 @@ Generate 3-5 high-signal tweets derived from these notes.`;
       { role: 'user',   content: userPrompt   }
     ],
     response_format: { type: 'json_object' },
-    temperature: 0.82,
-    max_tokens: 800
+    temperature: 0.85,
+    max_tokens: 4000
   });
 
-  const raw = parseJsonResponse(response.choices[0].message.content);
-  return raw.tweets || [];
+  let posts = normalizeGeneratedPosts(parseJsonResponse(response.choices[0].message.content));
+
+  // The mechanical gate. Repair once against the specific findings rather than
+  // regenerating blind, so the argument survives and only the slop changes.
+  const findings = findSlop(posts.map(p => p.text).join('\n\n'));
+  if (findings.length) {
+    posts = await repairSlop({ posts, findings, systemPrompt });
+  }
+
+  return posts;
+}
+
+/** Second pass: hand the model its own text and the exact patterns found in it. */
+async function repairSlop({ posts, findings, systemPrompt }) {
+  const repairPrompt = `These posts break the no-AI-slop contract in the ways listed below.
+
+Findings:
+${describeSlop(findings)}
+
+Fix only what is listed, plus anything else in the contract you spot. Keep each post's argument, evidence and length. Do not smooth the writing into something safer or blander, and do not drop a concrete detail to avoid a pattern.
+
+Posts:
+${JSON.stringify({ posts }, null, 2)}
+
+Return the same JSON shape: { "posts": [{ "angle": string, "text": string }] }`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: repairPrompt }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.4,
+      max_tokens: 4000
+    });
+    const repaired = normalizeGeneratedPosts(parseJsonResponse(response.choices[0].message.content));
+    // Keep the repair only if it actually reduced the slop and did not gut the posts.
+    const before = findings.length;
+    const after = findSlop(repaired.map(p => p.text).join('\n\n')).length;
+    const keptLength = wordCount(repaired.map(p => p.text).join(' ')) >
+                       wordCount(posts.map(p => p.text).join(' ')) * 0.6;
+    if (repaired.length && after < before && keptLength) return repaired;
+  } catch (err) {
+    console.error('[tweets] slop repair failed, returning first pass:', err.message);
+  }
+  return posts;
+}
+
+/** Tolerate the several shapes the model returns and normalise to { angle, text }. */
+function normalizeGeneratedPosts(raw) {
+  const list = Array.isArray(raw) ? raw
+    : Array.isArray(raw?.posts) ? raw.posts
+    : Array.isArray(raw?.tweets) ? raw.tweets
+    : [];
+
+  return list
+    .map(item => (typeof item === 'string'
+      ? { angle: '', text: item }
+      : { angle: String(item?.angle || '').trim(), text: String(item?.text || item?.post || '').trim() }))
+    .filter(p => p.text);
 }
 
 /**
@@ -1269,4 +1379,4 @@ Rules:
     .filter(c => c.idea_a?.bookTitle && c.idea_b?.bookTitle && c.idea_a.bookTitle !== c.idea_b.bookTitle);
 }
 
-module.exports = { distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, lintWiki, generateInsightCollisions, reconstructArgument };
+module.exports = { TWEET_TARGET_WORDS, TWEET_POST_COUNT_MIN, TWEET_POST_COUNT_MAX, distillNotes, chatWithPartner, suggestWriting, generateMacroNarrative, classifyArticleStances, generateTweets, generateDigest, detectContradictions, generateConceptMap, generateSessionRecap, generateBroadIdeas, runDevilsAdvocate, generateBookKnowledgeMap, generateCrossSynthesis, refineChapterNotes, ingestSourceToWiki, queryWiki, lintWiki, generateInsightCollisions, reconstructArgument };

@@ -364,3 +364,26 @@ do $$ begin
 end $$;
 
 alter table living_ideas enable row level security;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Generated posts (Tweet Ideas)
+--
+-- Every post ever generated for a book is kept, and the angles are fed back into
+-- the next generation so the model does not repeat itself. `angle` is a short
+-- label the model assigns to what the post argues; it is what dedupe compares on,
+-- because comparing full text would only catch verbatim repeats.
+-- ─────────────────────────────────────────────────────────────────────────────
+create table if not exists tweets (
+  id          uuid primary key default gen_random_uuid(),
+  book_id     uuid references books(id) on delete cascade,
+  content     text not null,
+  angle       text,
+  word_count  integer,
+  batch_id    uuid,
+  created_at  timestamptz default now()
+);
+
+create index if not exists tweets_book_idx on tweets (book_id);
+create index if not exists tweets_created_idx on tweets (created_at desc);
+
+alter table tweets enable row level security;
